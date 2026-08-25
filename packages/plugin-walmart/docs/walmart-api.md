@@ -78,6 +78,39 @@ price feed too. **This is unconfirmed.** JSON is what the endpoint's own page
 demonstrates, so that is what is sent; settling it either way needs one call from a
 real seller account.
 
+## Two feed-type vocabularies
+
+`feedType` means different things depending on which endpoint reads it, and the
+two sets share no members.
+
+| Type                  | Used by                       | Members                                                |
+| --------------------- | ----------------------------- | ------------------------------------------------------ |
+| `WalmartFeedType`     | `submitFeed`, `getFeedStatus` | `inventory`, `MP_INVENTORY`, `PRICE_AND_PROMOTION`     |
+| `WalmartSpecFeedType` | `getTaxonomy`, `getSpec`      | `MP_ITEM`, `MP_MAINTENANCE`, `MP_WFS_ITEM`, `OMNI_WFS` |
+
+The first names a feed you submit; the second names a schema family the item
+endpoints classify against. They are kept as separate types, named for the
+endpoints that accept them, because neither can be derived from the other.
+
+## `getSpec` is a POST that reads
+
+`POST /v3/items/spec` returns a JSON schema and mutates nothing. The verb is
+Walmart's, and the reason is that the product-type list travels in the body —
+Walmart caps it at 20 per request, so it would not fit a query string
+comfortably.
+
+The call is safe to retry despite the verb.
+
+## The global market header travels in pairs
+
+`WM_MARKET` is rejected on its own: it has to be sent with `WM_GLOBAL_VERSION`.
+`getItems` and `retireItem` therefore take an optional `market` and build both
+headers together rather than exposing them separately. `getItem` does not:
+whether the single-item read honours the global market header was not
+established, and offering the parameter would imply it does.
+
+Omitting `market` sends neither header, which is the US marketplace.
+
 ## `WM_QOS.CORRELATION_ID` on the token call
 
 Walmart requires a correlation id on `POST /v3/token` as well as on ordinary
