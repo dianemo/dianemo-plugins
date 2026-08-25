@@ -11,3 +11,5 @@ export * from "./reports/index.js";
 export * from "./sellers/index.js";
 export * from "./shipping/index.js";
 export * from "./supplySource/index.js";
+export * from "./awd/index.js";
+export * from "./ordersV2/index.js";

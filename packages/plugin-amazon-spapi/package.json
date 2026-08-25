@@ -18,6 +18,10 @@
       "types": "./dist/requests/auth/index.d.ts",
       "default": "./dist/requests/auth/index.js"
     },
+    "./requests/awd": {
+      "types": "./dist/requests/awd/index.d.ts",
+      "default": "./dist/requests/awd/index.js"
+    },
     "./requests/clientName": {
       "types": "./dist/requests/clientName.d.ts",
       "default": "./dist/requests/clientName.js"
@@ -50,6 +54,10 @@
       "types": "./dist/requests/orders/index.d.ts",
       "default": "./dist/requests/orders/index.js"
     },
+    "./requests/ordersV2": {
+      "types": "./dist/requests/ordersV2/index.d.ts",
+      "default": "./dist/requests/ordersV2/index.js"
+    },
     "./requests/productTypes": {
       "types": "./dist/requests/productTypes/index.d.ts",
       "default": "./dist/requests/productTypes/index.js"
@@ -81,6 +89,14 @@
     "./requests/auth/types": {
       "types": "./dist/requests/auth/types.d.ts",
       "default": "./dist/requests/auth/types.js"
+    },
+    "./requests/awd/index": {
+      "types": "./dist/requests/awd/index.d.ts",
+      "default": "./dist/requests/awd/index.js"
+    },
+    "./requests/awd/types": {
+      "types": "./dist/requests/awd/types.d.ts",
+      "default": "./dist/requests/awd/types.js"
     },
     "./requests/fba/index": {
       "types": "./dist/requests/fba/index.d.ts",
@@ -121,6 +137,14 @@
     "./requests/orders/types": {
       "types": "./dist/requests/orders/types.d.ts",
       "default": "./dist/requests/orders/types.js"
+    },
+    "./requests/ordersV2/index": {
+      "types": "./dist/requests/ordersV2/index.d.ts",
+      "default": "./dist/requests/ordersV2/index.js"
+    },
+    "./requests/ordersV2/types": {
+      "types": "./dist/requests/ordersV2/types.d.ts",
+      "default": "./dist/requests/ordersV2/types.js"
     },
     "./requests/productTypes/index": {
       "types": "./dist/requests/productTypes/index.d.ts",

@@ -6,6 +6,37 @@ plans, transcribed into `spapiEndpoints` in `src/utils/amazonSpapiData.ts`;
 <https://developer-docs.amazon.com/sp-api/docs/usage-plans-and-rate-limits>,
 checked **2026-08-25**.
 
+## Two Orders APIs, both live
+
+`orders/v0` and `orders/2026-01-01` are separate resources, not a version bump.
+This plugin carries both, under `orders` and `ordersV2`, and neither supersedes
+the other.
+
+They differ in more than field names:
+
+|                          | `orders/v0`                               | `orders/2026-01-01`            |
+| ------------------------ | ----------------------------------------- | ------------------------------ |
+| Optional sections        | restricted data token, via `dataElements` | `includedData` query parameter |
+| Marked `restricted` here | yes                                       | no                             |
+
+The second row is the one to be careful with. The v0 operations are flagged
+`restricted: true`, so a PII request routes to the `:pii` sub-client and goes out
+with a restricted token. The 2026-01-01 operations are **not** flagged, matching
+the consumer this was ported from, which reaches them with `includedData` alone.
+Whether Amazon requires a restricted token for `includedData: ["buyerInfo"]` on
+the new API was not established — if it does, these two entries need
+`restricted: true` and the calls need `dataElements`.
+
+## AWD is not FBA
+
+`awdListInventory` reads Amazon Warehousing and Distribution, a distinct
+inventory pool. A SKU held in AWD does not appear in
+`fbaInventoryGetInventorySummaries`, so a caller reconciling total on-hand has to
+read both.
+
+It also carries the tightest budget in this plugin — 2 requests per second, with
+a burst of 2, so there is no headroom above the steady rate at all.
+
 ## Rate limits are per operation, so there is one client per endpoint
 
 Amazon meters SP-API per _operation_, not per application or per selling partner,
