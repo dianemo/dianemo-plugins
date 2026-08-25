@@ -15,6 +15,7 @@ export default definePlugin({
 export { registerWalmartTemplate } from "./client.js";
 export * from "./requests/index.js";
 
+export * from "./requests/feeds/itemFeedTypes.js";
 export * from "./requests/feeds/types.js";
 export * from "./requests/inventory/types.js";
 export * from "./requests/items/types.js";

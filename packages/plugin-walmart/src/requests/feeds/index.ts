@@ -1,4 +1,6 @@
 import { tryHandleRequest } from "@dianemo/plugin-kit";
+import { WalmartMarket } from "../items/types.js";
+import globalHeaders from "../globalHeaders.js";
 import FormData from "form-data";
 import {
   GetFeedStatusParams,
@@ -9,7 +11,8 @@ import {
 export const getFeedStatus = async (
   clientName: string,
   feedId: string,
-  params?: GetFeedStatusParams
+  params?: GetFeedStatusParams,
+  market?: WalmartMarket
 ): Promise<WalmartFeedStatusResponse> => {
   const res = await tryHandleRequest<WalmartFeedStatusResponse>(
     {
@@ -17,6 +20,7 @@ export const getFeedStatus = async (
       requestName: "walmart.feeds.getStatus",
       url: `/v3/feeds/${feedId}`,
       method: "GET",
+      headers: globalHeaders(market),
       params: params ?? {},
     },
     "WMT_0010",
@@ -28,7 +32,8 @@ export const getFeedStatus = async (
 export const submitFeed = async (
   clientName: string,
   feedType: string,
-  data: FormData | object
+  data: FormData | object,
+  market?: WalmartMarket
 ) => {
   const res = await tryHandleRequest<WalmartFeedResponse>(
     {
@@ -38,6 +43,7 @@ export const submitFeed = async (
       method: "POST",
       params: { feedType },
       headers: {
+        ...globalHeaders(market),
         Accept: "application/json",
         // form-data generates a boundary that must travel with the
         // Content-Type; setting the type by hand drops it and Walmart cannot

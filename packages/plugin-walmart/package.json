@@ -18,6 +18,10 @@
       "types": "./dist/requests/feeds/index.d.ts",
       "default": "./dist/requests/feeds/index.js"
     },
+    "./requests/globalHeaders": {
+      "types": "./dist/requests/globalHeaders.d.ts",
+      "default": "./dist/requests/globalHeaders.js"
+    },
     "./requests/index": {
       "types": "./dist/requests/index.d.ts",
       "default": "./dist/requests/index.js"
@@ -49,6 +53,10 @@
     "./requests/feeds/index": {
       "types": "./dist/requests/feeds/index.d.ts",
       "default": "./dist/requests/feeds/index.js"
+    },
+    "./requests/feeds/itemFeedTypes": {
+      "types": "./dist/requests/feeds/itemFeedTypes.d.ts",
+      "default": "./dist/requests/feeds/itemFeedTypes.js"
     },
     "./requests/feeds/types": {
       "types": "./dist/requests/feeds/types.d.ts",

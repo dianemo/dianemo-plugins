@@ -1,4 +1,5 @@
 import { tryHandleRequest } from "@dianemo/plugin-kit";
+import globalHeaders from "../globalHeaders.js";
 import {
   CatalogSearchRequest,
   GetItemParams,
@@ -11,15 +12,6 @@ import {
   ItemsResponse,
   WalmartMarket,
 } from "./types.js";
-
-/**
- * `WM_GLOBAL_VERSION` travels with `WM_MARKET` — Walmart rejects the market
- * header on its own.
- */
-const globalHeaders = (market?: WalmartMarket) => {
-  if (!market) return undefined;
-  return { WM_MARKET: market, WM_GLOBAL_VERSION: 3.1 };
-};
 
 export const getItems = async (
   clientName: string,

@@ -92,6 +92,24 @@ The first names a feed you submit; the second names a schema family the item
 endpoints classify against. They are kept as separate types, named for the
 endpoints that accept them, because neither can be derived from the other.
 
+## The market header is per request, not per client
+
+`WM_MARKET` targets a non-US marketplace, and Walmart takes it **per request** rather
+than per credential — the same seller credential reads US and Canadian orders depending
+on what this header says.
+
+That is why `market` is an optional last parameter on every function in `orders`,
+`feeds`, `inventory`, `items` and `pricing` rather than something the client template
+sets once. Omitting it sends neither header, which is the US marketplace.
+
+The two feed wrappers (`submitMultiNodeInventoryFeed`, `submitPriceFeed`) pass it
+through to `submitFeed`, so a Canadian feed submission is one argument rather than a
+different code path.
+
+**Consequence of getting this wrong:** nothing errors. A request that should have gone
+to Canada goes to the US marketplace and answers 200 with US data, so a missing `market`
+surfaces as quietly wrong results rather than a failure.
+
 ## `getSpec` is a POST that reads
 
 `POST /v3/items/spec` returns a JSON schema and mutates nothing. The verb is

@@ -1,4 +1,6 @@
 import { tryHandleRequest } from "@dianemo/plugin-kit";
+import { WalmartMarket } from "../items/types.js";
+import globalHeaders from "../globalHeaders.js";
 import {
   AcknowledgeWalmartOrderResponse,
   GetWalmartOrderData,
@@ -13,7 +15,8 @@ import {
 
 export const getOrders = async (
   clientName: string,
-  filters?: GetWalmartOrdersData
+  filters?: GetWalmartOrdersData,
+  market?: WalmartMarket
 ) => {
   const res = await tryHandleRequest<GetWalmartOrdersResponse>(
     {
@@ -21,6 +24,7 @@ export const getOrders = async (
       requestName: "walmart.orders.list",
       url: `/v3/orders`,
       method: "GET",
+      headers: globalHeaders(market),
       params: filters,
     },
     "WMT_0001",
@@ -31,7 +35,8 @@ export const getOrders = async (
 
 export const getReleasedOrders = async (
   clientName: string,
-  filters?: GetWalmartReleasedOrdersData
+  filters?: GetWalmartReleasedOrdersData,
+  market?: WalmartMarket
 ) => {
   const res = await tryHandleRequest<GetWalmartOrdersResponse>(
     {
@@ -39,6 +44,7 @@ export const getReleasedOrders = async (
       requestName: "walmart.orders.listReleased",
       url: `/v3/orders/released`,
       method: "GET",
+      headers: globalHeaders(market),
       params: filters,
     },
     "WMT_0019",
@@ -50,7 +56,8 @@ export const getReleasedOrders = async (
 export const getOrder = async (
   clientName: string,
   purchaseOrderId: string,
-  filters?: GetWalmartOrderData
+  filters?: GetWalmartOrderData,
+  market?: WalmartMarket
 ) => {
   const res = await tryHandleRequest<GetWalmartOrderResponse>(
     {
@@ -58,6 +65,7 @@ export const getOrder = async (
       requestName: "walmart.orders.get",
       url: `/v3/orders/${purchaseOrderId}`,
       method: "GET",
+      headers: globalHeaders(market),
       params: filters,
     },
     "WMT_0002",
@@ -68,7 +76,8 @@ export const getOrder = async (
 
 export const acknowledgeOrder = async (
   clientName: string,
-  purchaseOrderId: string
+  purchaseOrderId: string,
+  market?: WalmartMarket
 ) => {
   const res = await tryHandleRequest<AcknowledgeWalmartOrderResponse>(
     {
@@ -76,6 +85,7 @@ export const acknowledgeOrder = async (
       requestName: "walmart.orders.acknowledge",
       url: `/v3/orders/${purchaseOrderId}/acknowledge`,
       method: "POST",
+      headers: globalHeaders(market),
     },
     "WMT_0005",
     "Failed to acknowledge Walmart order"
@@ -86,7 +96,8 @@ export const acknowledgeOrder = async (
 export const shipOrderLines = async (
   clientName: string,
   purchaseOrderId: string,
-  data: WalmartShipOrderData
+  data: WalmartShipOrderData,
+  market?: WalmartMarket
 ) => {
   const res = await tryHandleRequest<AcknowledgeWalmartOrderResponse>(
     {
@@ -94,6 +105,7 @@ export const shipOrderLines = async (
       requestName: "walmart.orders.ship",
       url: `/v3/orders/${purchaseOrderId}/shipping`,
       method: "POST",
+      headers: globalHeaders(market),
       data,
     },
     "WMT_0006",
@@ -105,7 +117,8 @@ export const shipOrderLines = async (
 export const cancelOrderLines = async (
   clientName: string,
   purchaseOrderId: string,
-  data: WalmartCancelOrderData
+  data: WalmartCancelOrderData,
+  market?: WalmartMarket
 ) => {
   const res = await tryHandleRequest<AcknowledgeWalmartOrderResponse>(
     {
@@ -113,6 +126,7 @@ export const cancelOrderLines = async (
       requestName: "walmart.orders.cancel",
       url: `/v3/orders/${purchaseOrderId}/cancel`,
       method: "POST",
+      headers: globalHeaders(market),
       data,
     },
     "WMT_0007",
@@ -124,7 +138,8 @@ export const cancelOrderLines = async (
 export const refundOrderLines = async (
   clientName: string,
   purchaseOrderId: string,
-  data: WalmartRefundOrderData
+  data: WalmartRefundOrderData,
+  market?: WalmartMarket
 ) => {
   const res = await tryHandleRequest<AcknowledgeWalmartOrderResponse>(
     {
@@ -132,6 +147,7 @@ export const refundOrderLines = async (
       requestName: "walmart.orders.refund",
       url: `/v3/orders/${purchaseOrderId}/refund`,
       method: "POST",
+      headers: globalHeaders(market),
       data,
     },
     "WMT_0008",

@@ -1,4 +1,6 @@
 import { tryHandleRequest } from "@dianemo/plugin-kit";
+import { WalmartMarket } from "../items/types.js";
+import globalHeaders from "../globalHeaders.js";
 import { submitFeed } from "../feeds/index.js";
 import FormData from "form-data";
 import {
@@ -20,7 +22,8 @@ import {
 export const submitMultiNodeInventoryFeed = async (
   clientName: string,
   syncId: string,
-  feed: WalmartMultiNodeInventoryFeed
+  feed: WalmartMultiNodeInventoryFeed,
+  market?: WalmartMarket
 ) => {
   const form = new FormData();
   form.append("file", JSON.stringify(feed), {
@@ -28,12 +31,13 @@ export const submitMultiNodeInventoryFeed = async (
     contentType: "application/json",
   });
 
-  return submitFeed(clientName, "MP_INVENTORY", form);
+  return submitFeed(clientName, "MP_INVENTORY", form, market);
 };
 
 export const getInventory = async (
   clientName: string,
-  params: GetInventoryParams
+  params: GetInventoryParams,
+  market?: WalmartMarket
 ) => {
   const res = await tryHandleRequest<InventoryResponse>(
     {
@@ -41,6 +45,7 @@ export const getInventory = async (
       requestName: "walmart.inventory.get",
       url: `/v3/inventory`,
       method: "GET",
+      headers: globalHeaders(market),
       params,
     },
     "WMT_0011",
@@ -52,7 +57,8 @@ export const getInventory = async (
 export const updateInventory = async (
   clientName: string,
   params: UpdateInventoryParams,
-  data: UpdateInventoryData
+  data: UpdateInventoryData,
+  market?: WalmartMarket
 ) => {
   const res = await tryHandleRequest<InventoryResponse>(
     {
@@ -60,6 +66,7 @@ export const updateInventory = async (
       requestName: "walmart.inventory.update",
       url: `/v3/inventory`,
       method: "PUT",
+      headers: globalHeaders(market),
       params,
       data,
     },
@@ -72,7 +79,8 @@ export const updateInventory = async (
 export const getMultiNodeInventory = async (
   clientName: string,
   sku: string,
-  params?: GetMultiNodeInventoryParams
+  params?: GetMultiNodeInventoryParams,
+  market?: WalmartMarket
 ) => {
   const res = await tryHandleRequest<MultiNodeInventoryResponse>(
     {
@@ -80,6 +88,7 @@ export const getMultiNodeInventory = async (
       requestName: "walmart.inventory.getMultiNode",
       url: `/v3/inventories/${encodeURIComponent(sku)}`,
       method: "GET",
+      headers: globalHeaders(market),
       params: params ?? {},
     },
     "WMT_0013",
@@ -91,7 +100,8 @@ export const getMultiNodeInventory = async (
 export const updateMultiNodeInventory = async (
   clientName: string,
   sku: string,
-  data: UpdateMultiNodeInventoryData
+  data: UpdateMultiNodeInventoryData,
+  market?: WalmartMarket
 ) => {
   const res = await tryHandleRequest<UpdateMultiNodeInventoryResponse>(
     {
@@ -99,6 +109,7 @@ export const updateMultiNodeInventory = async (
       requestName: "walmart.inventory.updateMultiNode",
       url: `/v3/inventories/${encodeURIComponent(sku)}`,
       method: "PUT",
+      headers: globalHeaders(market),
       data,
     },
     "WMT_0014",
@@ -109,7 +120,8 @@ export const updateMultiNodeInventory = async (
 
 export const getAllInventory = async (
   clientName: string,
-  params?: GetAllInventoryParams
+  params?: GetAllInventoryParams,
+  market?: WalmartMarket
 ) => {
   const res = await tryHandleRequest<AllInventoryResponse>(
     {
@@ -117,6 +129,7 @@ export const getAllInventory = async (
       requestName: "walmart.inventory.listAll",
       url: `/v3/inventories`,
       method: "GET",
+      headers: globalHeaders(market),
       params: params ?? {},
     },
     "WMT_0015",
@@ -127,7 +140,8 @@ export const getAllInventory = async (
 
 export const getWFSInventory = async (
   clientName: string,
-  params?: GetWFSInventoryParams
+  params?: GetWFSInventoryParams,
+  market?: WalmartMarket
 ) => {
   const res = await tryHandleRequest<WFSInventoryResponse>(
     {
@@ -135,6 +149,7 @@ export const getWFSInventory = async (
       requestName: "walmart.inventory.getWfs",
       url: `/v3/wfs/inventory`,
       method: "GET",
+      headers: globalHeaders(market),
       params: params ?? {},
     },
     "WMT_0016",
