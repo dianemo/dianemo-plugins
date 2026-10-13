@@ -1,6 +1,6 @@
 {
   "name": "@dianemo/plugin-helpscout",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Help Scout plugin — conversation reads",
   "type": "module",
   "main": "./dist/index.js",
@@ -55,7 +55,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/vivo-us/dianemo-plugins.git",
+    "url": "git+https://github.com/dianemo/dianemo-plugins.git",
     "directory": "packages/plugin-helpscout"
   },
   "publishConfig": {

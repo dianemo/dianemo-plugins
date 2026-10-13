@@ -5,7 +5,7 @@
 <h1 align="center">dianemo-plugins</h1>
 
 <p align="center">
-  Integration plugins for <a href="https://github.com/vivo-us/dianemo">dianemo</a> — one published
+  Integration plugins for <a href="https://github.com/dianemo/dianemo">dianemo</a> — one published
   package per external API, each carrying that vendor's rate-limit calibration, auth flow, and typed
   request functions.
 </p>

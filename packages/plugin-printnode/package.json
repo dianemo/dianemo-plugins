@@ -1,6 +1,6 @@
 {
   "name": "@dianemo/plugin-printnode",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "PrintNode plugin — remote print job dispatch",
   "type": "module",
   "main": "./dist/index.js",
@@ -75,7 +75,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/vivo-us/dianemo-plugins.git",
+    "url": "git+https://github.com/dianemo/dianemo-plugins.git",
     "directory": "packages/plugin-printnode"
   },
   "publishConfig": {

@@ -1,6 +1,6 @@
 {
   "name": "@dianemo/plugin-extensiv",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Extensiv (3PL Central) plugin — multi-warehouse inventory and orders",
   "type": "module",
   "main": "./dist/index.js",
@@ -148,7 +148,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/vivo-us/dianemo-plugins.git",
+    "url": "git+https://github.com/dianemo/dianemo-plugins.git",
     "directory": "packages/plugin-extensiv"
   },
   "publishConfig": {

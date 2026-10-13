@@ -1,6 +1,6 @@
 {
   "name": "@dianemo/plugin-newegg",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Newegg plugin — Newegg and Newegg Business marketplaces",
   "type": "module",
   "main": "./dist/index.js",
@@ -119,7 +119,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/vivo-us/dianemo-plugins.git",
+    "url": "git+https://github.com/dianemo/dianemo-plugins.git",
     "directory": "packages/plugin-newegg"
   },
   "publishConfig": {

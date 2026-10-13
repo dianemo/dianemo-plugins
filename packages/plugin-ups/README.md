@@ -2,7 +2,7 @@
 
 UPS plugin — rating, shipping, and tracking
 
-A plugin for [dianemo](https://github.com/vivo-us/dianemo), which distributes one API rate limit
+A plugin for [dianemo](https://github.com/dianemo/dianemo), which distributes one API rate limit
 across every process that draws on it.
 
 ```bash
@@ -57,7 +57,7 @@ client name, keeping each tenant's credentials and budget separate.
 it works around, and the questions still open are in
 [`docs/ups-api.md`](docs/ups-api.md) — it ships with the package.
 
-See [dianemo-plugins](https://github.com/vivo-us/dianemo-plugins) for the full catalogue.
+See [dianemo-plugins](https://github.com/dianemo/dianemo-plugins) for the full catalogue.
 
 ## License
 

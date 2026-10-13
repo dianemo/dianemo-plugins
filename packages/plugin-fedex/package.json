@@ -1,7 +1,7 @@
 {
   "name": "@dianemo/plugin-fedex",
-  "version": "1.0.0",
-  "description": "FedEx plugin \u2014 shipping, rates, tracking, pickups, and address validation",
+  "version": "1.0.1",
+  "description": "FedEx plugin — shipping, rates, tracking, pickups, and address validation",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -128,7 +128,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/vivo-us/dianemo-plugins.git",
+    "url": "git+https://github.com/dianemo/dianemo-plugins.git",
     "directory": "packages/plugin-fedex"
   },
   "publishConfig": {

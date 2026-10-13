@@ -1,6 +1,6 @@
 # dianemo-plugins
 
-Integration plugins for [dianemo](https://github.com/vivo-us/dianemo) — one published
+Integration plugins for [dianemo](https://github.com/dianemo/dianemo) — one published
 npm package per external API. 22 packages: `@dianemo/plugin-kit` plus 21 plugins.
 
 `@dianemo/core` is the rate-limiting request handler these plug into. It is a **peer
