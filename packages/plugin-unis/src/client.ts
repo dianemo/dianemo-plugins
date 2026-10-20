@@ -91,6 +91,13 @@ export async function registerUnisTemplate(handler: RequestHandler) {
           tokensToAdd: 100,
           maxTokens: 100,
         },
+        /**
+         * A 404 is retried rather than believed. Which UNIS responses are
+         * transient was not established here; this mirrors a configuration that
+         * has run in production, where retrying 404 was evidently needed. See
+         * docs/unis-api.md#404-is-retried
+         */
+        retryOptions: { retryStatusCodes: [404] },
         requestOptions: {
           defaults: { baseURL: creds.baseUrl },
           requestInterceptor,

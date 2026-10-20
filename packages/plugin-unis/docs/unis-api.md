@@ -2,6 +2,22 @@
 
 Findings behind `@dianemo/plugin-unis`.
 
+## 404 is retried
+
+The template adds `404` to `retryStatusCodes`, so a not-found response is retried
+up to `maxRetries` rather than returned to the caller as absence.
+
+**The evidence for this is operational, not documented.** UNIS publishes nothing
+about transient 404s; what is known is that a configuration running this
+integration in production carries exactly this setting, which is not something
+anyone adds without having been bitten. Which responses are transient, and under
+what conditions, is an open question.
+
+The cost of being wrong in this direction is a genuinely missing resource taking
+`maxRetries` attempts before it reports missing. The cost of the other direction
+is treating a transient 404 as a real one, which for an order read means acting
+as though the order does not exist.
+
 ## The documentation host's certificate expired
 
 UNIS links a WMS API reference from <https://www.unisco.com/unis-api>, at
