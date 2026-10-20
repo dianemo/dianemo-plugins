@@ -30,8 +30,8 @@
   "author": "Aaron Leman",
   "license": "Apache-2.0",
   "devDependencies": {
-    "@dianemo/backend-redis": "^1.0.0",
-    "@dianemo/core": "^1.0.0",
+    "@dianemo/backend-redis": "^2.0.0",
+    "@dianemo/core": "^2.0.0",
     "@eslint/js": "^9.39.4",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/luxon": "^3.7.4",

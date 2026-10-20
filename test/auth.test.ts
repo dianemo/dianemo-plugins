@@ -2,6 +2,7 @@ import RequestHandler, { memoryBackend } from "@dianemo/core";
 import { resetBinding } from "@dianemo/plugin-kit/testing";
 import type { RequestHandlerPlugin } from "@dianemo/core";
 import { afterEach, describe, expect, it } from "vitest";
+import { TEST_KEY } from "./fixtures/key.js";
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
 
@@ -18,7 +19,6 @@ import { join } from "node:path";
  */
 
 const PACKAGES = join(import.meta.dirname, "..", "packages");
-const KEY = "0123456789abcdef0123456789abcdef";
 
 /** Credentials plausible enough to build a client; none reach a network. */
 const base = { instanceId: "main", baseUrl: "https://example.invalid" };
@@ -155,7 +155,10 @@ async function register(testCase: Case): Promise<Registered[]> {
   const mod = await import(join(PACKAGES, testCase.dir, "src", "index.ts"));
   const plugin = mod.default as RequestHandlerPlugin;
 
-  const handler = new RequestHandler({ key: KEY, backend: memoryBackend() });
+  const handler = new RequestHandler({
+    key: TEST_KEY,
+    backend: memoryBackend(),
+  });
   handler.use(plugin);
   await handler.addTemplateClient(
     testCase.template as never,

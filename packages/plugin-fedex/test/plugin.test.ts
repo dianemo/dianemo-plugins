@@ -1,11 +1,12 @@
 import RequestHandler, { memoryBackend } from "@dianemo/core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { resetBinding } from "@dianemo/plugin-kit/testing";
+import { TEST_KEY } from "../../../test/fixtures/key.js";
 import fedex from "../src/index.js";
 
 const newHandler = () =>
   new RequestHandler({
-    key: "k",
+    key: TEST_KEY,
     backend: memoryBackend(),
   });
 

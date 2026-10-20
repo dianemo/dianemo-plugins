@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { resetBinding } from "@dianemo/plugin-kit/testing";
 import type { RequestHandlerPlugin } from "@dianemo/core";
 import { readdirSync, readFileSync } from "node:fs";
+import { TEST_KEY } from "./fixtures/key.js";
 import { join } from "node:path";
 
 const PACKAGES = join(import.meta.dirname, "..", "packages");
@@ -13,7 +14,7 @@ const pluginDirs = readdirSync(PACKAGES)
 
 const newHandler = () =>
   new RequestHandler({
-    key: "k",
+    key: TEST_KEY,
     backend: memoryBackend(),
   });
 

@@ -1,10 +1,11 @@
 import RequestHandler, { memoryBackend } from "@dianemo/core";
 import shopify from "@dianemo/plugin-shopify";
+import { TEST_KEY } from "./fixtures/key.js";
 import { expectTypeOf, it } from "vitest";
 import fedex from "@dianemo/plugin-fedex";
 import ups from "@dianemo/plugin-ups";
 
-const handler = new RequestHandler({ key: "k", backend: memoryBackend() });
+const handler = new RequestHandler({ key: TEST_KEY, backend: memoryBackend() });
 
 it("infers a distinct namespace per composed plugin", () => {
   const requests = handler.use(fedex, shopify, ups);
