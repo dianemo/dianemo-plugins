@@ -40,7 +40,7 @@ const [candidate] = await requests.smarty.verifySmartyUs(
 );
 ```
 
-The US and international APIs are separate sub-clients sharing one budget. Requests take an options object instead of a client name; `alias` is the `instanceId` you registered, defaulting to `"production"`.
+The US and international APIs are separate sub-clients, each metering against its own published limit — 25,000/s (US) and 3,500/s (international), the Professional-tier figures the template's `professional` option declares. Pass `rateLimitOverrides` to `addTemplateClient` if your plan differs. Requests take an options object instead of a client name; `alias` is the `instanceId` you registered, defaulting to `"production"`.
 
 Register another account by calling `addTemplateClient` again with a different `instanceId`. Pass
 `organizationId` alongside it in a multi-tenant deployment: it becomes the second segment of the

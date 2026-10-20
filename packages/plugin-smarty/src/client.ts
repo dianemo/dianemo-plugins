@@ -2,6 +2,7 @@ import RequestHandler, { buildClientName } from "@dianemo/core";
 import {
   BaseCredentialsData,
   CreateClientData,
+  DeclaredRateLimit,
 } from "@dianemo/core/client/types";
 
 declare module "@dianemo/core" {
@@ -11,86 +12,73 @@ declare module "@dianemo/core" {
 }
 
 export interface SmartyCredentials extends BaseCredentialsData {
-  /**
-   * Rides in the query string, where core's redaction does not reach it, so any
-   * 4xx/5xx logs it in plaintext. Not fixable from here: Smarty's secret-key
-   * auth is query-string only, and core's escape hatch covers headers.
-   * `authToken` is redacted; this one is not.
-   */
+  /** Rides in the query string, where core's redaction cannot reach it — see
+   * docs/smarty-api.md#authid-is-logged-in-plaintext-on-any-error */
   authId: string;
   authToken: string;
 }
 
-const US_BASE_URL = "https://us-street.api.smarty.com";
-const INTL_BASE_URL = "https://international-street.api.smarty.com";
+const perSecond = (n: number): DeclaredRateLimit[] => [
+  { type: "requestLimit", interval: 1_000, tokensToAdd: n, maxTokens: n },
+];
 
 /**
- * One secret-key pair covers both the US Street and International Street APIs,
- * billed per lookup against a single subscription. Each surface is a sub-client
- * so retry, freeze and metrics are scoped per endpoint, but the rate limit is
- * the parent's and is shared across the two — measured, and the reason two
- * independent buckets are wrong: docs/smarty-api.md#the-rate-limit-budget-is-shared-across-both-surfaces
+ * Professional-tier figures, checked 2026-08-25, and wrong for every other tier
+ * — docs/smarty-api.md#each-surface-is-its-own-subscription
+ */
+const RATE_LIMIT_OPTIONS: Record<
+  string,
+  Record<string, DeclaredRateLimit[]>
+> = {
+  professional: { us: perSecond(25_000), intl: perSecond(3_500) },
+};
+
+/**
+ * One key pair, but two subscriptions metered separately, so one bucket across
+ * both would cap US traffic against a budget it does not share — see
+ * docs/smarty-api.md#each-surface-is-its-own-subscription
  */
 export async function registerSmartyTemplate(handler: RequestHandler) {
   await handler.registerClientTemplate(
     "smarty",
-    (creds): CreateClientData[] => {
-      const parentName = buildClientName("smarty", creds);
-
-      return [
-        {
-          name: parentName,
-          // This repo's own ceiling, not a Smarty figure: they publish 25,000/s
-          // for US and 3,500/s for international, so 1,000/s clears the tighter
-          // of the two by 3.5x even if every call goes there. One bucket for both
-          // surfaces protects the single lookup quota they bill against, not a
-          // shared rate ceiling —
-          // docs/smarty-api.md#the-published-rate-limits-are-per-surface-and-are-enormous
-          rateLimit: {
-            type: "requestLimit",
-            interval: 1_000,
-            tokensToAdd: 1_000,
-            maxTokens: 1_000,
-          },
-          requestOptions: {
-            // Parent URL is informational only — every request goes through a
-            // sub-client. Default to US for any direct parent call.
-            defaults: { baseURL: US_BASE_URL },
-          },
-          subClients: [
-            {
-              name: "us",
-              rateLimit: { type: "sharedLimit", clientName: parentName },
-              requestOptions: {
-                defaults: { baseURL: US_BASE_URL },
-                requestInterceptor: (config) => ({
-                  ...config,
-                  params: {
-                    "auth-id": creds.authId,
-                    "auth-token": creds.authToken,
-                    ...(config.params ?? {}),
-                  },
-                }),
-              },
+    (creds): CreateClientData[] => [
+      {
+        name: buildClientName("smarty", creds),
+        // No `baseURL` and no rate limit: the parent owns only the auth, so a
+        // call reaching it fails on the URL rather than going out unmetered.
+        requestOptions: {
+          // Inherited: both sub-clients override `defaults` and nothing else.
+          requestInterceptor: (config) => ({
+            ...config,
+            params: {
+              "auth-id": creds.authId,
+              "auth-token": creds.authToken,
+              ...(config.params ?? {}),
             },
-            {
-              name: "intl",
-              rateLimit: { type: "sharedLimit", clientName: parentName },
-              requestOptions: {
-                defaults: { baseURL: INTL_BASE_URL },
-                requestInterceptor: (config) => ({
-                  ...config,
-                  params: {
-                    "auth-id": creds.authId,
-                    "auth-token": creds.authToken,
-                    ...(config.params ?? {}),
-                  },
-                }),
-              },
-            },
-          ],
+          }),
         },
-      ];
+        // Limits come from the chosen plan, which core applies by sub-client name.
+        subClients: [
+          {
+            name: "us",
+            requestOptions: {
+              defaults: { baseURL: "https://us-street.api.smarty.com" },
+            },
+          },
+          {
+            name: "intl",
+            requestOptions: {
+              defaults: {
+                baseURL: "https://international-street.api.smarty.com",
+              },
+            },
+          },
+        ],
+      },
+    ],
+    {
+      rateLimitOptions: RATE_LIMIT_OPTIONS,
+      defaultRateLimitOption: "professional",
     }
   );
 }

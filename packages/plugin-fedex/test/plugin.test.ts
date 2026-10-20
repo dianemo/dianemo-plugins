@@ -89,12 +89,14 @@ describe("plugin-fedex", () => {
     expect(clients[0].name).toBe("fedex:_:production");
     // The calibration is the plugin's real content — a change here is a
     // deliberate decision about what FedEx tolerates, not a refactor.
-    expect(clients[0].rateLimit).toEqual({
-      type: "requestLimit",
-      interval: 10000,
-      tokensToAdd: 1400,
-      maxTokens: 1400,
-    });
+    expect(clients[0].rateLimit).toEqual([
+      {
+        type: "requestLimit",
+        interval: 10000,
+        tokensToAdd: 1400,
+        maxTokens: 1400,
+      },
+    ]);
   });
 
   it("builds a client that can actually obtain a token", async () => {
