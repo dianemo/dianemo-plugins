@@ -174,16 +174,18 @@ export async function registerGoogleVertexAiTemplate(handler: RequestHandler) {
     (creds): CreateClientData[] => [
       {
         name: buildClientName("googleVertexAi", creds),
-        rateLimit: {
-          // `getAnswer` is an LLM query request, the tightest of the methods
-          // this package calls. The quota is per *project*, so two clients
-          // pointed at one project each meter to 60 and overrun it together —
-          // docs/vertex-ai-api.md#quotas
-          type: "requestLimit",
-          interval: 60_000,
-          tokensToAdd: 60,
-          maxTokens: 60,
-        },
+        rateLimit: [
+          {
+            // `getAnswer` is an LLM query request, the tightest of the methods
+            // this package calls. The quota is per *project*, so two clients
+            // pointed at one project each meter to 60 and overrun it together —
+            // docs/vertex-ai-api.md#quotas
+            type: "requestLimit",
+            interval: 60_000,
+            tokensToAdd: 60,
+            maxTokens: 60,
+          },
+        ],
         authentication: buildAuth(creds),
         requestOptions: {
           defaults: {

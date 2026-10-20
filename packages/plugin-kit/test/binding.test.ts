@@ -1,6 +1,7 @@
 import RequestHandler, { memoryBackend } from "@dianemo/core";
 import { resetBinding } from "@dianemo/plugin-kit/testing";
 import { afterEach, describe, expect, it } from "vitest";
+import { TEST_KEY } from "../../../test/fixtures/key.js";
 import * as dist from "@dianemo/plugin-kit";
 import {
   acquireLock,
@@ -14,7 +15,7 @@ import {
 } from "../src/index.js";
 
 const newHandler = (keyPrefix?: string) =>
-  new RequestHandler({ key: "k", backend: memoryBackend(), keyPrefix });
+  new RequestHandler({ key: TEST_KEY, backend: memoryBackend(), keyPrefix });
 
 /** What a plugin's `createRequests` receives, minus the fields kit ignores. */
 const ctx = (handler: RequestHandler) =>
@@ -42,6 +43,13 @@ describe("bindTryHandleRequest", () => {
     const handler = newHandler();
     bindTryHandleRequest(ctx(handler));
     expect(() => bindTryHandleRequest(ctx(handler))).not.toThrow();
+  });
+
+  it("keeps its binding in the v2 slot", () => {
+    const slots = globalThis as unknown as Record<symbol, unknown>;
+    bindTryHandleRequest(ctx(newHandler()));
+    expect(slots[Symbol.for("@dianemo/plugin-kit.binding.v2")]).toBeDefined();
+    expect(slots[Symbol.for("@dianemo/plugin-kit.binding.v1")]).toBeUndefined();
   });
 
   it("refuses a second handler across two copies of this package", () => {

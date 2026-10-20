@@ -44,34 +44,40 @@ const getSubClients = (): CreateClientData[] => {
   for (const endpoint of tenThousandPerHourEndpoints) {
     subClients.push({
       name: endpoint,
-      rateLimit: {
-        type: "requestLimit",
-        interval: 360,
-        tokensToAdd: 1,
-        maxTokens: 10000,
-      },
+      rateLimit: [
+        {
+          type: "requestLimit",
+          interval: 360,
+          tokensToAdd: 1,
+          maxTokens: 10000,
+        },
+      ],
     });
   }
   for (const endpoint of oneThousandPerHourEndpoints) {
     subClients.push({
       name: endpoint,
-      rateLimit: {
-        type: "requestLimit",
-        interval: 3600,
-        tokensToAdd: 1,
-        maxTokens: 1000,
-      },
+      rateLimit: [
+        {
+          type: "requestLimit",
+          interval: 3600,
+          tokensToAdd: 1,
+          maxTokens: 1000,
+        },
+      ],
     });
   }
   for (const endpoint of tenPerMinuteEndpoints) {
     subClients.push({
       name: endpoint,
-      rateLimit: {
-        type: "requestLimit",
-        interval: 6000,
-        tokensToAdd: 1,
-        maxTokens: 10,
-      },
+      rateLimit: [
+        {
+          type: "requestLimit",
+          interval: 6000,
+          tokensToAdd: 1,
+          maxTokens: 10,
+        },
+      ],
     });
   }
   return subClients;

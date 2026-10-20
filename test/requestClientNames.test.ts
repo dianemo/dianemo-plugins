@@ -2,6 +2,7 @@ import RequestHandler, { buildClientName, memoryBackend } from "@dianemo/core";
 import { resetBinding } from "@dianemo/plugin-kit/testing";
 import type { RequestHandlerPlugin } from "@dianemo/core";
 import { afterEach, describe, expect, it } from "vitest";
+import { TEST_KEY } from "./fixtures/key.js";
 import { join } from "node:path";
 
 /**
@@ -13,7 +14,6 @@ import { join } from "node:path";
  */
 
 const PACKAGES = join(import.meta.dirname, "..", "packages");
-const KEY = "0123456789abcdef0123456789abcdef";
 
 interface Case {
   /** Package directory under packages/. */
@@ -189,7 +189,7 @@ describe("request functions target registered clients", () => {
       const plugin = mod.default as RequestHandlerPlugin;
 
       const handler = new RequestHandler({
-        key: KEY,
+        key: TEST_KEY,
         backend: memoryBackend(),
       });
       const namespaces = handler.use(plugin) as Record<string, any>;

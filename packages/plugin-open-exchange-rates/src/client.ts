@@ -21,14 +21,16 @@ export async function registerOpenExchangeRatesTemplate(
     "openExchangeRates",
     (creds): CreateClientData => ({
       name: buildClientName("openExchangeRates", creds),
-      rateLimit: {
-        // Free tier is 1000 req/month, so a polite 60/min only catches a runaway
-        // loop — a daily-refresh consumer is far below it. docs/open-exchange-rates-api.md#rate-limits
-        type: "requestLimit",
-        interval: 60_000,
-        tokensToAdd: 60,
-        maxTokens: 60,
-      },
+      rateLimit: [
+        {
+          // Free tier is 1000 req/month, so a polite 60/min only catches a runaway
+          // loop — a daily-refresh consumer is far below it. docs/open-exchange-rates-api.md#rate-limits
+          type: "requestLimit",
+          interval: 60_000,
+          tokensToAdd: 60,
+          maxTokens: 60,
+        },
+      ],
       requestOptions: {
         defaults: { baseURL: creds.baseUrl },
       },

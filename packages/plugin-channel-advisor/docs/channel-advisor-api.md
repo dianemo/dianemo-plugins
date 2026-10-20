@@ -28,12 +28,14 @@ Three limits apply to every endpoint:
 `client.ts` configures exactly one bucket:
 
 ```ts
-rateLimit: {
-  type: "requestLimit",
-  interval: 60_000,
-  tokensToAdd: 2000,
-  maxTokens: 2000,
-}
+rateLimit: [
+  {
+    type: "requestLimit",
+    interval: 60_000,
+    tokensToAdd: 2000,
+    maxTokens: 2000,
+  },
+];
 ```
 
 The account limit is the binding one of the three rate figures: it is the
@@ -53,8 +55,9 @@ latency.
 Both omissions are deliberate:
 
 - **The 5-concurrent integration limit is not enforced.** It is a different
-  shape of limit and core allows one `rateLimit` per client, so it cannot be
-  expressed alongside the account limit. A full bucket admits far more than five
+  shape of limit; core 2.0's list-shaped `rateLimit` could carry a
+  `concurrencyLimit` beside the account bucket, but the figure is per
+  integration rather than per client, so it is left out. A full bucket admits far more than five
   requests at once. A host that needs the cap has to bound its own concurrency.
 - **One authorization can cover several profiles** (see
   [One refresh token per authorization, not per profile](#one-refresh-token-per-authorization-not-per-profile)),

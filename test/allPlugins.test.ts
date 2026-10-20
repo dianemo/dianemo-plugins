@@ -1,8 +1,10 @@
+import { sampleCredentials } from "./fixtures/sampleCredentials.js";
 import RequestHandler, { memoryBackend } from "@dianemo/core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { resetBinding } from "@dianemo/plugin-kit/testing";
 import type { RequestHandlerPlugin } from "@dianemo/core";
 import { readdirSync, readFileSync } from "node:fs";
+import { TEST_KEY } from "./fixtures/key.js";
 import { join } from "node:path";
 
 const PACKAGES = join(import.meta.dirname, "..", "packages");
@@ -13,7 +15,7 @@ const pluginDirs = readdirSync(PACKAGES)
 
 const newHandler = () =>
   new RequestHandler({
-    key: "k",
+    key: TEST_KEY,
     backend: memoryBackend(),
   });
 
@@ -27,6 +29,10 @@ afterEach(() => resetBinding());
 describe("plugin catalogue", () => {
   it("found every plugin package", () => {
     expect(pluginDirs.length).toBe(21);
+  });
+
+  it("has a sample credential for every plugin and no stale ones", () => {
+    expect(Object.keys(sampleCredentials).sort()).toEqual(pluginDirs);
   });
 
   it("gives each plugin a name matching its package", () => {
@@ -60,6 +66,34 @@ describe("plugin catalogue", () => {
 
       expect(handler.getRegisteredPlugins()).toEqual([plugin.name]);
       expect(namespaces[plugin.name]).toBeDefined();
+    });
+
+    it("has sample credentials", () => {
+      // A new plugin cannot skip the build check below by omitting its entry.
+      expect(sampleCredentials[dir]).toBeDefined();
+    });
+
+    it("builds a client from sample credentials", async () => {
+      const plugin = await load(dir);
+      const handler = newHandler();
+      handler.use(plugin);
+      await handler.start();
+      try {
+        // The JSON round-trip path: the same one a stored credential takes.
+        await handler.addTemplateClient(
+          plugin.name as never,
+          sampleCredentials[dir] as never
+        );
+        const clients = handler
+          .getLoadedClients()
+          .filter((c) => c.name.startsWith(`${plugin.name}:`));
+        expect(clients.length).toBeGreaterThan(0);
+        for (const client of clients) {
+          expect(Array.isArray(client.rateLimit)).toBe(true);
+        }
+      } finally {
+        await handler.stop();
+      }
     });
 
     it("registers at least one client template", async () => {

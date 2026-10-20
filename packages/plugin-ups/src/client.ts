@@ -31,12 +31,14 @@ export async function registerUpsTemplate(handler: RequestHandler) {
       // UNSOURCED, and deliberately labelled as such: UPS publishes no rate
       // limit for its REST APIs, so 5/s is a placeholder to calibrate against
       // your own 429s — see docs/ups-api.md#no-published-rate-limit
-      rateLimit: {
-        type: "requestLimit",
-        interval: 1000,
-        tokensToAdd: 5,
-        maxTokens: 5,
-      },
+      rateLimit: [
+        {
+          type: "requestLimit",
+          interval: 1000,
+          tokensToAdd: 5,
+          maxTokens: 5,
+        },
+      ],
       requestOptions: {
         defaults: {
           baseURL: creds.baseUrl,

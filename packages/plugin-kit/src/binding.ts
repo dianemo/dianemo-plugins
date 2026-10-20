@@ -16,7 +16,7 @@ interface BindingState {
  * ranges of it — which made the guard below fail open, the case it exists to
  * refuse. Versioned so an older copy cannot read a future state shape.
  */
-const STATE_KEY = Symbol.for("@dianemo/plugin-kit.binding.v1");
+const STATE_KEY = Symbol.for("@dianemo/plugin-kit.binding.v2");
 
 const globals = globalThis as typeof globalThis & {
   [STATE_KEY]?: BindingState;

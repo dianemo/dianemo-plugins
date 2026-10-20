@@ -120,12 +120,14 @@ export async function registerStripeTemplate(handler: RequestHandler) {
         {
           name: buildClientName("stripe", creds),
           // One bucket, not per-subsystem ones: docs/stripe-api.md#rate-limits
-          rateLimit: {
-            type: "requestLimit",
-            interval: 1000,
-            tokensToAdd: 100,
-            maxTokens: 100,
-          },
+          rateLimit: [
+            {
+              type: "requestLimit",
+              interval: 1000,
+              tokensToAdd: 100,
+              maxTokens: 100,
+            },
+          ],
           // A card decline is an expected outcome, not an audit-log line. 404 is
           // deliberately *not* muted — a mis-routed id has to surface.
           httpStatusCodesToMute: [402],

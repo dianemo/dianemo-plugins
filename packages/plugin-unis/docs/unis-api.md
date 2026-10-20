@@ -149,7 +149,7 @@ means core never writes a prefix, and nothing reads the stored type back.
 Core's side of this is `client/methods/authenticate.js`, which builds the header
 as `` `${excludePrefix ? "" : `${prefix} `}${value}` `` and takes `prefix` from
 `customPrefix` or a per-type default — never from the `token_type` the refresh
-response returned. Verified against `@dianemo/core@^1.0.0`'s shipped `dist/`.
+response returned. Verified against `@dianemo/core@^2.0.0`'s shipped `dist/`.
 
 ## Rate limit
 

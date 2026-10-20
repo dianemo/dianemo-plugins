@@ -15,12 +15,14 @@ export async function registerPrintNodeTemplate(handler: RequestHandler) {
         name: buildClientName("printNode", creds),
         // 10/s per account, and maxTokens deliberately equal to tokensToAdd —
         // see docs/printnode-api.md#rate-limiting
-        rateLimit: {
-          type: "requestLimit",
-          interval: 1000,
-          tokensToAdd: 10,
-          maxTokens: 10,
-        },
+        rateLimit: [
+          {
+            type: "requestLimit",
+            interval: 1000,
+            tokensToAdd: 10,
+            maxTokens: 10,
+          },
+        ],
         requestOptions: {
           defaults: {
             baseURL: creds.baseUrl,

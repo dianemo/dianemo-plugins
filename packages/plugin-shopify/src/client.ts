@@ -1,7 +1,11 @@
-import { CreateClientData, TokenCredentials } from "@dianemo/core/client/types";
 import { throttleAwareTransformResponse } from "./throttling.js";
 import RequestHandler, { buildClientName } from "@dianemo/core";
 import { GraphQLResponse } from "./requests/types.js";
+import {
+  CreateClientData,
+  RateLimitChange,
+  TokenCredentials,
+} from "@dianemo/core/client/types";
 
 declare module "@dianemo/core" {
   interface ClientTemplates {
@@ -39,11 +43,15 @@ const STANDARD_PLAN_BUCKET = {
  * returned limit is a fleet-wide broadcast, and the steady state is one response
  * per request.
  */
-const adoptShopThrottleStatus: CreateClientData["rateLimitChange"] = (
-  oldRateLimit,
+export const adoptShopThrottleStatus: RateLimitChange = (
+  oldRateLimits,
   response
 ) => {
-  if (oldRateLimit.type !== "requestLimit") return undefined;
+  const index = oldRateLimits.findIndex(
+    (limit) => limit.type === "requestLimit"
+  );
+  const oldRateLimit = oldRateLimits[index];
+  if (!oldRateLimit || oldRateLimit.type !== "requestLimit") return undefined;
   const body = response.data as GraphQLResponse<unknown> | undefined;
   const throttleStatus = body?.extensions?.cost?.throttleStatus;
   if (!throttleStatus) return undefined;
@@ -64,12 +72,19 @@ const adoptShopThrottleStatus: CreateClientData["rateLimitChange"] = (
   ) {
     return undefined;
   }
-  return {
-    type: "requestLimit",
-    interval: 1000,
-    tokensToAdd: restoreRate,
-    maxTokens: maximumAvailable,
-  };
+  // The returned list replaces the client's whole list, so every other
+  // entry (a consumer's rateLimitOverrides) has to come back untouched.
+  return oldRateLimits.map((limit, i) =>
+    i === index
+      ? {
+          name: oldRateLimit.name,
+          type: "requestLimit",
+          interval: 1000,
+          tokensToAdd: restoreRate,
+          maxTokens: maximumAvailable,
+        }
+      : limit
+  );
 };
 
 export async function registerShopifyTemplate(handler: RequestHandler) {
@@ -98,7 +113,7 @@ export async function registerShopifyTemplate(handler: RequestHandler) {
         subClients: [
           {
             name: "graph-ql",
-            rateLimit: STANDARD_PLAN_BUCKET,
+            rateLimit: [STANDARD_PLAN_BUCKET],
             rateLimitChange: adoptShopThrottleStatus,
             axiosOptions: {
               // Turns a body-level `THROTTLED` on an HTTP 200 into a 429 that

@@ -2,13 +2,13 @@ import RequestHandler, { buildClientName, RequestError } from "@dianemo/core";
 import { accountClientNameOf, PII_SEGMENT } from "./requests/clientName.js";
 import { RestrictedResource } from "./requests/auth/types.js";
 import { RequestConfig } from "@dianemo/core/request/types";
-import { AxiosResponse, Method } from "axios";
 import { getRdt } from "./requests/index.js";
 import { DateTime } from "luxon";
+import { Method } from "axios";
 import {
   CreateClientData,
   OAuth2Credentials,
-  RateLimitData,
+  RateLimitChange,
 } from "@dianemo/core/client/types";
 import {
   spapiRegions,
@@ -133,12 +133,14 @@ const buildEndpointClient = (
   endpoint: SPAPIEndpointName
 ): CreateClientData => ({
   name: endpoint,
-  rateLimit: {
-    type: "requestLimit",
-    maxTokens: spapiEndpoints[endpoint].burstLimit,
-    tokensToAdd: spapiEndpoints[endpoint].rateLimit,
-    interval: 1000,
-  },
+  rateLimit: [
+    {
+      type: "requestLimit",
+      maxTokens: spapiEndpoints[endpoint].burstLimit,
+      tokensToAdd: spapiEndpoints[endpoint].rateLimit,
+      interval: 1000,
+    },
+  ],
   subClients: spapiEndpoints[endpoint].restricted
     ? [
         {
@@ -156,10 +158,12 @@ const buildEndpointClient = (
           // spends the same quota as an unrestricted one. Sharing also keeps
           // grant isolation intact: a `sharedLimit` client reads that off the
           // budget owner, which still has the account's `authentication`.
-          rateLimit: {
-            type: "sharedLimit",
-            clientName: `${accountName}:${region}:${endpoint}`,
-          },
+          rateLimit: [
+            {
+              type: "sharedLimit",
+              clientName: `${accountName}:${region}:${endpoint}`,
+            },
+          ],
         },
       ]
     : undefined,
@@ -216,15 +220,28 @@ const restrictedDataInterceptor = async (config: RequestConfig) => {
 
 const requestDate = () => DateTime.utc().toFormat("yyyyMMdd'T'HHmmss.SSS'Z'");
 
-const rateLimitChange = async (
-  rateLimit: RateLimitData,
-  response: AxiosResponse
+export const rateLimitChange: RateLimitChange = async (
+  rateLimits,
+  response
 ) => {
-  const limit = response.headers["x-amzn-ratelimit-limit"];
+  const limit = Number(response.headers["x-amzn-ratelimit-limit"]);
+  if (!limit) return undefined;
   // A `sharedLimit` descriptor names no budget to restate, so a restricted-data
   // response cannot recalibrate the endpoint. Its unrestricted sibling spends
   // the same bucket and does carry the header, so the budget still tracks.
-  if (rateLimit.type !== "requestLimit" || !limit) return;
-  if (Number(limit) === rateLimit.tokensToAdd) return;
-  return { ...rateLimit, tokensToAdd: Number(limit) };
+  let changed = false;
+  const next = rateLimits.map((rateLimit) => {
+    // The header is a per-second rate; only the template's 1000 ms limit
+    // carries that unit, so an overridden daily limit is left alone.
+    if (
+      rateLimit.type !== "requestLimit" ||
+      rateLimit.interval !== 1000 ||
+      rateLimit.tokensToAdd === limit
+    ) {
+      return rateLimit;
+    }
+    changed = true;
+    return { ...rateLimit, tokensToAdd: limit };
+  });
+  return changed ? next : undefined;
 };

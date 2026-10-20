@@ -2,7 +2,7 @@
 
 Findings about core that cost real time to establish, and that more than one plugin
 is built around. Each was verified by reading core's shipped `dist/`, at
-`@dianemo/core@^1.0.0`. Line references are to that build and will drift; the
+`@dianemo/core@^2.0.0`. Line references are to that build and will drift; the
 quoted code is the durable part.
 
 ## `refreshConfig` is deep-copied, so it cannot hold a function
