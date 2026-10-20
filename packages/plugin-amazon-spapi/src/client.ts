@@ -231,7 +231,13 @@ export const rateLimitChange: RateLimitChange = async (
   // the same bucket and does carry the header, so the budget still tracks.
   let changed = false;
   const next = rateLimits.map((rateLimit) => {
-    if (rateLimit.type !== "requestLimit" || rateLimit.tokensToAdd === limit) {
+    // The header is a per-second rate; only the template's 1000 ms limit
+    // carries that unit, so an overridden daily limit is left alone.
+    if (
+      rateLimit.type !== "requestLimit" ||
+      rateLimit.interval !== 1000 ||
+      rateLimit.tokensToAdd === limit
+    ) {
       return rateLimit;
     }
     changed = true;

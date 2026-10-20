@@ -59,4 +59,29 @@ describe("smarty rate-limit plan", () => {
       })
     ).rejects.toMatchObject({ code: "unknown_rate_limit_option" });
   });
+
+  it("sends the account credentials as query params on a us sub-client request", async () => {
+    const handler = await newHandler();
+    await handler.addLocalTemplateClient("smarty", creds);
+
+    let seen: Record<string, unknown> | undefined;
+    await handler.handleRequest({
+      clientName: "smarty:_:main:us",
+      requestName: "smarty.us.verify",
+      method: "GET",
+      url: "/street-address",
+      adapter: async (config: { params?: Record<string, unknown> }) => {
+        seen = config.params;
+        return {
+          data: {},
+          status: 200,
+          statusText: "OK",
+          headers: {},
+          config,
+        };
+      },
+    } as never);
+
+    expect(seen).toMatchObject({ "auth-id": "id", "auth-token": "token" });
+  });
 });

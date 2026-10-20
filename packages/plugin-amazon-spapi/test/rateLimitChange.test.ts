@@ -45,4 +45,32 @@ describe("amazon rateLimitChange", () => {
   it("returns undefined when the header is absent", async () => {
     expect(await rateLimitChange([...current], respond({}))).toBeUndefined();
   });
+
+  it("restates only the per-second limit and keeps names", async () => {
+    const daily = {
+      name: "daily",
+      type: "requestLimit",
+      interval: 86_400_000,
+      tokensToAdd: 1000,
+      maxTokens: 1000,
+    } as const;
+    const result = await rateLimitChange(
+      [{ ...current[0] }, daily],
+      respond({ "x-amzn-ratelimit-limit": "5" })
+    );
+    expect(result).toEqual([{ ...current[0], tokensToAdd: 5 }, daily]);
+  });
+
+  it("returns undefined when only a non-per-second limit differs", async () => {
+    const daily = {
+      name: "daily",
+      type: "requestLimit",
+      interval: 86_400_000,
+      tokensToAdd: 1000,
+      maxTokens: 1000,
+    } as const;
+    expect(
+      await rateLimitChange([daily], respond({ "x-amzn-ratelimit-limit": "5" }))
+    ).toBeUndefined();
+  });
 });

@@ -47,9 +47,10 @@ export const adoptShopThrottleStatus: RateLimitChange = (
   oldRateLimits,
   response
 ) => {
-  const oldRateLimit = oldRateLimits.find(
+  const index = oldRateLimits.findIndex(
     (limit) => limit.type === "requestLimit"
   );
+  const oldRateLimit = oldRateLimits[index];
   if (!oldRateLimit || oldRateLimit.type !== "requestLimit") return undefined;
   const body = response.data as GraphQLResponse<unknown> | undefined;
   const throttleStatus = body?.extensions?.cost?.throttleStatus;
@@ -71,15 +72,19 @@ export const adoptShopThrottleStatus: RateLimitChange = (
   ) {
     return undefined;
   }
-  return [
-    {
-      name: oldRateLimit.name,
-      type: "requestLimit",
-      interval: 1000,
-      tokensToAdd: restoreRate,
-      maxTokens: maximumAvailable,
-    },
-  ];
+  // The returned list replaces the client's whole list, so every other
+  // entry (a consumer's rateLimitOverrides) has to come back untouched.
+  return oldRateLimits.map((limit, i) =>
+    i === index
+      ? {
+          name: oldRateLimit.name,
+          type: "requestLimit",
+          interval: 1000,
+          tokensToAdd: restoreRate,
+          maxTokens: maximumAvailable,
+        }
+      : limit
+  );
 };
 
 export async function registerShopifyTemplate(handler: RequestHandler) {

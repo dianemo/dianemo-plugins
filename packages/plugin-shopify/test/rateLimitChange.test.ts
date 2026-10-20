@@ -64,4 +64,22 @@ describe("shopify adoptShopThrottleStatus", () => {
       )
     ).toBeUndefined();
   });
+
+  it("keeps every other limit and both names when two are present", async () => {
+    const extra = {
+      name: "burst",
+      type: "requestLimit" as const,
+      interval: 60_000,
+      tokensToAdd: 7,
+      maxTokens: 9,
+    };
+    const result = await adoptShopThrottleStatus(
+      [current[0]!, extra],
+      respond({ maximumAvailable: 2000, restoreRate: 200 })
+    );
+    expect(result).toEqual([
+      { ...current[0], tokensToAdd: 200, maxTokens: 2000 },
+      extra,
+    ]);
+  });
 });
