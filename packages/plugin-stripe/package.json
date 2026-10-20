@@ -1,6 +1,6 @@
 {
   "name": "@dianemo/plugin-stripe",
-  "version": "1.0.1",
+  "version": "2.0.0",
   "description": "Stripe plugin — payment intents, refunds, and webhooks",
   "type": "module",
   "main": "./dist/index.js",
@@ -94,8 +94,8 @@
   "author": "Aaron Leman",
   "license": "Apache-2.0",
   "peerDependencies": {
-    "@dianemo/core": "^1.0.0",
-    "@dianemo/plugin-kit": "^1.0.0"
+    "@dianemo/core": "^2.0.0",
+    "@dianemo/plugin-kit": "^2.0.0"
   },
   "repository": {
     "type": "git",

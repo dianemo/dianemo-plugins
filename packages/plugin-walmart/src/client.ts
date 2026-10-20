@@ -21,19 +21,21 @@ export async function registerWalmartTemplate(handler: RequestHandler) {
     (creds): CreateClientData[] => [
       {
         name: buildClientName("walmart", creds),
-        rateLimit: {
-          // One shared bucket at the floor of the endpoints this package
-          // calls — 60/min — see docs/walmart-api.md#rate-limits.
-          //
-          // It deliberately cannot protect the price paths: PUT /v3/price is
-          // 100/hour and the PRICE_AND_PROMOTION feed 10/hour shared, and one
-          // requestLimit cannot express a second, much slower budget. A caller
-          // looping over price feeds has to pace itself.
-          type: "requestLimit",
-          interval: 60_000,
-          tokensToAdd: 60,
-          maxTokens: 60,
-        },
+        rateLimit: [
+          {
+            // One shared bucket at the floor of the endpoints this package
+            // calls — 60/min — see docs/walmart-api.md#rate-limits.
+            //
+            // It deliberately cannot protect the price paths: PUT /v3/price is
+            // 100/hour and the PRICE_AND_PROMOTION feed 10/hour shared, and one
+            // requestLimit cannot express a second, much slower budget. A caller
+            // looping over price feeds has to pace itself.
+            type: "requestLimit",
+            interval: 60_000,
+            tokensToAdd: 60,
+            maxTokens: 60,
+          },
+        ],
         requestOptions: {
           defaults: {
             baseURL: creds.baseUrl,

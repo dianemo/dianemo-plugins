@@ -16,16 +16,18 @@ export async function registerWayfairTemplate(handler: RequestHandler) {
     (creds): CreateClientData[] => [
       {
         name: buildClientName("wayfair", creds),
-        rateLimit: {
-          // Unsourced: Wayfair publishes no rate limit for this API, and 60/min
-          // is this repository's own politeness ceiling, never verified against
-          // Wayfair. Treat it as a guess, not a documented figure — see
-          // docs/wayfair-api.md#rate-limits-are-unpublished.
-          type: "requestLimit",
-          interval: 60000,
-          tokensToAdd: 60,
-          maxTokens: 60,
-        },
+        rateLimit: [
+          {
+            // Unsourced: Wayfair publishes no rate limit for this API, and 60/min
+            // is this repository's own politeness ceiling, never verified against
+            // Wayfair. Treat it as a guess, not a documented figure — see
+            // docs/wayfair-api.md#rate-limits-are-unpublished.
+            type: "requestLimit",
+            interval: 60000,
+            tokensToAdd: 60,
+            maxTokens: 60,
+          },
+        ],
         requestOptions: {
           defaults: {
             baseURL: creds.baseUrl,

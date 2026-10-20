@@ -24,12 +24,14 @@ export async function registerExtensivTemplate(handler: RequestHandler) {
         // This repo's own ceiling, NOT an Extensiv figure: they publish no rate
         // limit. At 1,200/min it is also the most permissive guess in the
         // catalogue — docs/extensiv-api.md#rate-limit-unpublished-and-20s-is-this-repos-own-ceiling
-        rateLimit: {
-          type: "requestLimit",
-          interval: 1000,
-          tokensToAdd: 20,
-          maxTokens: 20,
-        },
+        rateLimit: [
+          {
+            type: "requestLimit",
+            interval: 1000,
+            tokensToAdd: 20,
+            maxTokens: 20,
+          },
+        ],
         requestOptions: {
           defaults: {
             baseURL: creds.baseUrl,

@@ -85,12 +85,14 @@ export async function registerUnisTemplate(handler: RequestHandler) {
          * 1,000/min that a per-client budget cannot see: ten clients on one host
          * reach it while each looks compliant — docs/unis-api.md#rate-limit
          */
-        rateLimit: {
-          type: "requestLimit",
-          interval: 60000,
-          tokensToAdd: 100,
-          maxTokens: 100,
-        },
+        rateLimit: [
+          {
+            type: "requestLimit",
+            interval: 60000,
+            tokensToAdd: 100,
+            maxTokens: 100,
+          },
+        ],
         /**
          * A 404 is retried rather than believed. Which UNIS responses are
          * transient was not established here; this mirrors a configuration that

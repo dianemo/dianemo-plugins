@@ -16,18 +16,20 @@ export async function registerChannelAdvisorTemplate(handler: RequestHandler) {
     (creds): CreateClientData[] => [
       {
         name: buildClientName("channelAdvisor", creds),
-        rateLimit: {
-          /**
-           * ChannelAdvisor's per-profile quota over a one-minute window. Neither
-           * the 5-concurrent integration limit nor the per-endpoint limits are
-           * expressible alongside it — see
-           * docs/channel-advisor-api.md#request-limits.
-           */
-          type: "requestLimit",
-          interval: 60_000,
-          tokensToAdd: 2000,
-          maxTokens: 2000,
-        },
+        rateLimit: [
+          {
+            /**
+             * ChannelAdvisor's per-profile quota over a one-minute window. Neither
+             * the 5-concurrent integration limit nor the per-endpoint limits are
+             * expressible alongside it — see
+             * docs/channel-advisor-api.md#request-limits.
+             */
+            type: "requestLimit",
+            interval: 60_000,
+            tokensToAdd: 2000,
+            maxTokens: 2000,
+          },
+        ],
         requestOptions: { defaults: { baseURL: creds.baseUrl } },
         authentication: {
           type: "oauth2",

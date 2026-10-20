@@ -20,12 +20,14 @@ export async function registerHelpscoutTemplate(handler: RequestHandler) {
         // and Pro 800, and the quota is per account rather than per client. Raise
         // it with `rateLimitOverrides` rather than here —
         // docs/helpscout-api.md#rate-limit-200min-is-the-standard-plan-and-the-plan-is-the-variable
-        rateLimit: {
-          type: "requestLimit",
-          interval: 60000,
-          tokensToAdd: 200,
-          maxTokens: 200,
-        },
+        rateLimit: [
+          {
+            type: "requestLimit",
+            interval: 60000,
+            tokensToAdd: 200,
+            maxTokens: 200,
+          },
+        ],
         authentication: {
           type: "oauth2",
           clientId: creds.clientId,

@@ -15,12 +15,14 @@ export async function registerMainfreightTemplate(handler: RequestHandler) {
         name: buildClientName("mainfreight", creds),
         // This repo's own ceiling, NOT a Mainfreight figure: they publish no
         // rate limit at all — docs/mainfreight-api.md#rate-limit-unpublished-and-100min-is-this-repos-own-ceiling
-        rateLimit: {
-          type: "requestLimit",
-          tokensToAdd: 100,
-          maxTokens: 100,
-          interval: 60000,
-        },
+        rateLimit: [
+          {
+            type: "requestLimit",
+            tokensToAdd: 100,
+            maxTokens: 100,
+            interval: 60000,
+          },
+        ],
         requestOptions: {
           defaults: {
             baseURL: creds.baseUrl,

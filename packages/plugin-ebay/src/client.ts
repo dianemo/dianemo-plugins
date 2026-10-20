@@ -45,7 +45,7 @@ export async function registerEbayTemplate(handler: RequestHandler) {
   await handler.registerClientTemplate("ebay", (creds): CreateClientData[] => [
     {
       name: buildClientName("ebay", creds),
-      rateLimit,
+      rateLimit: [rateLimit],
       requestOptions: {
         defaults: {
           baseURL: creds.baseUrl,
