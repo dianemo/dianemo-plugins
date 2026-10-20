@@ -31,6 +31,10 @@ describe("plugin catalogue", () => {
     expect(pluginDirs.length).toBe(21);
   });
 
+  it("has a sample credential for every plugin and no stale ones", () => {
+    expect(Object.keys(sampleCredentials).sort()).toEqual(pluginDirs);
+  });
+
   it("gives each plugin a name matching its package", () => {
     // Guards against a copy-paste port: two packages claiming one template name
     // would be refused at use() time, but only once someone composed both.

@@ -4,6 +4,7 @@ export default defineConfig({
   test: {
     include: ["test/**/*.test.ts", "packages/*/test/**/*.test.ts"],
     environment: "node",
+    setupFiles: ["test/setup.ts"],
     typecheck: {
       // Multi-plugin composition is where the namespace inference actually
       // gets exercised, so the type-level guard belongs here rather than only
