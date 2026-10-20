@@ -1,3 +1,4 @@
+import { sampleCredentials } from "./fixtures/sampleCredentials.js";
 import RequestHandler, { memoryBackend } from "@dianemo/core";
 import { resetBinding } from "@dianemo/plugin-kit/testing";
 import type { RequestHandlerPlugin } from "@dianemo/core";
@@ -19,11 +20,6 @@ import { join } from "node:path";
  */
 
 const PACKAGES = join(import.meta.dirname, "..", "packages");
-
-/** Credentials plausible enough to build a client; none reach a network. */
-const base = { instanceId: "main", baseUrl: "https://example.invalid" };
-const oauth = { ...base, clientId: "id", clientSecret: "secret" };
-const token = { ...base, token: "tok" };
 
 /**
  * Grants each vendor accepts at its token endpoint — a table rather than a
@@ -74,82 +70,35 @@ interface Case {
   credentials: Record<string, unknown>;
 }
 
-const CASES: Case[] = [
-  { dir: "plugin-amazon-spapi", template: "amazonSpapi", credentials: oauth },
-  {
-    dir: "plugin-channel-advisor",
-    template: "channelAdvisor",
-    credentials: oauth,
-  },
-  {
-    dir: "plugin-ebay",
-    template: "ebay",
-    credentials: {
-      ...oauth,
-      scopeList: "https://api.ebay.com/oauth/api_scope",
-    },
-  },
-  {
-    dir: "plugin-extensiv",
-    template: "extensiv",
-    credentials: { ...oauth, userLogin: "user" },
-  },
-  { dir: "plugin-fedex", template: "fedex", credentials: oauth },
-  { dir: "plugin-google", template: "google", credentials: oauth },
-  {
-    dir: "plugin-google-vertex-ai",
-    template: "googleVertexAi",
-    credentials: oauth,
-  },
-  { dir: "plugin-helpscout", template: "helpscout", credentials: oauth },
-  { dir: "plugin-labelary", template: "labelary", credentials: base },
-  { dir: "plugin-mainfreight", template: "mainfreight", credentials: token },
-  {
-    dir: "plugin-newegg",
-    template: "newegg",
-    credentials: { ...token, secretKey: "s", sellerId: "A1" },
-  },
-  {
-    dir: "plugin-open-exchange-rates",
-    template: "openExchangeRates",
-    credentials: token,
-  },
-  { dir: "plugin-printnode", template: "printNode", credentials: token },
-  { dir: "plugin-shopify", template: "shopify", credentials: token },
-  {
-    dir: "plugin-smarty",
-    template: "smarty",
-    credentials: { ...base, authId: "id", authToken: "tok" },
-  },
-  {
-    dir: "plugin-stripe",
-    template: "stripe",
-    credentials: { ...base, apiKey: "sk_test", webhookSecret: "whsec" },
-  },
-  {
-    dir: "plugin-unis",
-    template: "unis",
-    credentials: {
-      ...base,
-      username: "u",
-      password: "p",
-      companyId: "c",
-      customerId: "cu",
-    },
-  },
-  { dir: "plugin-ups", template: "ups", credentials: oauth },
-  {
-    dir: "plugin-usps",
-    template: "usps",
-    credentials: { ...oauth, crid: "1", mid: "2" },
-  },
-  {
-    dir: "plugin-walmart",
-    template: "walmart",
-    credentials: { ...oauth, partnerId: "p" },
-  },
-  { dir: "plugin-wayfair", template: "wayfair", credentials: oauth },
-];
+const TEMPLATES: Record<string, string> = {
+  "plugin-amazon-spapi": "amazonSpapi",
+  "plugin-channel-advisor": "channelAdvisor",
+  "plugin-ebay": "ebay",
+  "plugin-extensiv": "extensiv",
+  "plugin-fedex": "fedex",
+  "plugin-google": "google",
+  "plugin-google-vertex-ai": "googleVertexAi",
+  "plugin-helpscout": "helpscout",
+  "plugin-labelary": "labelary",
+  "plugin-mainfreight": "mainfreight",
+  "plugin-newegg": "newegg",
+  "plugin-open-exchange-rates": "openExchangeRates",
+  "plugin-printnode": "printNode",
+  "plugin-shopify": "shopify",
+  "plugin-smarty": "smarty",
+  "plugin-stripe": "stripe",
+  "plugin-unis": "unis",
+  "plugin-ups": "ups",
+  "plugin-usps": "usps",
+  "plugin-walmart": "walmart",
+  "plugin-wayfair": "wayfair",
+};
+
+const CASES: Case[] = Object.entries(TEMPLATES).map(([dir, template]) => ({
+  dir,
+  template,
+  credentials: sampleCredentials[dir],
+}));
 
 async function register(testCase: Case): Promise<Registered[]> {
   const mod = await import(join(PACKAGES, testCase.dir, "src", "index.ts"));

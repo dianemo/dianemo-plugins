@@ -1,3 +1,4 @@
+import { sampleCredentials } from "./fixtures/sampleCredentials.js";
 import RequestHandler, { memoryBackend } from "@dianemo/core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { resetBinding } from "@dianemo/plugin-kit/testing";
@@ -61,6 +62,34 @@ describe("plugin catalogue", () => {
 
       expect(handler.getRegisteredPlugins()).toEqual([plugin.name]);
       expect(namespaces[plugin.name]).toBeDefined();
+    });
+
+    it("has sample credentials", () => {
+      // A new plugin cannot skip the build check below by omitting its entry.
+      expect(sampleCredentials[dir]).toBeDefined();
+    });
+
+    it("builds a client from sample credentials", async () => {
+      const plugin = await load(dir);
+      const handler = newHandler();
+      handler.use(plugin);
+      await handler.start();
+      try {
+        // The JSON round-trip path: the same one a stored credential takes.
+        await handler.addTemplateClient(
+          plugin.name as never,
+          sampleCredentials[dir] as never
+        );
+        const clients = handler
+          .getLoadedClients()
+          .filter((c) => c.name.startsWith(`${plugin.name}:`));
+        expect(clients.length).toBeGreaterThan(0);
+        for (const client of clients) {
+          expect(Array.isArray(client.rateLimit)).toBe(true);
+        }
+      } finally {
+        await handler.stop();
+      }
     });
 
     it("registers at least one client template", async () => {
