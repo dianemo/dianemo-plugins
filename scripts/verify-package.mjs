@@ -316,7 +316,7 @@ for (const subpath of directorySubpaths) {
 }
 
 if (plugins.length === pluginNames.length) {
-  const handler = new RequestHandler({ key: "verify", backend: memoryBackend() });
+  const handler = new RequestHandler({ key: "verify-key-at-least-32-characters-long", backend: memoryBackend() });
   const namespaces = handler.use(...plugins);
   for (const plugin of plugins) {
     if (namespaces[plugin.name] === undefined) {
@@ -326,7 +326,7 @@ if (plugins.length === pluginNames.length) {
   }
 
   for (const plugin of plugins) {
-    const scoped = new RequestHandler({ key: "verify", backend: memoryBackend() });
+    const scoped = new RequestHandler({ key: "verify-key-at-least-32-characters-long", backend: memoryBackend() });
     const registered = [];
     scoped.registerClientTemplate = async (templateName) => {
       registered.push(templateName);
@@ -364,7 +364,7 @@ fs.writeFileSync(
   `import RequestHandler, { memoryBackend } from "@dianemo/core";
 ${imports.join("\n")}
 
-const handler = new RequestHandler({ key: "verify", backend: memoryBackend() });
+const handler = new RequestHandler({ key: "verify-key-at-least-32-characters-long", backend: memoryBackend() });
 const namespaces = handler.use(${pluginNames.map((_, i) => `p${i}`).join(", ")});
 ${pluginNames.map((name, i) => `void namespaces.${namespaceOf.get(name)};\nvoid r${i};`).join("\n")}
 `

@@ -28,12 +28,14 @@ async function registerAcmeTemplate(handler: RequestHandler) {
   await handler.registerClientTemplate("acme", (creds): CreateClientData[] => [
     {
       name: buildClientName("acme", creds),
-      rateLimit: {
-        type: "requestLimit",
-        interval: 60_000,
-        tokensToAdd: 600,
-        maxTokens: 600,
-      },
+      rateLimit: [
+        {
+          type: "requestLimit",
+          interval: 60_000,
+          tokensToAdd: 600,
+          maxTokens: 600,
+        },
+      ],
       requestOptions: { defaults: { baseURL: creds.baseUrl } },
       authentication: { type: "token", token: creds.token },
     },

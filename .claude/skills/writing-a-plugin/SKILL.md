@@ -114,12 +114,14 @@ export async function registerAcmeTemplate(handler: RequestHandler) {
   await handler.registerClientTemplate("acme", (creds): CreateClientData[] => [
     {
       name: buildClientName("acme", creds),
-      rateLimit: {
-        type: "requestLimit",
-        interval: 60_000,
-        tokensToAdd: 60,
-        maxTokens: 60,
-      },
+      rateLimit: [
+        {
+          type: "requestLimit",
+          interval: 60_000,
+          tokensToAdd: 60,
+          maxTokens: 60,
+        },
+      ],
       requestOptions: { defaults: { baseURL: creds.baseUrl } },
       authentication: {/* see below */},
     },
@@ -221,8 +223,8 @@ The parts that are not obvious:
 
 ```json
 "peerDependencies": {
-  "@dianemo/core": "^1.0.0",
-  "@dianemo/plugin-kit": "^1.0.0"
+  "@dianemo/core": "^2.0.0",
+  "@dianemo/plugin-kit": "^2.0.0"
 }
 ```
 

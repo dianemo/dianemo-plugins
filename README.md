@@ -23,6 +23,7 @@ import fedex from "@dianemo/plugin-fedex";
 import ups from "@dianemo/plugin-ups";
 import { Redis } from "ioredis";
 
+// core 2.0 rejects a key shorter than 32 characters (`key_too_short`)
 const handler = new RequestHandler({
   key: process.env.DIANEMO_KEY!,
   backend: redisBackend(new Redis(process.env.REDIS_URL!)),
