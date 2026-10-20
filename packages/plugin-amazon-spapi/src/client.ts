@@ -2,9 +2,9 @@ import RequestHandler, { buildClientName, RequestError } from "@dianemo/core";
 import { accountClientNameOf, PII_SEGMENT } from "./requests/clientName.js";
 import { RestrictedResource } from "./requests/auth/types.js";
 import { RequestConfig } from "@dianemo/core/request/types";
-import { Method } from "axios";
 import { getRdt } from "./requests/index.js";
 import { DateTime } from "luxon";
+import { Method } from "axios";
 import {
   CreateClientData,
   OAuth2Credentials,
