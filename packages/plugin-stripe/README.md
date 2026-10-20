@@ -2,7 +2,7 @@
 
 Stripe plugin — payment intents, refunds, and webhooks
 
-A plugin for [dianemo](https://github.com/vivo-us/dianemo), which distributes one API rate limit
+A plugin for [dianemo](https://github.com/dianemo/dianemo), which distributes one API rate limit
 across every process that draws on it.
 
 ```bash
@@ -71,7 +71,7 @@ Every request pins [`Stripe-Version: 2022-11-15`](https://docs.stripe.com/api/ve
 it works around, and the questions still open are in
 [`docs/stripe-api.md`](docs/stripe-api.md) — it ships with the package.
 
-See [dianemo-plugins](https://github.com/vivo-us/dianemo-plugins) for the full catalogue.
+See [dianemo-plugins](https://github.com/dianemo/dianemo-plugins) for the full catalogue.
 
 ## License
 

@@ -78,8 +78,8 @@ The ISO 4217 list this package exports is the declared type of required fields i
 its accuracy moves money. [`docs/currency-codes.md`](docs/currency-codes.md) records what was wrong
 before 1.0.0 and how it is kept right.
 
-See [dianemo-plugins](https://github.com/vivo-us/dianemo-plugins) for the full plugin catalogue, and
-[dianemo](https://github.com/vivo-us/dianemo) for the rate-limiting host itself.
+See [dianemo-plugins](https://github.com/dianemo/dianemo-plugins) for the full plugin catalogue, and
+[dianemo](https://github.com/dianemo/dianemo) for the rate-limiting host itself.
 
 ## License
 

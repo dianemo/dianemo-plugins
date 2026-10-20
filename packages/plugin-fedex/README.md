@@ -2,7 +2,7 @@
 
 FedEx plugin — shipping, rates, tracking, pickups, and address validation
 
-A plugin for [dianemo](https://github.com/vivo-us/dianemo), which distributes one API rate limit
+A plugin for [dianemo](https://github.com/dianemo/dianemo), which distributes one API rate limit
 across every process that draws on it.
 
 ```bash
@@ -47,7 +47,7 @@ Register another account by calling `addTemplateClient` again with a different `
 `organizationId` alongside it in a multi-tenant deployment: it becomes the second segment of the
 client name, keeping each tenant's credentials and budget separate.
 
-See [dianemo-plugins](https://github.com/vivo-us/dianemo-plugins) for the full catalogue.
+See [dianemo-plugins](https://github.com/dianemo/dianemo-plugins) for the full catalogue.
 
 ## License
 
