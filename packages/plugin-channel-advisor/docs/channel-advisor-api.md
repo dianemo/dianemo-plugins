@@ -35,7 +35,7 @@ rateLimit: [
     tokensToAdd: 2000,
     maxTokens: 2000,
   },
-]
+];
 ```
 
 The account limit is the binding one of the three rate figures: it is the
