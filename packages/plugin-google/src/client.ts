@@ -100,12 +100,14 @@ function buildAddressValidationSubClient(
     // 6,000 QPM covering the validation methods only, which is all this plugin
     // calls. What that quota is scoped to is an open question —
     // docs/google-api.md#address-validation-quotas
-    rateLimit: {
-      type: "requestLimit",
-      interval: 60_000,
-      tokensToAdd: 6000,
-      maxTokens: 6000,
-    },
+    rateLimit: [
+      {
+        type: "requestLimit",
+        interval: 60_000,
+        tokensToAdd: 6000,
+        maxTokens: 6000,
+      },
+    ],
     ...(apiKey ? { authentication: undefined } : {}),
     requestOptions: {
       defaults: {
@@ -146,12 +148,14 @@ export async function registerGoogleTemplate(handler: RequestHandler) {
           // A self-imposed backstop, NOT a vendor figure — Google publishes no
           // QPM for the OIDC userinfo endpoint. Do not read it as one:
           // docs/google-api.md#openid-connect-userinfo-has-no-published-quota
-          rateLimit: {
-            type: "requestLimit",
-            interval: 60_000,
-            tokensToAdd: 600,
-            maxTokens: 600,
-          },
+          rateLimit: [
+            {
+              type: "requestLimit",
+              interval: 60_000,
+              tokensToAdd: 600,
+              maxTokens: 600,
+            },
+          ],
           requestOptions: { defaults: { baseURL: creds.baseUrl } },
           subClients: [
             // Registered only with an OAuth client, so an API-key-only account
@@ -163,10 +167,12 @@ export async function registerGoogleTemplate(handler: RequestHandler) {
                     name: "profile",
                     // Same host as the parent's `baseUrl`, so it draws on the
                     // one budget rather than a second bucket for one quota.
-                    rateLimit: {
-                      type: "sharedLimit" as const,
-                      clientName: parentName,
-                    },
+                    rateLimit: [
+                      {
+                        type: "sharedLimit" as const,
+                        clientName: parentName,
+                      },
+                    ],
                   },
                 ]
               : []),

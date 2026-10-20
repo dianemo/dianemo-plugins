@@ -118,12 +118,14 @@ export async function registerUspsTemplate(handler: RequestHandler) {
              * in a second. Pickups rides here too, on the conservative side of
              * an unpublished quota — see docs/usps-api.md#rate-limits.
              */
-            rateLimit: {
-              type: "requestLimit",
-              interval: 60_000,
-              tokensToAdd: 1,
-              maxTokens: 1,
-            },
+            rateLimit: [
+              {
+                type: "requestLimit",
+                interval: 60_000,
+                tokensToAdd: 1,
+                maxTokens: 1,
+              },
+            ],
           },
           {
             name: "labels",
@@ -133,12 +135,14 @@ export async function registerUspsTemplate(handler: RequestHandler) {
              * `rateLimitOverrides` to `addTemplateClient` rather than editing
              * this number — see docs/usps-api.md#rate-limits.
              */
-            rateLimit: {
-              type: "requestLimit",
-              interval: 1000,
-              tokensToAdd: 10,
-              maxTokens: 10,
-            },
+            rateLimit: [
+              {
+                type: "requestLimit",
+                interval: 1000,
+                tokensToAdd: 10,
+                maxTokens: 10,
+              },
+            ],
             requestOptions: {
               // Only on this sub-client: the payment token gates label
               // requests, and only labels and payments are dispatched here.
