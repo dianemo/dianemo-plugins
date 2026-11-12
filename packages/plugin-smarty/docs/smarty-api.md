@@ -148,28 +148,30 @@ The collection's "Using Embedded Key" entries authenticate with a `key=` query
 parameter, which Smarty intends for browser use. The plugin always injects the
 secret-key pair (`auth-id`, `auth-token`) and models `key` nowhere.
 
-### Two calling conventions
+### Every request takes the client name first
 
-`verifySmartyUs` and `verifySmartyIntl` take `(input, options)` and build the client
-name themselves from `organizationId` and `alias`. They are published that way in
-v1.0.0 and are unchanged. Every function added since takes `clientName` first, as
-the rest of the repo does, and appends its own sub-client segment.
+Until 3.0.0, `verifySmartyUs` and `verifySmartyIntl` took `(input, options)` and
+built the client name themselves from `organizationId` and an `alias` that defaulted
+to `"production"`. They now take `clientName` first like every other request here
+and in the rest of the repo, and append their own sub-client segment. A caller who
+relied on the `"production"` default passes
+`buildClientName("smarty", { instanceId: "production" })`.
 
 ## US Street and International Street audit
 
 C is the collection, R a reference page, I an inference.
 
-| Item                                               | Finding                                                                                                                                          | Outcome                                                                    |
-| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------- |
-| `license` on US Street (C)                         | A query parameter even on the POST; it was unreachable                                                                                           | Added `SmartyCallOptions.license`, sent as a query parameter. Non-breaking |
-| Multiple-address POST (C; R: 100 lookups or 32 KB) | Unreachable through the single-lookup wrapper                                                                                                    | Added `verifySmartyUsBatch`, SMT_0010. Non-breaking                        |
-| Forced `candidates: 1`, `match: "strict"`          | Equal to Smarty's documented defaults (R), and the caller's body overrides them                                                                  | Kept                                                                       |
-| "Include Rooftop Geocoding" (C)                    | Same parameters as the plain call apart from the licence value; rooftop is a licence (I)                                                         | Covered by `license`                                                       |
-| International `max_results` 1 to 10 (R only)       | Missing                                                                                                                                          | Added. Non-breaking                                                        |
-| International `address5` to `address12` (R)        | Missing from the response type                                                                                                                   | Added as optional. Non-breaking                                            |
-| International `analysis.changes` (R)               | The reference nests it as `{ organization, components: {…} }`; the type has the component keys flat, so `changes.components` does not type-check | **Not fixed**: correcting it is a breaking change for readers. Open        |
-| International `language` (R)                       | Documented as `native` or `latin`; typed `string`                                                                                                | **Not narrowed**: breaking. Open                                           |
-| US `component-analysis` response (R)               | The reference does not say where it sits in the payload                                                                                          | Not typed. Unverified                                                      |
+| Item                                               | Finding                                                                                                                                          | Outcome                                                             |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------- |
+| `license` on US Street (C)                         | A query parameter even on the POST; it was unreachable                                                                                           | Added an optional `{ license }` argument, sent as a query parameter |
+| Multiple-address POST (C; R: 100 lookups or 32 KB) | Unreachable through the single-lookup wrapper                                                                                                    | Added `verifySmartyUsBatch`, SMT_0010. Non-breaking                 |
+| Forced `candidates: 1`, `match: "strict"`          | Equal to Smarty's documented defaults (R), and the caller's body overrides them                                                                  | Kept                                                                |
+| "Include Rooftop Geocoding" (C)                    | Same parameters as the plain call apart from the licence value; rooftop is a licence (I)                                                         | Covered by `license`                                                |
+| International `max_results` 1 to 10 (R only)       | Missing                                                                                                                                          | Added. Non-breaking                                                 |
+| International `address5` to `address12` (R)        | Missing from the response type                                                                                                                   | Added as optional. Non-breaking                                     |
+| International `analysis.changes` (R)               | The reference nests it as `{ organization, components: {…} }`; the type has the component keys flat, so `changes.components` does not type-check | **Not fixed**: correcting it is a breaking change for readers. Open |
+| International `language` (R)                       | Documented as `native` or `latin`; typed `string`                                                                                                | **Not narrowed**: breaking. Open                                    |
+| US `component-analysis` response (R)               | The reference does not say where it sits in the payload                                                                                          | Not typed. Unverified                                               |
 
 The response value enumerations (DPV codes, change codes) were not re-checked.
 

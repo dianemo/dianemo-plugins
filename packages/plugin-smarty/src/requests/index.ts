@@ -1,10 +1,5 @@
+import { smartyQueryParams, smartySubClient } from "./utils.js";
 import { tryHandleRequest } from "@dianemo/plugin-kit";
-import { buildClientName } from "@dianemo/core";
-import {
-  smartyQueryParams,
-  smartySubClient,
-  type SmartySubClient,
-} from "./utils.js";
 import type {
   SmartyIntlCandidate,
   SmartyIntlRequest,
@@ -12,35 +7,9 @@ import type {
   SmartyUsRequest,
 } from "./types.js";
 
-export interface SmartyCallOptions {
-  /** Organization scope — must match the `organizationId` the
-   * Smarty credentials were registered under. */
-  organizationId: string | null;
-  /** Per-environment integration alias, e.g. `production` or `sandbox`. */
-  alias?: string;
-  /**
-   * US Street only: sent as the `license` query parameter (never in the
-   * body), comma-separated and applied left to right. International takes its
-   * own `license` on the request.
-   */
+export interface SmartyUsOptions {
+  /** Sent as a query parameter even on the POST, comma-separated and applied left to right. */
   license?: string;
-}
-
-/** Options for the batch call, which takes the parent client name directly. */
-export interface SmartyUsBatchOptions {
-  license?: string;
-}
-
-function smartyClient(
-  opts: SmartyCallOptions,
-  sub: Extract<SmartySubClient, "us" | "intl">
-): string {
-  const alias = opts.alias ?? "production";
-  const parent = buildClientName("smarty", {
-    organizationId: opts.organizationId,
-    instanceId: alias,
-  });
-  return smartySubClient(parent, sub);
 }
 
 const licenseParams = (license?: string) => (license ? { license } : undefined);
@@ -51,16 +20,17 @@ const licenseParams = (license?: string) => (license ? { license } : undefined);
  * USPS results, and is billed as a separate lookup type.
  */
 export const verifySmartyUs = async (
+  clientName: string,
   body: SmartyUsRequest,
-  options: SmartyCallOptions
+  { license }: SmartyUsOptions = {}
 ): Promise<SmartyUsCandidate[]> => {
   const res = await tryHandleRequest<SmartyUsCandidate[]>(
     {
-      clientName: smartyClient(options, "us"),
+      clientName: smartySubClient(clientName, "us"),
       requestName: "smarty.us.verify",
       method: "POST",
       url: "/street-address",
-      params: licenseParams(options.license),
+      params: licenseParams(license),
       data: [
         {
           candidates: 1,
@@ -84,7 +54,7 @@ export const verifySmartyUs = async (
 export const verifySmartyUsBatch = async (
   clientName: string,
   lookups: SmartyUsRequest[],
-  { license }: SmartyUsBatchOptions = {}
+  { license }: SmartyUsOptions = {}
 ): Promise<SmartyUsCandidate[]> => {
   const res = await tryHandleRequest<SmartyUsCandidate[]>(
     {
@@ -103,21 +73,16 @@ export const verifySmartyUsBatch = async (
 
 /** The international endpoint is GET-only, and takes one address per request. */
 export const verifySmartyIntl = async (
-  params: SmartyIntlRequest,
-  options: SmartyCallOptions
+  clientName: string,
+  params: SmartyIntlRequest
 ): Promise<SmartyIntlCandidate[]> => {
-  const cleaned = smartyQueryParams({
-    license: options.license,
-    ...params,
-  });
-
   const res = await tryHandleRequest<SmartyIntlCandidate[]>(
     {
-      clientName: smartyClient(options, "intl"),
+      clientName: smartySubClient(clientName, "intl"),
       requestName: "smarty.intl.verify",
       method: "GET",
       url: "/verify",
-      params: cleaned,
+      params: smartyQueryParams(params),
     },
     "SMT_0002",
     "Smarty International verification failed"

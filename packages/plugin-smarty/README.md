@@ -12,7 +12,7 @@ npm install @dianemo/core @dianemo/backend-redis @dianemo/plugin-smarty ioredis
 ## Setup
 
 ```ts
-import RequestHandler from "@dianemo/core";
+import RequestHandler, { buildClientName } from "@dianemo/core";
 import { redisBackend } from "@dianemo/backend-redis";
 import smarty from "@dianemo/plugin-smarty";
 import { Redis } from "ioredis";
@@ -34,13 +34,17 @@ await handler.addTemplateClient("smarty", {
   authToken: process.env.SMARTY_AUTH_TOKEN!,
 });
 
-const [candidate] = await requests.smarty.verifySmartyUs(
-  { street: "1600 Amphitheatre Pkwy", city: "Mountain View", state: "CA" },
-  { organizationId: null, alias: "main" }
-);
+// "smarty:_:main" — <template>:<organizationId | "_">:<instanceId>
+const account = buildClientName("smarty", { instanceId: "main" });
+
+const [candidate] = await requests.smarty.verifySmartyUs(account, {
+  street: "1600 Amphitheatre Pkwy",
+  city: "Mountain View",
+  state: "CA",
+});
 ```
 
-Each Smarty API is its own sub-client, metered against Smarty's default limit for it — from 400/s (international autocomplete) to 25,000/s (US street, ZIP Code and extract), with US Autocomplete unlimited — as the template's `professional` option declares. Pass `rateLimitOverrides` to `addTemplateClient` if your plan differs. `verifySmartyUs` and `verifySmartyIntl` take an options object instead of a client name; every other request takes the client name first. For those two, `alias` is the `instanceId` you registered, defaulting to `"production"`.
+Each Smarty API is its own sub-client, metered against Smarty's default limit for it — from 400/s (international autocomplete) to 25,000/s (US street, ZIP Code and extract), with US Autocomplete unlimited — as the template's `professional` option declares. Pass `rateLimitOverrides` to `addTemplateClient` if your plan differs. Every request takes the account's client name first and picks its own sub-client.
 
 Register another account by calling `addTemplateClient` again with a different `instanceId`. Pass
 `organizationId` alongside it in a multi-tenant deployment: it becomes the second segment of the

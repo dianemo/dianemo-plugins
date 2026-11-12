@@ -1,6 +1,6 @@
 {
   "name": "@dianemo/plugin-smarty",
-  "version": "2.1.0",
+  "version": "3.0.0",
   "description": "Smarty plugin — US and international address verification, autocomplete, ZIP Code lookup, extraction and reverse geocoding",
   "type": "module",
   "main": "./dist/index.js",

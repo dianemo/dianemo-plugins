@@ -21,10 +21,10 @@ const setup = () => {
 describe("verifySmartyUs", () => {
   it("POSTs a one-element array with strict/1 defaults", async () => {
     const { spy, requests } = setup();
-    await requests.verifySmartyUs(
-      { street: "1 Main St", candidates: 5 },
-      { organizationId: null }
-    );
+    await requests.verifySmartyUs("smarty:_:production", {
+      street: "1 Main St",
+      candidates: 5,
+    });
     const c = spy.mock.calls[0][0];
     expect(c.clientName).toBe("smarty:_:production:us");
     expect(c.requestName).toBe("smarty.us.verify");
@@ -39,8 +39,9 @@ describe("verifySmartyUs", () => {
   it("sends license as a query parameter, not in the body", async () => {
     const { spy, requests } = setup();
     await requests.verifySmartyUs(
+      "smarty:org:sandbox",
       { street: "1 Main St" },
-      { organizationId: "org", alias: "sandbox", license: "us-core-cloud" }
+      { license: "us-core-cloud" }
     );
     const c = spy.mock.calls[0][0];
     expect(c.clientName).toBe("smarty:org:sandbox:us");
@@ -72,17 +73,14 @@ describe("verifySmartyUsBatch", () => {
 describe("verifySmartyIntl", () => {
   it("GETs /verify, stripping empty values and stringifying", async () => {
     const { spy, requests } = setup();
-    await requests.verifySmartyIntl(
-      {
-        country: "Brazil",
-        address1: "Rua X 1",
-        address2: "",
-        geocode: "true",
-        max_results: 3,
-        license: "international-global-plus-cloud",
-      },
-      { organizationId: null }
-    );
+    await requests.verifySmartyIntl("smarty:_:production", {
+      country: "Brazil",
+      address1: "Rua X 1",
+      address2: "",
+      geocode: "true",
+      max_results: 3,
+      license: "international-global-plus-cloud",
+    });
     const c = spy.mock.calls[0][0];
     expect(c.clientName).toBe("smarty:_:production:intl");
     expect(c.requestName).toBe("smarty.intl.verify");
@@ -96,14 +94,5 @@ describe("verifySmartyIntl", () => {
       license: "international-global-plus-cloud",
     });
     expect(c.data).toBeUndefined();
-  });
-
-  it("falls back to options.license when the request has none", async () => {
-    const { spy, requests } = setup();
-    await requests.verifySmartyIntl(
-      { country: "FRA", freeform: "x" },
-      { organizationId: null, license: "L" }
-    );
-    expect(spy.mock.calls[0][0].params).toMatchObject({ license: "L" });
   });
 });
