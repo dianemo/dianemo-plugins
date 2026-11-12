@@ -40,9 +40,11 @@ const account = buildClientName("wayfair", { instanceId: "main" });
 // `page` is 1-based, 100 rows a page.
 const inventory = await requests.wayfair.getInventory(account, 1);
 
+// Reads `getDropshipPurchaseOrders`; Wayfair caps `limit` at 25.
 const orders = await requests.wayfair.getOrders(account, {
-  limit: 50,
-  fromDate: "2026-01-01",
+  limit: 25,
+  hasResponse: false,
+  sortOrder: "ASC",
 });
 ```
 
@@ -51,10 +53,10 @@ audience is taken from `baseUrl`'s host root — `https://api.wayfair.com/`, the
 own [supplier plugin](https://github.com/wayfair-contribs/plentymarkets-plugin) sends; pointing
 `baseUrl` at the sandbox moves the audience with it.
 
-`fromDate` and `toDate` bound `poDate` through Wayfair's `filters` list. The lower bound matches what
-Wayfair's own client sends; the upper bound uses `lessThanOrEqualTo`, which is attested only by
-schema types generated from introspection, so verify it against your own account before relying on
-it — if Wayfair rejects it you get the GraphQL error, not a silently unbounded page.
+`getOrders` takes typed GraphQL variables — `limit`, `hasResponse`, `fromDate`, `poNumbers`,
+`sortOrder` and `offset` — and `acceptOrder`, `shipOrder` and `saveInventory` are mutations that answer
+with a feed handle: `status` reports that the submission was accepted, not that the work succeeded, so
+poll the handle for the outcome. See [`docs/wayfair-api.md`](docs/wayfair-api.md).
 
 Wayfair answers a rejected query with HTTP 200 and a body carrying `errors`. Those come back as a
 `RequestError` whose `metadata.errors` holds Wayfair's own messages, rather than as a null field on a

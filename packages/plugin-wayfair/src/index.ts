@@ -17,4 +17,5 @@ export * from "./requests/index.js";
 
 export * from "./requests/types.js";
 export * from "./requests/inventory/types.js";
+export * from "./requests/fulfillment/types.js";
 export * from "./requests/orders/types.js";
