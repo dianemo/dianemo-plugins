@@ -9,7 +9,7 @@ export interface InventoryList {
   ResourceList: Inventory[];
 }
 
-interface Inventory {
+export interface Inventory {
   ReceiverId: number;
   ReceivedDate: Date;
   ReceiveItemId: number;

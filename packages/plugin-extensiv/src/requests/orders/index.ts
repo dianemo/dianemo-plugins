@@ -7,6 +7,7 @@ import {
   OrderItemDetailOptions,
   ExtensivOrderItem,
   UpdateOrderItemResponse,
+  UpdateOrderOptions,
 } from "./types.js";
 
 export const getOrders = async (
@@ -69,6 +70,38 @@ export const createOrder = async (
     },
     "EXT_0011",
     "Failed to create Extensiv order"
+  );
+  return res.data;
+};
+
+/**
+ * A whole-order replace, so `order` must be a complete body — read it with
+ * `getOrder`, which is also the only source of the `If-Match` ETag Extensiv
+ * requires here.
+ *
+ * Members absent from the body are dropped rather than left unchanged, and the
+ * narrower reads do not carry them all — see
+ * docs/extensiv-api.md#put-ordersid-is-a-whole-order-replace
+ */
+export const updateOrder = async (
+  clientName: string,
+  orderId: number | string,
+  order: Order,
+  etag: string,
+  options?: UpdateOrderOptions
+): Promise<Order> => {
+  const res = await tryHandleRequest<Order>(
+    {
+      clientName,
+      requestName: "extensiv.orders.update",
+      method: "PUT",
+      url: `/orders/${orderId}`,
+      params: options,
+      headers: { "If-Match": etag },
+      data: order,
+    },
+    "EXT_0025",
+    "Failed to update Extensiv order"
   );
   return res.data;
 };
