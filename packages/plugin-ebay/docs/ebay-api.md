@@ -4,6 +4,67 @@ Findings about eBay's Sell Fulfillment and OAuth services that cost real time to
 establish, and that the shape of `@dianemo/plugin-ebay` depends on. Every page
 cited here was checked 2026-08-25; quoted text is verbatim from the page named.
 
+## Paging follows the opaque `next` URL
+
+`getOrders` answers with a `next` field holding a **complete URL** for the following
+page, not a cursor token to pass back as a parameter.
+
+It already encodes the filters, limit and offset of the search that produced it, and
+eBay does not document its shape as stable — so it is followed verbatim rather than
+parsed and rebuilt. Pass it as `data.next` and `getOrders` requests that URL directly.
+
+Because everything else is already baked in, `next` is exclusive with every other field
+on `GetEbayOrdersData`; combining them is refused with `EBY_0004` rather than silently
+dropping one side.
+
+```ts
+let next: string | undefined;
+do {
+  const page = await getOrders(
+    clientName,
+    { grantId },
+    next ? { next } : { limit: 50 }
+  );
+  // …
+  next = page.next;
+} while (next);
+```
+
+## The fulfillment id is only in a header
+
+`POST /sell/fulfillment/v1/order/{orderId}/shipping_fulfillment` answers 201
+with an **empty body**. The id of the fulfillment it just created is in the
+`Location` header and nowhere else.
+
+`createShippingFulfillment` parses it off the last path segment and raises when
+it is absent, because the alternative — returning undefined — hides a
+fulfillment that exists on eBay and cannot be addressed. A proxy that strips
+response headers produces exactly that case.
+
+## Two request caps eBay enforces by rejection
+
+Both are refused client-side rather than sent and bounced, because the whole
+batch fails and the caller cannot tell which item was at fault:
+
+| Function                | Cap        |
+| ----------------------- | ---------- |
+| `getBulkInventoryItems` | 25 SKUs    |
+| `bulkMigrate`           | 5 listings |
+
+## `Content-Language` on writes
+
+eBay reads localised fields off `Content-Language` and omits or rejects them
+without it. Every inventory and offer write sends `en-US`, as do the three
+account policy reads — the policy endpoints use it to choose which localised
+policy fields come back.
+
+## Literal braces in a filter
+
+`get_item_condition_policies` takes `filter=categoryIds:{123}` with the braces
+unencoded. `getItemConditionPolicies` therefore builds that into the URL rather
+than passing it through query-parameter serialisation, which would percent-encode
+them.
+
 ## Call limits are daily; the per-minute rate is derived
 
 eBay's default API call limit table gives the Fulfillment API **"Order resource

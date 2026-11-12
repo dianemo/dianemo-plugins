@@ -1,4 +1,5 @@
 import { tryHandleRequest } from "@dianemo/plugin-kit";
+import { EbayRequestOptions } from "../types.js";
 import { RequestError } from "@dianemo/core";
 import {
   EbayOrder,
@@ -7,21 +8,43 @@ import {
   GetEbayOrdersResponse,
 } from "./types.js";
 
-/**
- * Sell Fulfillment answers a user token only, and one application's credentials
- * serve every seller who authorised it, so `grantId` — not the client — is what
- * decides whose orders are read. Seed it with the refresh token
- * `exchangeAuthCodeForAccessToken` returns, via `handler.setGrantTokens`.
- */
-export interface EbayRequestOptions {
-  grantId: string;
-}
-
 export const getOrders = async (
   clientName: string,
   { grantId }: EbayRequestOptions,
   data?: GetEbayOrdersData
 ): Promise<GetEbayOrdersResponse> => {
+  // Followed verbatim rather than picked apart: `next` already carries the
+  // filters, limit and offset of the search that produced it, and eBay does not
+  // document its shape as stable — see
+  // docs/ebay-api.md#paging-follows-the-opaque-next-url.
+  if (data?.next) {
+    const { next, ...rest } = data;
+    if (Object.values(rest).some((value) => value !== undefined)) {
+      throw new RequestError(
+        "EBY_0004",
+        "eBay next-page URL cannot be combined with any other order query parameter",
+        {
+          metadata: {
+            context:
+              "`next` already encodes the filters, limit and offset of the " +
+              "search that produced it. Follow it alone, or start a new search.",
+          },
+        }
+      );
+    }
+    const page = await tryHandleRequest<GetEbayOrdersResponse>(
+      {
+        clientName,
+        requestName: "ebay.orders.listNextPage",
+        grantId,
+        method: "GET",
+        url: next,
+      },
+      "EBY_0001",
+      "Failed to fetch the next page of eBay orders"
+    );
+    return page.data;
+  }
   const filters: string[] | undefined =
     data?.filters && Object.keys(data.filters).length ? [] : undefined;
   if (filters && data?.filters?.creationDate) {

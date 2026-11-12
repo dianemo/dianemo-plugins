@@ -14,17 +14,73 @@
       "types": "./dist/requests/index.d.ts",
       "default": "./dist/requests/index.js"
     },
+    "./requests/account": {
+      "types": "./dist/requests/account/index.d.ts",
+      "default": "./dist/requests/account/index.js"
+    },
     "./requests/auth": {
       "types": "./dist/requests/auth.d.ts",
       "default": "./dist/requests/auth.js"
+    },
+    "./requests/fulfillment": {
+      "types": "./dist/requests/fulfillment/index.d.ts",
+      "default": "./dist/requests/fulfillment/index.js"
     },
     "./requests/index": {
       "types": "./dist/requests/index.d.ts",
       "default": "./dist/requests/index.js"
     },
+    "./requests/inventory": {
+      "types": "./dist/requests/inventory/index.d.ts",
+      "default": "./dist/requests/inventory/index.js"
+    },
+    "./requests/listing": {
+      "types": "./dist/requests/listing/index.d.ts",
+      "default": "./dist/requests/listing/index.js"
+    },
     "./requests/orders": {
       "types": "./dist/requests/orders/index.d.ts",
       "default": "./dist/requests/orders/index.js"
+    },
+    "./requests/taxonomy": {
+      "types": "./dist/requests/taxonomy/index.d.ts",
+      "default": "./dist/requests/taxonomy/index.js"
+    },
+    "./requests/types": {
+      "types": "./dist/requests/types.d.ts",
+      "default": "./dist/requests/types.js"
+    },
+    "./requests/account/index": {
+      "types": "./dist/requests/account/index.d.ts",
+      "default": "./dist/requests/account/index.js"
+    },
+    "./requests/account/types": {
+      "types": "./dist/requests/account/types.d.ts",
+      "default": "./dist/requests/account/types.js"
+    },
+    "./requests/fulfillment/index": {
+      "types": "./dist/requests/fulfillment/index.d.ts",
+      "default": "./dist/requests/fulfillment/index.js"
+    },
+    "./requests/fulfillment/types": {
+      "types": "./dist/requests/fulfillment/types.d.ts",
+      "default": "./dist/requests/fulfillment/types.js"
+    },
+    "./requests/inventory/index": {
+      "types": "./dist/requests/inventory/index.d.ts",
+      "default": "./dist/requests/inventory/index.js"
+    },
+    "./requests/inventory/types": {
+      "types": "./dist/requests/inventory/types.d.ts",
+      "default": "./dist/requests/inventory/types.js"
+    },
+    "./requests/listing/index": {
+      "types": "./dist/requests/listing/index.d.ts",
+      "default": "./dist/requests/listing/index.js"
+    },
+    "./requests/listing/types": {
+      "types": "./dist/requests/listing/types.d.ts",
+      "default": "./dist/requests/listing/types.js"
     },
     "./requests/orders/index": {
       "types": "./dist/requests/orders/index.d.ts",
@@ -33,6 +89,14 @@
     "./requests/orders/types": {
       "types": "./dist/requests/orders/types.d.ts",
       "default": "./dist/requests/orders/types.js"
+    },
+    "./requests/taxonomy/index": {
+      "types": "./dist/requests/taxonomy/index.d.ts",
+      "default": "./dist/requests/taxonomy/index.js"
+    },
+    "./requests/taxonomy/types": {
+      "types": "./dist/requests/taxonomy/types.d.ts",
+      "default": "./dist/requests/taxonomy/types.js"
     }
   },
   "files": [
