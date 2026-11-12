@@ -62,9 +62,17 @@
       "types": "./dist/requests/orders/index.d.ts",
       "default": "./dist/requests/orders/index.js"
     },
+    "./requests/priceLists": {
+      "types": "./dist/requests/priceLists/index.d.ts",
+      "default": "./dist/requests/priceLists/index.js"
+    },
     "./requests/pricing": {
       "types": "./dist/requests/pricing/index.d.ts",
       "default": "./dist/requests/pricing/index.js"
+    },
+    "./requests/returns": {
+      "types": "./dist/requests/returns/index.d.ts",
+      "default": "./dist/requests/returns/index.js"
     },
     "./requests/types": {
       "types": "./dist/requests/types.d.ts",
@@ -158,6 +166,14 @@
       "types": "./dist/requests/orders/types.d.ts",
       "default": "./dist/requests/orders/types.js"
     },
+    "./requests/priceLists/index": {
+      "types": "./dist/requests/priceLists/index.d.ts",
+      "default": "./dist/requests/priceLists/index.js"
+    },
+    "./requests/priceLists/types": {
+      "types": "./dist/requests/priceLists/types.d.ts",
+      "default": "./dist/requests/priceLists/types.js"
+    },
     "./requests/pricing/index": {
       "types": "./dist/requests/pricing/index.d.ts",
       "default": "./dist/requests/pricing/index.js"
@@ -165,6 +181,14 @@
     "./requests/pricing/types": {
       "types": "./dist/requests/pricing/types.d.ts",
       "default": "./dist/requests/pricing/types.js"
+    },
+    "./requests/returns/index": {
+      "types": "./dist/requests/returns/index.d.ts",
+      "default": "./dist/requests/returns/index.js"
+    },
+    "./requests/returns/types": {
+      "types": "./dist/requests/returns/types.d.ts",
+      "default": "./dist/requests/returns/types.js"
     },
     "./requests/utils/graphQLTypeName": {
       "types": "./dist/requests/utils/graphQLTypeName.d.ts",

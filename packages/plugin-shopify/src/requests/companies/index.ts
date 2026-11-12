@@ -9,7 +9,7 @@ import {
   listPageSize,
 } from "../utils/listArguments.js";
 
-interface CompanyFieldPages {
+export interface CompanyFieldPages {
   contacts: number;
   locations: number;
   catalogs: number;
@@ -157,15 +157,26 @@ export const getMany = async (
   );
 };
 
-export const getOne = async (clientName: string, id: string) => {
+/**
+ * `pages` raises the nested sizes for a store whose cost allowance can carry
+ * them — a wholesale company with more contacts than the default page returns
+ * would otherwise lose the rest silently. See
+ * docs/shopify-api.md#nested-page-sizes-are-a-cost-decision
+ */
+export const getOne = async (
+  clientName: string,
+  id: string,
+  pages?: Partial<CompanyFieldPages>
+) => {
+  const detailPages: CompanyFieldPages = { ...COMPANY_DETAIL_PAGES, ...pages };
   const query = `query company($id: ID!) {
-    company(id: $id) ${companyFields(COMPANY_DETAIL_PAGES)}
+    company(id: $id) ${companyFields(detailPages)}
   }`;
   const res = await handleGraphQLRequest<GetCompanyResponse>(
     clientName,
     "SHO_0021",
     "Failed to fetch Shopify company",
-    companyCost(COMPANY_DETAIL_PAGES),
+    companyCost(detailPages),
     "shopify.companies.get",
     query,
     { id }

@@ -1,4 +1,5 @@
 import handleGraphQLRequest from "../handleGraphQLRequest.js";
+import { RequestError } from "@dianemo/core";
 import {
   MUTATION_COST,
   OBJECT_COST,
@@ -8,9 +9,10 @@ import {
   FulfillmentOrderByOrderIdResponse,
   FulfillmentOrdersNode,
   ShopifyFulfillmentCreateConfig,
+  ShopifyFulfillmentMoveData,
 } from "./types.js";
 
-interface FulfillmentOrderFieldPages {
+export interface FulfillmentOrderFieldPages {
   fulfillments: number;
   fulfillmentLineItems: number;
   lineItems: number;
@@ -51,8 +53,9 @@ const FULFILLMENT_ORDERS_PAGE_SIZE = 10;
 const fulfillmentCost = (fulfillmentLineItems: number) =>
   2 * OBJECT_COST + connectionCost(fulfillmentLineItems, 2 * OBJECT_COST);
 
+/** `assignedLocation` and its nested `location` are the two extra objects. */
 const fulfillmentOrderCost = (pages: FulfillmentOrderFieldPages) =>
-  OBJECT_COST +
+  3 * OBJECT_COST +
   connectionCost(
     pages.fulfillments,
     fulfillmentCost(pages.fulfillmentLineItems)
@@ -62,6 +65,11 @@ const fulfillmentOrderCost = (pages: FulfillmentOrderFieldPages) =>
 const fulfillmentOrderFields = (pages: FulfillmentOrderFieldPages) => `{
     id
     status
+    assignedLocation {
+      location {
+        id
+      }
+    }
     fulfillments(first: ${pages.fulfillments}) {
       edges {
         node {
@@ -120,16 +128,30 @@ export const getOne = async (clientName: string, id: string) => {
 };
 
 /** Read one with `getOne` instead where its full fulfillment history matters. */
-export const getByOrderId = async (clientName: string, orderId: string) => {
+/**
+ * `pages` raises the nested sizes. An order with more fulfillment orders, or a
+ * fulfillment order with more fulfillments, than the default page returns loses
+ * the rest silently — see docs/shopify-api.md#nested-page-sizes-are-a-cost-decision
+ */
+export const getByOrderId = async (
+  clientName: string,
+  orderId: string,
+  pages?: Partial<FulfillmentOrderFieldPages> & { fulfillmentOrders?: number }
+) => {
+  const listPages: FulfillmentOrderFieldPages = {
+    ...FULFILLMENT_ORDER_LIST_PAGES,
+    ...pages,
+  };
+  const outerPage = pages?.fulfillmentOrders ?? FULFILLMENT_ORDERS_PAGE_SIZE;
   const query = `
     query getFulfillmentData($orderId: ID!) {
       order(id: $orderId) {
         id
         name
-        fulfillmentOrders(first: ${FULFILLMENT_ORDERS_PAGE_SIZE}) {
+        fulfillmentOrders(first: ${outerPage}) {
         edges{
           node
-            ${fulfillmentOrderFields(FULFILLMENT_ORDER_LIST_PAGES)}
+            ${fulfillmentOrderFields(listPages)}
         }
 
         }
@@ -142,11 +164,7 @@ export const getByOrderId = async (clientName: string, orderId: string) => {
     clientName,
     "SHO_0045",
     "Failed to fetch Shopify fulfillment orders by order ID",
-    OBJECT_COST +
-      connectionCost(
-        FULFILLMENT_ORDERS_PAGE_SIZE,
-        fulfillmentOrderCost(FULFILLMENT_ORDER_LIST_PAGES)
-      ),
+    OBJECT_COST + connectionCost(outerPage, fulfillmentOrderCost(listPages)),
     "shopify.fulfillmentOrders.getByOrderId",
     query,
     variables
@@ -191,4 +209,65 @@ export const fulfill = async (
 export default {
   getOne,
   fulfill,
+};
+
+/**
+ * Moves a fulfillment order to another location.
+ *
+ * Shopify may split rather than move: when the destination cannot stock every
+ * line, it answers with `movedFulfillmentOrder` **and** a
+ * `remainingFulfillmentOrder` holding what stayed behind. A caller that reads
+ * only the first has silently lost track of the rest.
+ *
+ * `userErrors` arrives under HTTP 200 and is raised here, because a move that
+ * did not happen must not read as one that did.
+ */
+export const move = async (
+  clientName: string,
+  fulfillmentOrderId: string,
+  newLocationId: string
+): Promise<ShopifyFulfillmentMoveData["fulfillmentOrderMove"]> => {
+  const query = `mutation fulfillmentOrderMove($id: ID!, $newLocationId: ID!) {
+      fulfillmentOrderMove(id: $id, newLocationId: $newLocationId) {
+        movedFulfillmentOrder {
+          id
+          status
+        }
+        originalFulfillmentOrder {
+          id
+          status
+        }
+        remainingFulfillmentOrder {
+          id
+          status
+        }
+        userErrors {
+          field
+          message
+        }
+      }
+    }`;
+  const res = await handleGraphQLRequest<ShopifyFulfillmentMoveData>(
+    clientName,
+    "SHO_0062",
+    "Failed to move Shopify fulfillment order",
+    10,
+    "shopify.fulfillmentOrders.move",
+    query,
+    { id: fulfillmentOrderId, newLocationId }
+  );
+  const move = res.data.fulfillmentOrderMove;
+  if (move.userErrors.length) {
+    throw new RequestError(
+      "SHO_0063",
+      "Shopify rejected the fulfillment order move",
+      {
+        metadata: {
+          context: `Failed to move fulfillment order ${fulfillmentOrderId} to location ${newLocationId}: ${move.userErrors.map((e) => e.message).join(", ")}`,
+          userErrors: move.userErrors,
+        },
+      }
+    );
+  }
+  return move;
 };
