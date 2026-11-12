@@ -3,6 +3,25 @@ import { ExtensivAddress } from "../types.js";
 export type OrderItemDetailOptions =
   "None" | "SavedElements" | "Allocations" | "All" | "AllocationsWithDetail";
 
+export interface UpdateOrderOptions {
+  /** Which sections the *response* carries. The request body is always whole. */
+  detail?: string;
+  /** Re-runs the customer's auto-charge rules against the updated order. */
+  recalcautocharges?: boolean;
+}
+
+/**
+ * `ReadOnly.Status` on an order. Extensiv sends the number; these are the three
+ * it uses. A canceled order also carries `IsClosed: true` and a `-CANCELED-`
+ * suffix on its reference number — see
+ * docs/extensiv-api.md#a-canceled-order-reports-as-closed
+ */
+export enum ExtensivOrderStatus {
+  OPEN = 0,
+  CLOSED = 1,
+  CANCELED = 2,
+}
+
 export interface NewOrderData {
   CustomerIdentifier?: { Name?: string; Id: number };
   FacilityIdentifier?: { Name?: string; Id: number };
@@ -58,7 +77,7 @@ interface OrderInfo {
   CreatedByIdentifier: { Name: string; Id: number };
   LastModifiedDate: string;
   LastModifiedByIdentifier: { Name: string; Id: number };
-  Status: number;
+  Status: ExtensivOrderStatus;
 }
 
 interface ExtensivPackage {

@@ -79,6 +79,7 @@ which is the intended shape, not an oversight.
 
 | mutating function     | etag from          |
 | --------------------- | ------------------ |
+| `updateOrder`         | `getOrder`         |
 | `cancelOrder`         | `getOrder`         |
 | `updateOrderItem`     | `getOrderItems`    |
 | `deleteOrderItem`     | `getOrderItems`    |
@@ -92,6 +93,41 @@ is. That is **standard HTTP semantics (RFC 9110 §13.1.1), not something
 confirmed against Extensiv** — its documentation was not found to say whether
 its cancel and delete endpoints honour the wildcard. Treat it as likely rather
 than known, and read the resource first if the answer matters.
+
+## A canceled order reports as closed
+
+`ReadOnly.Status` is a number, and a canceled order is `2` — but it also comes
+back with **`IsClosed: true`**, the same as a normally completed one. Filtering on
+`IsClosed` alone therefore treats cancellations as fulfilled work.
+
+The three values are `0` open, `1` closed, `2` canceled, exported as
+`ExtensivOrderStatus`. A canceled order additionally carries a `-CANCELED-` suffix
+on its reference number, which is a useful cross-check but not a substitute:
+read `Status`.
+
+## PUT /orders/{id} is a whole-order replace
+
+`updateOrder` sends the entire order, not a patch. Members absent from the
+request body are **dropped**, not left unchanged — so the body has to be a read
+of the order with the mutation applied on top, and the read has to be wide
+enough to carry every member back.
+
+Two narrower reads were measured to be insufficient:
+
+- `detail=BillingDetails` omits `ShipTo`, `OrderItems`, `ParcelOption`,
+  `SavedElements` and `Inserts` outright.
+- `detail=All` **without** `itemdetail=All` returns `OrderItems` whose
+  `Allocations` are absent.
+
+These are top-level members rather than detail sections, so Extensiv's
+"unspecified sections are left unchanged" does not cover them.
+
+**Consequence for a caller:** read with `getOrder`, which already requests
+`detail=All` and `itemdetail=All` and is the only source of the required
+`If-Match` etag. Do not assemble an update body by hand.
+
+The `detail` parameter on the update itself controls only what the _response_
+carries; it has no bearing on what is written.
 
 ## Pagination
 
