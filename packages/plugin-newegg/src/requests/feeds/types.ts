@@ -54,3 +54,41 @@ export interface NeweggFeedResponse {
   RequestDate: string;
   RequestStatus: NeweggFeedStatus;
 }
+
+interface NeweggFeedResultAdditionalInfo {
+  SubCategoryID: string;
+  SellerPartNumber: string;
+  ManufacturerPartNumber: string;
+  UPCOrISBN?: string;
+}
+
+interface NeweggFeedResultItem {
+  AdditionalInfo: NeweggFeedResultAdditionalInfo;
+  ErrorList?: {
+    ErrorDescription: string[];
+  };
+}
+
+/** Counts arrive as strings, not numbers. */
+interface NeweggProcessingReport {
+  OriginalMessageName: string;
+  StatusCode: string;
+  ProcessingSummary: {
+    ProcessedCount: string;
+    SuccessCount: string;
+    WithErrorCount: string;
+  };
+  Result?: NeweggFeedResultItem[];
+}
+
+export interface NeweggFeedResult {
+  NeweggEnvelope: {
+    Header: {
+      DocumentVersion: string;
+    };
+    MessageType: "ProcessingReport";
+    Message: {
+      ProcessingReport: NeweggProcessingReport;
+    };
+  };
+}

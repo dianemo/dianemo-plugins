@@ -15,10 +15,14 @@ declare module "@dianemo/core" {
 
 const tenThousandPerHourEndpoints = [
   "getItemInventory",
+  "getBatchItemInventory",
   "updateItemInventory",
   "getItemPricing",
   "updateItemPricing",
+  "updateItemInventoryAndPrice",
   "getFeedStatus",
+  "getFeedResult",
+  "getIndustryList",
 ];
 
 const oneThousandPerHourEndpoints = [
@@ -28,7 +32,7 @@ const oneThousandPerHourEndpoints = [
   "getRmaInfo",
 ];
 
-const tenPerMinuteEndpoints = ["submitFeed"];
+const tenPerMinuteEndpoints = ["submitFeed", "getFeedSchema"];
 
 /**
  * **Every figure below is this repo's own ceiling, not Newegg's.** Newegg

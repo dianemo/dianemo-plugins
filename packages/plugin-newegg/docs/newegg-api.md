@@ -102,6 +102,63 @@ package models them as numeric enums — `FulfillmentOption: "0"` against
 the wire sends them. Coercing them to the enums would read as a documented
 vendor guarantee, and this is one observed response from one seller.
 
+## `international` names the platform, not the marketplace
+
+The consumer marketplace's endpoints carry `/international/` in their path and the
+business marketplace's do not — which reads backwards until you know that
+"international" is Newegg's name for the **platform** the consumer marketplace runs on,
+not a non-US region.
+
+| Operation        | Consumer marketplace                            | Business marketplace              |
+| ---------------- | ----------------------------------------------- | --------------------------------- |
+| Single-item read | `/contentmgmt/item/international/inventory`     | `/contentmgmt/item/inventory`     |
+| Batch read       | `/contentmgmt/item/international/inventorylist` | `/contentmgmt/item/inventorylist` |
+| Price read       | `/contentmgmt/item/international/price`         | —                                 |
+
+This is why each of those is a **pair of functions** rather than one function taking a
+marketplace flag: the path is not derivable from the credential, so the caller picks the
+function that matches the account it holds.
+
+## The business marketplace has no standalone inventory feed
+
+`submitInventoryFeed` sends `INVENTORY_DATA` at DocumentVersion 2.0 with per-warehouse
+quantities. The business marketplace's domestic platform does not accept that feed at
+all, so `submitBusinessInventoryFeed` sends `INVENTORY_AND_PRICE_DATA` at DocumentVersion
+1.0 instead, omitting price so the write stays inventory-only.
+
+Two details carry real consequences:
+
+- **`Overwrite: "No"`** leaves items absent from the feed untouched. `"Yes"` would treat
+  the feed as the complete inventory and zero everything it does not mention.
+- **`Shipping: "Default"`** uses the seller's portal rate. The field is required on this
+  feed even though the write is inventory-only.
+
+## Two feed-type vocabularies that do not line up
+
+A feed is identified two different ways depending on which endpoint is asked.
+
+- The datafeed endpoints (`submitFeed`, `getFeedStatus`) name it as a **string** —
+  `ITEM_DATA`, `INVENTORY_AND_PRICE_DATA` and so on. That is `NeweggFeedType` in
+  `requests/feeds/types.ts`.
+- `getFeedSchema` identifies it by **numeric code** — `1`, `2`, `3` … That is
+  `NeweggFeedSchemaType` in `requests/sellerManagement/types.ts`.
+
+They are not a renaming of one another. The numeric set carries members the string
+set has no name for (`ITEM_BATCH_UPDATE = 4`, `ITEM_DATA_UPCMATCH = 6`,
+`ITEM_PROMOTION_DATA = 7`) and skips `9` entirely, so neither can be derived from
+the other. Both are kept, deliberately, and named for the endpoint that accepts
+them rather than merged into one type.
+
+## `getFeedSchema` is a PUT that reads
+
+`PUT /sellermgmt/seller/feedschema` mutates nothing — it returns an XSD. The verb
+is Newegg's choice, and the reason is that the feed identifier travels in the
+request body rather than the query string.
+
+Two consequences for a caller: the response is **not JSON**, so the request asks
+for `arraybuffer` and the function returns one for the caller to validate against
+or write to disk; and the call is safe to retry despite the verb.
+
 ## Rate limits: the mechanism is documented, the numbers are not
 
 **Vendor documentation for the framework, nothing for the figures.** Checked
@@ -125,11 +182,11 @@ table is published anywhere on the developer site.
 **Every figure below is this repo's own ceiling.** They are not Newegg's, and
 nothing on the developer site corroborates them.
 
-| Sub-client group                                                                                  | Declared      |
-| ------------------------------------------------------------------------------------------------- | ------------- |
-| `getItemInventory`, `updateItemInventory`, `getItemPricing`, `updateItemPricing`, `getFeedStatus` | 10,000 / hour |
-| `getOrders`, `markOrderDownloaded`, `shipOrder`, `getRmaInfo`                                     | 1,000 / hour  |
-| `submitFeed`                                                                                      | 10 / minute   |
+| Sub-client group                                                                                                                                                     | Declared      |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
+| `getItemInventory`, `updateItemInventory`, `getItemPricing`, `updateItemPricing`, `updateItemInventoryAndPrice`, `getFeedStatus`, `getFeedResult`, `getIndustryList` | 10,000 / hour |
+| `getOrders`, `markOrderDownloaded`, `shipOrder`, `getRmaInfo`                                                                                                        | 1,000 / hour  |
+| `submitFeed`, `getFeedSchema`                                                                                                                                        | 10 / minute   |
 
 There is also a **modelling mismatch worth knowing**: Newegg meters the
 non-datafeed functions _per minute_, but these buckets are expressed per hour and
@@ -139,8 +196,8 @@ by construction — a drip can never burst — but it does mean the shape of the
 budget does not match the shape of the limit, and a caller that could legitimately
 burst 60 calls in a minute is instead paced at roughly 10 per second.
 
-`submitFeed` is the one that matches its mechanism: it is a datafeed function, and
-datafeed limits genuinely are hourly.
+`submitFeed`, `getFeedSchema` and `getFeedResult` are the ones that match their
+mechanism: they are datafeed functions, and datafeed limits genuinely are hourly.
 
 ### How to get the real numbers without asking Newegg
 

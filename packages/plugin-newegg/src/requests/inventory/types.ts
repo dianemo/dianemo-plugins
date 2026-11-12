@@ -81,3 +81,41 @@ export interface NeweggUpdateItemInventoryResponse {
     Inventory: NeweggItemInventory[];
   };
 }
+
+export interface NeweggGetBatchInventoryData {
+  Type?: NeweggItemUpdateType;
+  /** Newegg caps this at 100 SKUs. */
+  Values: string[];
+  WarehouseList?: string[];
+}
+
+export interface NeweggGetBatchInventoryResponse {
+  ItemList: {
+    ItemNumber: string;
+    SellerPartNumber: string;
+    Condition: number;
+    InventoryAllocation: NeweggDetailedItemInventory[];
+  }[];
+  TotalCount: number;
+}
+
+export interface NeweggBusinessInventoryFeedItemData {
+  SellerPartNumber: string;
+  Inventory: number;
+  /** `"Default"` uses the seller's portal rate. */
+  Shipping: "Default" | "Free";
+  SellingPrice?: number;
+  NeweggItemNumber?: string;
+}
+
+export interface NeweggSubmitBusinessInventoryFeedData {
+  NeweggEnvelope: {
+    Header: { DocumentVersion: "1.0" };
+    MessageType: "Inventory";
+    /** `"No"` leaves items absent from this feed untouched. */
+    Overwrite: "Yes" | "No";
+    Message: {
+      Inventory: { Item: NeweggBusinessInventoryFeedItemData[] };
+    };
+  };
+}
