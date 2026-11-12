@@ -146,6 +146,13 @@ interface EbayAddress {
 
 export interface GetEbayOrdersData {
   /**
+   * The opaque `next` URL from a previous response, followed as-is. Every other
+   * field here is already baked into it, so it is exclusive with all of them and
+   * `getOrders` refuses the combination (`EBY_0004`). See
+   * docs/ebay-api.md#paging-follows-the-opaque-next-url.
+   */
+  next?: string;
+  /**
    * Up to 50 order ids. Exclusive with every other field here — eBay ignores the
    * rest when this is set, so `getOrders` refuses the combination (`EBY_0003`).
    * See docs/ebay-api.md#orderids-excludes-every-other-parameter.
