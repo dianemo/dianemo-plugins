@@ -11,11 +11,11 @@ Run the `pre-commit-checks` skill first, all eleven steps. A PR is where other p
 time starts getting spent, and CI here runs the same checks — a red pipeline on a fresh
 PR means a step was skipped, not that CI found something clever.
 
-Three CI jobs run on every PR (`.github/workflows/ci.yml`): `verify`
-(`sort-imports:check`, `format`, `lint`, `check`, `test`), `versions` (a version bump for
-every package whose published content changed) and `package` (`verify:pack`,
-`verify:readme`). `verify` and `package` build first. Nothing is enforced by a git hook,
-so CI is the first thing that will tell you.
+Three CI jobs run on every PR: `verify` (`sort-imports:check`, `format`, `lint`, `check`,
+`test`) and `package` (`verify:pack`, `verify:readme`) from `.github/workflows/ci.yml`,
+both building first, and `Version Plan Check` (a version plan for every package whose
+published content changed). Nothing is enforced by a git hook, so CI is the first thing
+that will tell you.
 
 ## Title and base
 
@@ -36,7 +36,8 @@ Name the package when the change is confined to one, and let the title carry the
 subject rather than the mechanism: `Bugfix: Restore Extensiv Token Refresh`, not
 `Bugfix: Change refreshToken Placeholder In client.ts`.
 
-PRs target `master`. Branches here are `feature/<subject>`.
+PRs target `master`. Branches here are `feature/<subject>`. **Never name one
+`chore/release-…`** — merging a PR from that prefix publishes; see `/docs/releasing.md`.
 
 ```bash
 gh pr create --base master --title "Bugfix: …" --body-file <path>
@@ -64,7 +65,7 @@ repeating them makes the PR twice as long and half as useful.
 
 This repo publishes one npm package per API, so "which workspace" is the first thing a
 reviewer needs and the diff spreads it across directories. One line per workspace,
-with the version bump it needs:
+with the bump its version plan declares:
 
 ```markdown
 - `@dianemo/plugin-newegg` — **new package**, `1.0.0`
@@ -72,18 +73,18 @@ with the version bump it needs:
 - Repo-level: `test/allPlugins.test.ts`, `test/requestClientNames.test.ts` counts bumped
 ```
 
-**The version bump is enforced, not a convention.** The `versions` job runs
-`check-version-bumps.mjs` against the PR's merge base and fails when a package's
-`src/**`, `tsconfig.json` or `package.json` changed without its `version` going up. Run
-it before you push:
+**The version plan is enforced, not a convention.** `Version Plan Check` fails when a
+package changed outside Markdown and its `test/` with no plan naming it. Write it before
+you push:
 
 ```bash
-npm run check:versions
-npm version patch --no-git-tag-version -w @dianemo/plugin-<name>
+npm run version-plan
+npm run version-plan:check
 ```
 
-Docs, READMEs and tests are exempt, so a documentation-only PR needs no bump. Bump with
-`npm version` rather than editing the field, so the lockfile follows.
+The plan's body is the release note a consumer reads in that package's `CHANGELOG.md`,
+so write it for them. Do not edit a `version` field: the release PR does, and a version
+bumped anywhere else is never published — see `/docs/releasing.md`.
 
 Two more things reviewers here specifically look for:
 

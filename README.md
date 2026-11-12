@@ -182,6 +182,12 @@ length; and `build` before either verify script, because both read `dist/`.
 
 `@dianemo/core` installs from npm like any other dependency — no sibling checkout needed.
 
+### Releasing
+
+A PR that changes a package carries a version plan (`npm run version-plan`) rather than a version
+bump. Plans on `master` are gathered into one release PR, and merging it publishes each released
+package to npm and tags it. [`docs/releasing.md`](docs/releasing.md) has the whole flow.
+
 ### Test coverage
 
 Four repo-wide suites cover every plugin structurally: `allPlugins` (it composes and registers a

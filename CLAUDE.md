@@ -43,7 +43,7 @@ npm run lint
 npm run format:fix     # then sort-imports — order matters
 npm run sort-imports
 npm run exports        # regenerate exports maps from files on disk
-npm run check:versions # published packages changed without a version bump
+npm run version-plan   # declare a bump for a changed package; never edit `version`
 npm run verify:pack    # packs and installs tarballs; needs a fresh build
 npm run verify:readme  # compiles every README example; needs a fresh build
 ```
@@ -93,6 +93,7 @@ open questions that need a real account.
 - `docs/core-behaviour.md` — `@dianemo/core` behaviour several plugins are built around
 - `docs/oauth-grants.md` — evidence behind `ACCEPTED_GRANTS` in `test/auth.test.ts`
 - `docs/open-questions.md` — everything unresolved, and what would settle each
+- `docs/releasing.md` — version plans, the release PR, and how merging it publishes
 - `docs/package-exports.md`, `docs/dependency-hygiene.md`
 
 Both directories are called `docs/`, so a pointer in code disambiguates by its first

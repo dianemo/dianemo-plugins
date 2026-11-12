@@ -4,8 +4,9 @@
 
 ## Packages Touched
 
-**REQUIRED** | List the workspaces this changes, and say whether each needs a version
-bump. Write `None — repo-level only` if nothing under `packages/` changed.
+**REQUIRED** | List the workspaces this changes, with the bump each takes in the version
+plan (`npm run version-plan`). Write `None — repo-level only` if nothing under
+`packages/` changed.
 
 ## Changes Made
 

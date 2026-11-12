@@ -2,13 +2,17 @@
 
 Findings about core that cost real time to establish, and that more than one plugin
 is built around. Each was verified by reading core's shipped `dist/`, at
-`@dianemo/core@^2.0.0`. Line references are to that build and will drift; the
-quoted code is the durable part.
+`@dianemo/core@2.1.1` unless a section names another version. Line references are
+to that build and will drift; the quoted code is the durable part.
 
-## `refreshConfig` is deep-copied, so it cannot hold a function
+<a id="refreshconfig-is-deep-copied-so-it-cannot-hold-a-function"></a>
 
-`client/methods/authenticate.js` runs a refresh config's own interceptor against a
-`structuredClone` of the object that _contains_ it:
+## Before core 2.1.1, a `refreshConfig` could not hold a function
+
+Every package here declares a peer of `@dianemo/core ^2.0.0`, so a consumer may
+still be on 2.0.0 or 2.1.0, and in both `client/methods/authenticate.js` runs a
+refresh config's own interceptor against a `structuredClone` of the object that
+_contains_ it:
 
 ```js
 const refreshConfig = baseConfig.requestInterceptor
@@ -16,20 +20,26 @@ const refreshConfig = baseConfig.requestInterceptor
   : baseConfig;
 ```
 
-`structuredClone` cannot clone a function, so any `requestInterceptor` inside
-`refreshConfig` throws `DataCloneError` before a single request leaves the
-process. The copy is deliberate on core's part — the config is shared by every
-grant on the client, and an interceptor writing into `config.data` would corrupt
-the `{{…}}` placeholders for all of them.
+`structuredClone` cannot clone a function, so on those versions any
+`requestInterceptor` inside `refreshConfig` throws `DataCloneError` before a
+single request leaves the process.
 
-`requestOptions.requestInterceptor` is a different thing and is safe:
+Core 2.1.1 copies with `deepCloneWithFunctions` instead, and the interceptor runs
+([dianemo#11](https://github.com/dianemo/dianemo/pull/11)). It is still handed a
+copy, deliberately — the config is shared by every grant on the client, and an
+interceptor writing into `config.data` would corrupt the `{{…}}` placeholders for
+all of them.
+
+`requestOptions.requestInterceptor` is a different thing and is safe on every 2.x:
 `client/methods/handleRequest.js` calls it on the live `request.config` with no
 clone.
 
-**Consequence for a plugin:** anything per-request in a refresh config has to be a
-value minted at template-build time, in `refreshConfig.customHeaders`. Per-request
-work belongs in `requestOptions.requestInterceptor`, where `config.requestId` is
-available and is a better correlation id than a fresh UUID anyway.
+**Consequence for a plugin:** while the peer range admits a core older than 2.1.1,
+anything per-request in a refresh config has to be a value minted at
+template-build time, in `refreshConfig.customHeaders`. Per-request work belongs in
+`requestOptions.requestInterceptor`, where `config.requestId` is available and is
+a better correlation id than a fresh UUID anyway. A plugin that wants an
+interceptor in its `refreshConfig` has to raise its own peer to `^2.1.1` first.
 
 Walmart shipped this bug: it was the only plugin with an interceptor inside
 `refreshConfig`, and all 20 of its request functions threw. amazon-spapi's sits in

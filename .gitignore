@@ -13,3 +13,7 @@ coverage/
 
 # Vendor API specs kept locally for reference; not ours to redistribute.
 vendor-specs/
+
+# Nx local state; .nx/version-plans is tracked.
+.nx/cache/
+.nx/workspace-data/
