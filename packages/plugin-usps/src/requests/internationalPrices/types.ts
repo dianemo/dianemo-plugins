@@ -81,15 +81,23 @@ export interface UspsInternationalPriceExtraServiceRateQuery {
   accountNumber?: string;
 }
 
-export interface UspsInternationalPriceExtraServiceRateDetails {
-  extraServices?: Array<{
-    SKU?: UspsInternationalPriceSKU;
-    price?: UspsInternationalPricePrice;
-    priceType?: UspsInternationalPricePriceType;
-    extraService?: 370 | 813 | 820 | 826 | 857 | 930 | 931 | 955;
-    name?: UspsInternationalPriceExtraServiceName;
-    warnings?: UspsInternationalPriceWarningsList;
-  }>;
+export interface UspsInternationalPriceExtraServiceDetail {
+  SKU?: UspsInternationalPriceSKU;
+  price?: UspsInternationalPricePrice;
+  priceType?: UspsInternationalPricePriceType;
+  /** The spec lists integers; USPS's examples return the code as a string (`"930"`). */
+  extraService?: string | number;
+  name?: UspsInternationalPriceExtraServiceName;
+  warnings?: UspsInternationalPriceWarningsList;
+}
+
+/**
+ * The spec wraps the rows in `extraServices`; USPS's README example answers with
+ * one bare row (`SKU`, `price`, `extraService`, ...). Both shapes are readable
+ * here: the row's own fields, or the wrapper.
+ */
+export interface UspsInternationalPriceExtraServiceRateDetails extends UspsInternationalPriceExtraServiceDetail {
+  extraServices?: UspsInternationalPriceExtraServiceDetail[];
 }
 
 export interface UspsInternationalPriceRateListQuery {

@@ -1,7 +1,8 @@
 # USPS APIs (v3)
 
-Findings behind `@dianemo/plugin-usps`. Everything cited here is USPS's own
-developer portal, checked 2026-08-25.
+Findings behind `@dianemo/plugin-usps`. Everything cited here is USPS's own: the
+developer portal (checked 2026-08-25), the OpenAPI specs (downloaded 2026-11-12) or
+USPS's published example repository (checked 2026-11-12). Each section says which.
 
 ## Rate limits
 
@@ -69,11 +70,41 @@ person to go looking does not repeat the search:
   quota, no token lifetime.
 - **`https://www.usps.com/business/web-tools-apis/onboarding-guide.pdf`** — no
   rate limit anywhere in it, and no payment-token lifetime.
+- **`https://github.com/USPS/api-examples`** (USPS's own example repository, checked
+  2026-11-12) — no quota, rate limit or token lifetime in its README, Postman
+  collection or example files. The README says access tokens expire and callers
+  should check the expiration time; its `expires_in` is the placeholder `"11111"`.
 
 So for Labels and Payments there is no figure to cite, and none is invented. Both
 sit **outside the default product** — USPS Ship enrolment and an Enterprise
 Payment Account, per the quote above — which is also why the documented 60/hour
 cannot simply be stretched to cover them.
+
+### Re-checked 2026-11-12
+
+Both getting-started pages were fetched again, through a tool that summarises
+pages, so treat the wording as near-verbatim. Nothing has changed since
+2026-08-25: `devs.usps.com/getting-started` still carries the "each with a quota
+of 60 calls per hour" sentence and omits Tracking; `developers.usps.com/getting-started`
+still has no figure and lists Tracking in the default product. No USPS page
+fetched says whether a quota is scoped to an application, a client id, a CRID or
+an IP, and none states a quota for Labels or any other non-default API.
+
+Two more USPS statements, neither with a number:
+
+- `developers.usps.com/faq`: "Each API product limits APIs access by time, scope,
+  and quota." APIs are bundled into "API products", some approved automatically
+  and some needing administrative approval. This is the only primary hint that a
+  quota belongs to a product, which is consistent with Labels having its own.
+- `developers.usps.com/terms-and-conditions` says limits are on requests "in a
+  given day" and "may be reviewed on the description pages associated with the
+  APIs". That is per day where the getting-started page says per hour. **The
+  per-API description pages were not fetched**, so whether they state figures is
+  a gap in this search, not a negative result.
+
+What would settle the scope: with a real account, call one default API until it
+returns 429, then call a different default API with the same token. If the second
+still answers, the quota is per API.
 
 ### Third-party figures — _not_ used for calibration
 
@@ -92,6 +123,19 @@ is a USPS statement:
   third-party, and a different, discontinued API. It is the only
   order-of-magnitude anchor available for label throughput and it is a weak one;
   it appears in the `:labels` comment as a ceiling, not as a source.
+
+- **"60/hour per application, shared across every endpoint, labels included."**
+  This circulates in search-engine summaries. Traced 2026-11-12, it comes from
+  one author: a vendor who runs a USPS proxy, writing in
+  `github.com/USPS/api-examples/issues/107` (2026-03-10, "what I've found through
+  testing") and repeating it on his own blog and site. No raw 429 response is
+  shown. It also claims a burst of 5 requests a minute and that token requests
+  count. Two other vendor posts say "per API" instead, equally without a USPS
+  source. **Not used**: it contradicts USPS's own "each with a quota", and its
+  claim about labels contradicts USPS listing Labels outside the default
+  product. The `:default` bucket here is one shared 60/hour bucket anyway, so
+  that group is safe under either reading; only the `:labels` figure would be
+  wrong if the claim were true.
 
 The original flag was arithmetic: 10/s is 36,000/hour, roughly **600×** the
 published 60/hour default. That ratio is what made a single shared bucket
@@ -228,6 +272,19 @@ directly and through `$ref`):
 
 No API in the `default` group declares the header.
 
+**What USPS's published examples show (USPS's own published examples,
+github.com/USPS/api-examples, checked 2026-11-12).** The header appears on four calls:
+domestic label create, domestic label edit, first-class indicia (README and Postman) and
+international label create (Postman). Every other label-group call in the examples
+omits it: label reprint and cancel, branding, IMB indicia, international reprint, cancel
+and indicia, both Open and Distribute calls, Containers, SCAN Forms and the payment
+inquiry. The spec declares it **required** on 15 Labels, 6 International Labels and 2
+Open and Distribute operations, so the examples are less strict than the spec, which is
+the usual sign of an example that was copied rather than run. The plugin keeps sending the
+token on every operation whose spec requires it; the examples do not show that any of
+those calls works without it. Containers and SCAN Forms carry no token in the examples
+either, which agrees with the spec and leaves the SCAN inference below unconfirmed.
+
 ## `manifestMid`
 
 `UspsCredentials.manifestMid` is optional and, when absent, **the field is omitted
@@ -248,6 +305,14 @@ omit the field when `manifestMid` is absent. The statement is prose, not a schem
 so it does not by itself overturn the code's choice. Open question, needing a real
 account: does USPS reject, or default, a `LABEL_OWNER` without `manifestMID`?
 
+**Corroboration, not settlement (USPS's own published examples, checked 2026-11-12).**
+All three payment-authorization examples (one README, two Postman) send `manifestMID` on
+both the `PAYER` and the `LABEL_OWNER` role, and the `LABEL_OWNER` role there also
+carries `accountType` and `accountNumber`, which the plugin's `LABEL_OWNER` omits. Each
+example is a placeholder with the field filled in, so it agrees with the prose that the
+role normally has `manifestMID`; it does not show what USPS does when it is absent. The
+question stays open and the code is unchanged.
+
 ## Where the endpoint findings come from
 
 Everything below rests on the USPS developer portal OpenAPI specs, downloaded
@@ -256,6 +321,10 @@ observed response**. No call was made against a USPS account. Where a schema, it
 examples and its prose disagree, the types follow the schema and the disagreement is
 recorded in the section for that API. A claim marked "inference" is a reading of the
 spec, not something a response confirmed.
+
+USPS's own example repository is a second, stronger-in-places source; it is described
+under [USPS's published examples](#uspss-published-examples). Where this section
+says "vendor documentation" it means the specs.
 
 Every spec lists `https://apis.usps.com` as production. Eight list **no**
 `apis-tem.usps.com` test server (read from each spec's `servers` block):
@@ -283,6 +352,71 @@ Function tables below were taken from the findings where they had one; where a
 family's findings had none, the table was **read from the source** in
 `src/requests/<family>/`, not from the spec.
 
+## USPS's published examples
+
+Source: `https://github.com/USPS/api-examples`, USPS's own GitHub organisation (last
+pushed 2026-10-29), checked **2026-11-12**. It holds a README of curl examples with
+responses (about 2,100 lines), a Postman collection of 90 requests with no saved
+responses, SCAN Form request and response files, and two response files for Locations.
+An `Error Inventory` spreadsheet, a Post Office locations interface-control document
+(`.docx`) and a 2023 Domestic Labels PDF are also in the repository and were **not
+read**: none could be opened as text here.
+
+**Strength.** Vendor-published examples: a concrete request or response, so stronger
+than a spec schema where the two disagree, but still not a response anyone here
+observed. Many are dated 2023, placeholders are redacted (`XXXX`, `"string"`,
+`{Confirmation Number}`), and the examples contradict each other in places. Where an
+example contradicts a spec schema the types accept what the example shows; where the
+example could simply be older than the spec the types admit both shapes and the section
+for that API says so. Where an example only agrees with the spec it is recorded as
+corroboration. The labels used below are "vendor documentation (spec)", "USPS's own
+published examples" and "inference"; none of them is an observed response.
+
+**Coverage.**
+
+| API                                                                                                                                                                                                                                                                                                                                                                          | In the examples                                                                                                                  |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| OAuth token, Addresses, Carrier Pickup, Containers, Domestic Labels (create, edit, indicia), Domestic Prices, International Prices, Service Standards, Shipping Options, Tracking v3                                                                                                                                                                                         | request and response in the README                                                                                               |
+| Payments authorization, SCAN Forms, Locations (drop-off, post office)                                                                                                                                                                                                                                                                                                        | request and response (SCAN and Locations as separate files)                                                                      |
+| Payment account inquiry, Adjustments, Appointments, Informed Delivery Mail and Package Campaigns, International Labels, International Service Standards, Open and Distribute, Service Standards Directory and Files, Ship Enrollment, UserInfo, Parcel Locker locations, Label branding, label reprint and cancel, IMB indicia, Tracking notifications and proof of delivery | **request only** (Postman, no response)                                                                                          |
+| Subscriptions (all eight), Logistic Shipments, QR Code, NCOA Data Services, Reconciliation Adjustments                                                                                                                                                                                                                                                                       | **not covered at all**                                                                                                           |
+| Tracking v3r2                                                                                                                                                                                                                                                                                                                                                                | one README block, which looks like a documentation error (see [Tracking](#tracking)); the Postman collection has no v3r2 request |
+
+The Postman collection also has a `POST /disputes/v3/dispute` request. That is a
+Disputes API the plugin does not implement (it covers only Subscriptions - Disputes).
+
+**What the examples do not state.** No quota, rate limit, token lifetime or
+payment-token lifetime appears anywhere in the repository (see the negative results
+under [Rate limits](#rate-limits)).
+
+**Where the examples contradict themselves.** Recorded so that a later reader does not
+take either side for settled:
+
+- The README labels the first-class indicia call `PATCH /labels/v3/indicia`; the Postman
+  collection and the spec use `POST`. The plugin uses `POST`.
+- The README Edit Label body is a brace-wrapped list of objects with no enclosing array
+  (not valid JSON); the Postman collection and the spec send an array. The plugin sends
+  an array.
+- The README Revoke example authenticates with `Bearer $TOKEN`; the Postman collection
+  uses HTTP Basic, as does the spec.
+- The README Carrier Pickup update response spells `streetAdress` and `ZIPLus4`; every
+  other pickup example spells `streetAddress` and `ZIPPlus4`. The Postman PUT body wraps
+  the pickup in `carrierPickupRequest`; the README PUT body does not.
+- `postoffice-locator-v3-response.json` is **not valid JSON**: a trailing comma precedes
+  the closing brace (line 2990), and the object has only `locations`, no `metadata` or
+  `warnings`.
+- The README SCAN response (`SCANForm-*-response.json`) is multipart with parts named
+  `Scan Form Response` and `label`; the spec's multipart schema names them
+  `SCANFormMetaData` and `SCANFormImage`. Its `fromAddress.address` has
+  `streetAddress` and `secondaryAddress` swapped relative to the request, and
+  lower-case `zipCode` and `zipPlus4`.
+- Several README requests omit headers the spec lists: label create, edit and indicia
+  carry `X-Payment-Authorization-Token`; reprint, cancel, branding, IMB indicia,
+  international reprint, cancel and indicia, Open and Distribute, Containers and SCAN
+  Forms do not (see [Payment token](#the-labels-interceptor-and-the-payment-token)).
+- The Postman Addresses requests carry an empty `x-user-id` header that no spec lists;
+  it is not sent.
+
 ## OAuth and UserInfo
 
 Specs: "Open Authorization (OAuth 2.0) 3.0" v3.1.5, "Userinfo (OAuth 2.0)" v3.0.4.
@@ -306,6 +440,26 @@ The spec confirms every part of the existing `src/client.ts` auth block:
   grant returns no refresh token.
 - The spec states no rate limit for the token endpoint; 429 "spike arrest" responses
   carry `Retry-After`.
+
+**What USPS's published examples show (USPS's own published examples, checked
+2026-11-12).** Corroboration unless stated:
+
+- The client-credentials request is `POST /oauth2/v3/token` with
+  `Content-Type: application/json` and a body of `client_id`, `client_secret` and
+  `grant_type`: exactly what `src/client.ts` sends. No `scope` in the example either.
+- The token response shows `expires_in` and `issued_at` as **strings** (`"11111"`,
+  `"1111111111111"`), where the spec says integers. Core reads `Number(expires_in)` in
+  `authenticate.js` of `@dianemo/core`, so a numeric string is accepted and a bad one
+  falls back to a default lifetime with a logged warning. Nothing changed. The example
+  values are placeholders, so whether live responses send strings is not shown.
+- The authorization-code and refresh examples show the field names the spec lists
+  (`refresh_token`, `refresh_token_issued_at`, `refresh_token_status`,
+  `refresh_token_expires_in`, `refresh_count`) with `refresh_token_issued_at` and
+  `refresh_token_expires_in` as numbers.
+- **Contradiction.** The README Revoke example sends `Authorization: Bearer $TOKEN`; the
+  Postman collection uses HTTP Basic, as does the spec. The spec and Postman agree, so
+  `revokeUspsToken` would use Basic, and the reasons below for not adding it are
+  unchanged.
 
 ### Authorization code grant
 
@@ -367,6 +521,9 @@ Revisit if the authorization code grant is ever added.
   app's default-scope token includes `openid`. The plugin sends no `scope`.
 - The spec states no quota. The path summary copies RFC 7009 revocation wording, a
   copy-paste error in the spec; ignored.
+- USPS's published examples (Postman only, no response) call both `GET` and `POST` with
+  no body, corroborating that the `POST` carries nothing a caller could vary. The
+  open questions above stay open: no example shows a `sub` or any claim.
 
 ## Payments
 
@@ -394,6 +551,17 @@ function matches. Role rules are in the spec's **prose, not its schema**: `PAYER
 `uspsAccountNumber` metadata, so it is not token-gated. Response `PaymentAccount`:
 `accountType`, `accountNumber`, `permitNumber`, `permitZIP`, `nonProfitStatus`
 (permits only) and `sufficientFunds` (only when `amount` is sent). 404 is documented.
+
+**What USPS's published examples show (USPS's own published examples, checked
+2026-11-12).** The authorize request body matches `UspsAuthorizePaymentRequest` field for
+field (`roleName`, `CRID`, `MID`, `manifestMID`, `accountType`, `accountNumber`), and the
+README response is `{ paymentAuthorizationToken, roles }` with the roles echoed back,
+which is `UspsAuthorizePaymentResponse`. The README token is the placeholder
+`"XXXXXXXXXXXXXXXXXXXXXX"`. The account inquiry request in Postman is
+`GET /payments/v3/payment-account/{account}?accountType=EPS&amount=100`, matching
+`getUspsPaymentAccount`; no response is shown. The examples send `accountType` and
+`accountNumber` on `LABEL_OWNER` too, which the plugin's minted token omits (see
+[`manifestMid`](#manifestmid)); that is not shown to matter.
 
 ### Spec contradictions
 
@@ -494,9 +662,11 @@ account has confirmed whether USPS rejects branding calls without it.
     `indiciaImage`, `receiptImage`) for every content type.
 - The plugin keeps `Accept: application/vnd.usps.labels+json` for create, return and
   reprint (existing behaviour for create and reprint) and sends
-  `Accept: application/json` for the two indicia creations. **Inference, never
-  observed:** without an `Accept` the server may answer `multipart/form-data`, which a
-  JSON handler cannot return as `data`.
+  `Accept: application/json` for the two indicia creations, which it reads back as
+  bytes and accepts in either form. Without an `Accept` the server answers
+  `multipart/form-data`, which a JSON handler cannot return as `data`: stated by the
+  spec as an inference and now shown by USPS's own README create and indicia examples
+  (see [below](#what-uspss-published-examples-show)); still not observed here.
 - `DELETE /label` and `/label/{trackingNumber}` return `CancelResponse` (`disputeId`);
   `DELETE /indicia/imb/{imb}` returns `IMBCancelResponse` with `disputeID`, a different
   capitalisation. Both are kept as the spec writes them.
@@ -529,12 +699,68 @@ it required, since without it the call identifies nothing (this repo's decision)
 - `ExtraService` is an integer enum list, not `{extraServiceCode, value}` objects (see the
   audit table).
 
+### What USPS's published examples show
+
+Source: USPS's own published examples (github.com/USPS/api-examples, checked
+2026-11-12); not observed responses. The README has create, edit and first-class indicia
+with responses, dated 2023 to 2025. Postman adds reprint, cancel, IMB indicia and the
+branding calls as requests only.
+
+- **Create label (corroboration).** The README request (`POST /labels/v3/label`, no
+  `Accept`) has the spec's field names and nesting: `imageInfo`, `toAddress`,
+  `fromAddress`, `packageDescription` with `weightUOM: "lb"`, `dimensionsUOM: "in"`,
+  `extraServices: [920]` as integers and `packageOptions.packageValue`. Its response is
+  `multipart/form-data` with a JSON part `labelMetadata` and a PDF part `labelImage`:
+  the multipart form the spec lists first, and what a request without a vendor `Accept`
+  gets. The `labelMetadata` fields match `UspsLabelMetadata` (`routingInformation`
+  string, `zone` the string `"01"`, `postage` number, `commitment.name` and
+  `scheduleDeliveryDate`, `extraServices[]` of `name`, `price`, `SKU`, `links[]` with
+  `rel` as an array). One extra field, `parcelLockerNumber` (`""`), was not in the schema
+  and is now optional on `UspsLabelMetadata`.
+- **The example does not show what `application/vnd.usps.labels+json` returns.** No
+  example uses the vendor type, so the flat shape `createLabel` types is still the spec's
+  word alone.
+- **Edit label.** The README response is a plain JSON object (not multipart) with the
+  `UspsLabelMetadata` fields, including `labelBrokerID: ""`; it corroborates
+  `editLabel`'s return type. The paths `/packageDescription/weight`, `length`, `height`,
+  `width`, `girth`, `processingCategory`, `containers` and `rateIndicator` match
+  `UspsLabelEditOperation`, with `containers` carrying `{ containerID, sortType }`. The
+  README body is not valid JSON (no enclosing array); Postman sends an array.
+- **First-class indicia: a real contradiction, fixed.** The README response is
+  `multipart/form-data` from a request with no `Accept`: a JSON part named
+  `indiciaMetadata` holding the **flat** metadata (`SKU`, `postage`, `fees`, `weight`),
+  then PDF parts `receiptImage` and `indiciaImage`, the PDFs shown as base64 text with
+  no `Content-Transfer-Encoding`. The plugin had sent `Accept: application/json` and typed
+  the result as the spec's nested JSON document, which a multipart body would have
+  broken. The spec text says `Accept` changes only the metadata part of a multipart
+  body, and no example shows `application/json` returning a single document. Both
+  indicia creations now request the body as bytes (`responseType: "arraybuffer"`), keep
+  `Accept: application/json`, and fold either form into the same nested type
+  (`readIndiciaBody` in `src/requests/labels/utils.ts`): multipart parts become
+  `indiciaMetadata`, `indiciaImage` and `receiptImage`, the images as base64 strings. An
+  unreadable body throws `USP_0095`. Not breaking against v2.0.0, which had no indicia.
+  The cost: a failure status reaches the caller with a `Buffer` body in the error's
+  `originalError`, not a parsed object.
+- **Indicia method.** The README says `PATCH /labels/v3/indicia`; Postman and the spec
+  say `POST`. The plugin uses `POST`.
+- **Not exemplified at all:** reprint responses (either content type), cancel
+  responses, IMB indicia responses, any `vnd.usps.labels+json` body, branding responses,
+  `X-Idempotency-Key` (no example sends it), and the return label.
+
 ### Open questions needing a real account
 
-- Whether USPS defaults to `multipart/form-data` without an `Accept` header (the plugin
-  never relies on it).
-- Whether branding operations really need the payment token.
+- Whether branding operations really need the payment token. The examples do not help:
+  none of them carries the header on a branding call (see
+  [the payment token](#the-labels-interceptor-and-the-payment-token)).
 - Whether USPS enforces the `X-Idempotency-Key` UUID format on cancel by key.
+- Whether `application/vnd.usps.labels+json` returns the flat single JSON document the
+  spec describes. No example uses it.
+- Whether `Accept: application/json` on indicia returns the nested single document or
+  multipart; the plugin handles either.
+
+Settled by USPS's published examples (not observed): a create or indicia request with no
+`Accept` header is answered with `multipart/form-data`. The plugin never relies on that
+default.
 
 ### Audit of pre-existing types (v1.0.0 to now)
 
@@ -563,6 +789,7 @@ positional next to `clientName`, against the repo rule, because they are publish
 | `UspsLabelReprintRequest.imageInfo`: shared `UspsImageInfo` to `UspsLabelReprintImageInfo` (drops `receiptOption`, `returnLabel`, `includeLabelBrokerPDF`, `addImageComments`, which the reprint schema does not have)                                  | breaking only for callers that passed those                                |
 | `UspsErrorResponse` removed from `labels/types.ts` (the shared `../types.ts` exports the same name; both under `export *` was a TS2308 conflict)                                                                                                        | non-breaking (still exported from the package)                             |
 | `voidLabel` and `reprintLabel` URL-encode `trackingNumber`                                                                                                                                                                                              | non-breaking                                                               |
+| `UspsLabelMetadata.parcelLockerNumber` added (from the README create example)                                                                                                                                                                           | non-breaking                                                               |
 
 ## International
 
@@ -624,6 +851,19 @@ Servers `https://apis.usps.com/international-labels/v3` and a testing server
   `CustomsForm`, ...) are prefixed `UspsInternationalLabel`.
 - Open question needing an account: whether the duties and taxes prepay detail is returned
   under `vnd+json` when `prepayDutiesTaxesFees` is true.
+- **USPS's published examples** (github.com/USPS/api-examples, checked 2026-11-12;
+  Postman only, request without a response). The create request has the field names and
+  nesting `UspsInternationalLabelRequest` has (`toAddress` with `postalCode`,
+  `province`, `country`, `countryISOAlpha2Code`; `packageDescription` with
+  `packageOptions.nonDeliveryOption`; `customsForm.contents[]` with `countryofOrigin`
+  lower-case `o`, as the type has it). One discrepancy: its `imageInfo` carries
+  `packageNumber` (5) and `totalPackages` (50), which this spec's `imageInfo` schema
+  does not list; both are now optional on `UspsInternationalLabelImageInfo`
+  (non-breaking; the domestic reprint schema lists the same pair). Only create carries
+  `X-Payment-Authorization-Token` there; reprint, cancel and indicia do not (see
+  [the payment token](#the-labels-interceptor-and-the-payment-token)). No response is
+  shown for any of the six operations, so the `vnd+json` and multipart questions above
+  are unchanged.
 
 ### International Prices
 
@@ -655,7 +895,25 @@ body and response and no query parameters.
   untyped).
 - `ExtraServiceRateQuery.itemValue` is a `string` in the spec, while
   `TotalRatesQuery.itemValue` and `LetterRatesQuery.itemValue` are numbers. Mirrored as
-  written; likely a spec inconsistency (inference).
+  written; likely a spec inconsistency (inference). **Corroborated** by USPS's published
+  examples (github.com/USPS/api-examples, checked 2026-11-12): the README and Postman
+  extra-service request sends `"itemValue": "500"` while total rates sends `300`.
+- **Extra-service response shape (USPS's published examples; contradiction with the spec,
+  types now admit both).** The spec wraps the rows in `extraServices`. The README example
+  answers with one bare row (`SKU`, `priceType`, `price`, `extraService: "930"`, `name`,
+  `warnings`), and its `extraService` is the string `"930"`, where the spec lists
+  integers. `UspsInternationalPriceExtraServiceRateDetails` now carries the row's own
+  fields and the optional `extraServices` wrapper, and `extraService` is
+  `string | number`. Not breaking against v2.0.0, which had no International Prices.
+  The example is dated 2023 and sends the single `extraService` key; it may predate the
+  array form.
+- **Corroboration.** The base-rates, base-rates-list and total-rates requests and
+  responses match the types: `rates[]` and `totalBasePrice` at the top (base rates), or
+  `rateOptions[]` each with `rates[]` and `totalBasePrice` (list), plus `totalPrice` and
+  `extraServices[]` with string `extraService` codes (total). Response `priceType` is
+  `COMMERCIAL_BASE` on list and total rows, as the types allow; `endDate` is `""`;
+  `dimWeight` is a number. The README sends `destinationEntryFacilityType: "NONE"`
+  and `rateIndicator: "SP"` as the type lists.
 
 ### International Service Standards
 
@@ -671,6 +929,10 @@ Required query `countryCode` (two letters, pattern `^([a-zA-Z]){2}$`) and `mailC
 (three international classes). Response `{ countryCode, mailClass,
 serviceStandardMessage }`, all optional in the spec. Documented errors are 400, 404 and
 500 only (no 401 or 429). Group `default` by the repo's decision; no quota stated.
+
+USPS's published examples (checked 2026-11-12) show the request only (Postman,
+`?countryCode=CA&mailClass=FIRST-CLASS_PACKAGE_INTERNATIONAL_SERVICE`), which matches the
+function; there is no example response.
 
 ## Addresses, prices, shipping options and service standards
 
@@ -767,13 +1029,71 @@ only. None requires `X-Payment-Authorization-Token`, and no operation here sets
   is a plain GET on `signedURL` and is **not** done by this plugin (it is outside the USPS
   API host and needs no OAuth).
 
+### What USPS's published examples show for addresses, prices and shipping options
+
+Source: USPS's own published examples (github.com/USPS/api-examples, checked
+2026-11-12), README and Postman. They are dated 2023 to 2025 and are not observed
+responses.
+
+**Corroboration.**
+
+- Addresses: the three request paths and query names (`streetAddress`,
+  `secondaryAddress`, `city`, `state`, `ZIPCode`, `ZIPPlus4`; `ZIPCode` alone for
+  city-state; `streetAddress`, `city`, `state` for zipcode) match. The address example
+  sends only `streetAddress`, `city` and `state` plus optionals, so `state` optional on
+  `/address` is not contradicted. `additionalInfo` in the example uses `deliveryPoint`,
+  `carrierRoute`, `DPVConfirmation`, `DPVCMRA`, `business`, `centralDeliveryPoint` and
+  `vacant`, all typed. `corrections[].code` is `""` and `matches[].code` is `"31"`, both
+  strings as typed.
+- Domestic Prices: request field names and nesting for base rates, total rates, base
+  rates list (both `mailClass` and `mailClasses` in Postman) and letter rates match, and
+  the total-rates request carries no `processingCategory`, `rateIndicator` or
+  `destinationEntryFacilityType`, so the v1.0.0 removal agrees with the example. Response
+  rows have `endDate: ""` throughout and no `null`, so the v1.0.0 `endDate: null`
+  typing has no support in the examples. `totalPrice`, `totalBasePrice`, `rates[]` and
+  `extraServices[]` inside each `rateOptions[]` entry match `UspsTotalRatesOption`.
+- Shipping Options: the request (`pricingOptions[].paymentAccount`, `packageDescription`
+  with `girth`, `extraServices: [365]`, `packageValue`, `mailingDate`) and the response
+  (`shippingOptions[].mailClass`, `rateOptions[]` with `commitment.name` and
+  `scheduleDeliveryDate`, `totalPrice`, `rates[]` with `dimensionalWeight` and
+  `endDate: ""`, `extraServices[]` with `SKU: "NA"`) match. The response normalises
+  `"38746 0230"` to `"38746-0230"`. The README curl sends no `Content-Type`; the plugin's
+  client sets JSON.
+- Service Standards: both requests use the typed query names
+  (`serviceTypeCodes=925` as a bare string).
+
+**Contradictions between the spec and the examples; the types now admit both.**
+
+| API and field                                                         | Spec says                  | Example shows                                                                                                        | Change                                                                                    |
+| --------------------------------------------------------------------- | -------------------------- | -------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Domestic extra-service search request key (single code)               | `extraServices: <integer>` | `extraService: 415` (README and Postman)                                                                             | `extraService` added to `UspsRateExtraServiceSingleQuery`                                 |
+| Domestic extra-service search response                                | array                      | one bare object, with a lower-case `sku`                                                                             | overloads: array query returns an array, single-code query returns object or array; `sku` |
+| Letter rates `mailClass`, `zone`, `dimWeight`                         | `FIRST-CLASS_MAIL` only    | `USPS_GROUND_ADVANTAGE`, `zone: null`, `dimWeight: null`                                                             | `UspsRateLetterDetail` widened; `description` added                                       |
+| Service Standards estimates `cutOffTime`, `serviceStandard`           | strings                    | numbers (`1700`, `2`)                                                                                                | `string \| number`                                                                        |
+| Service Standards ZIP fields (`ZIPCode`, `ZIPPlus4`, `originZIPCode`) | strings                    | numbers (`10018`, `9998`)                                                                                            | `string \| number`                                                                        |
+| Service Standards facility `closes`, `facilityType`                   | `closes`; `POST_OFFICE`    | `closeTimes` with mixed numbers and `"0000"`; `"POST OFFICE"`                                                        | `closeTimes` and the spaced value added; close times `string \| number`                   |
+| Addresses: absent fields                                              | omitted or typed strings   | explicit `null` on every non-applicable field; four extra keys `postalCode`, `province`, `country`, `countryISOCode` | nullable fields and the four keys added                                                   |
+
+All are new in this release, so none is breaking against v2.0.0 except where noted under
+the audit below (v2.0.0 had `validateAddress` types; making `firm` and the address
+fields nullable widens what a reader must handle).
+
+The extra-service result is the one place a caller sees a union. The deprecated
+single-code query is the form the examples use, and the spec says it is removed
+(June 2025); the array query keeps the spec's array type.
+
 ### Open questions (need a real account)
 
 - Whether USPS tolerates the three fields v1.0.0 sent on total-rates (the spec says
   `additionalProperties: false`; presumably 400).
-- Whether `ZIPPlus4: null` actually occurs, and whether `endDate: null` (the v1.0.0 typing)
-  occurs on rate rows.
 - Whether the Directory and Files APIs count against the same 60/hour as the others.
+- Whether the extra-service search answers with an object or an array for the array
+  query (the examples only show the single-code query).
+- Settled by the examples (still not observed): `endDate` is `""`, not `null`, on every
+  rate row shown. Whether `ZIPPlus4: null` occurs is still open: the examples show a
+  string for `ZIPPlus4` wherever it appears in an Addresses response.
+- Not exemplified at all: Service Standards Directory and Files responses, the
+  international shipping-options request, and any 429.
 
 ### Audit of pre-existing types
 
@@ -798,6 +1118,7 @@ Methods, URLs, error codes, request names and function signatures of `validateAd
 | `UspsRateOption`: `totalBasePrice`, `rates` optional; `totalPrice`, `extraServices` moved to new `UspsTotalRatesOption`                                                                                                               | breaking (readers of base-list options)      |
 | `UspsRateDetail`: all fields optional; `priceType` gains `COMMERCIAL_BASE` and `COMMERCIAL_PLUS`; `processingCategory` and `destinationEntryFacilityType` become unions; `warnings` kept although only `BaseRateDetails` documents it | breaking (readers)                           |
 | `UspsRateFee`, `UspsExtraServiceDetail`, `UspsRateWarning`: fields optional                                                                                                                                                           | breaking (readers)                           |
+| `UspsDomesticAddress` and `firm` in the address responses: absent fields typed `\| null`; `postalCode`, `province`, `country`, `countryISOCode` added (from the README example)                                                       | breaking (readers must handle `null`)        |
 
 ## Tracking
 
@@ -849,12 +1170,20 @@ The two specs carry the same title and version string but are different APIs. On
 ### Spec contradictions and quirks
 
 - v3 `mailClass` is an enum of 18 values, but its description says it "will also include
-  the service standard message", which an enum cannot. The type follows the schema; a real
-  response could fall outside the union.
+  the service standard message", which an enum cannot. **Settled by USPS's published
+  example (github.com/USPS/api-examples README, checked 2026-11-12), not observed:** the
+  detail example returns `"mailClass": "Priority Mail<SUP>&reg;</SUP>"`, display text with
+  HTML markup, and `"services": "USPS Tracking<SUP>&#174;</SUP>"` likewise. The type is now
+  the 18 constants plus any string (`UspsTrackingMailClassValue`), which is the v2.0.0
+  `string` made autocomplete-friendly. Do not match on the text or parse its markup.
 - v3 declares `authorizedAgent`, `emailEnabled`, `proofOfDeliveryEnabled`, `restoreEnabled`,
   `RRAMenabled` and `RREEnabled` as `string`, while `trackingProofOfDeliveryEnabled`,
   `redeliveryEnabled`, `carrierRelease` and `eSOFEligible` are `boolean`. The types follow
-  the schema; the earlier types had them all `boolean`.
+  the schema; the earlier types had them all `boolean`. **Corroborated** by the README v3
+  detail example, where `emailEnabled`, `kahalaIndicator`, `proofOfDeliveryEnabled`,
+  `restoreEnabled`, `RRAMEnabled`, `RREEnabled` and the event's `authorizedAgent` all
+  arrive as the strings `"true"` and `"false"`. The example spells the field `RRAMEnabled`
+  (capital E) where the spec says `RRAMenabled`; both are now typed.
 - v3 `extendRetentionExtraServiceCodeOptions` items have no properties and are typed
   `Record<string, unknown>[]`.
 - The v3 notification and proof-of-delivery requests carry deprecated fields beside their
@@ -871,24 +1200,57 @@ The two specs carry the same title and version string but are different APIs. On
 - The notification and proof-of-delivery operations are 202 acknowledgements; the spec gives
   no status or polling operation.
 
+**What USPS's published examples show** (github.com/USPS/api-examples, checked
+2026-11-12; not observed responses):
+
+- **Summary.** The README summary example (`?expand=summary`, lower case) returns a legacy
+  Web Tools envelope, `{ TrackResults: { RequestSeqNumber, TrackInfo: { "@ID",
+TrackSummary } } }`, none of the spec's `eventSummaries` fields. `UspsTrackingSummary`
+  now has an optional `TrackResults`. It may be an old example; which shape a live account
+  gets is open. The plugin sends `expand` upper-case (`SUMMARY`, `DETAIL`), as Postman does.
+- **Detail.** Beyond the settled fields above: `mailType` is `"DM"`, outside the four-value
+  enum (the type now admits any string); `trackingEvents[]` carries `null` for
+  `eventCountry`, `firm`, `name` and a key `additionalProp` that is in no schema (typed
+  `string | null` and `unknown`); `services` is a single string where the spec says an
+  array (typed `string | string[]`). `serviceTypeCode` is the string `"14"`, as typed.
+- **"Tracking 3.2" is probably a documentation error.** The README block for v3r2 shows
+  `GET https://apis.usps.com/tracking/v3r2/tracking/` (with an unterminated quote) carrying
+  a JSON array in `--data`, no `{trackingNumber}` in the path, and answers with the **v3**
+  flat detail shape (`emailEnabled: "true"`, `trackingEvents[]` with no grouping, `services`
+  as an array). The spec says v3r2 is `POST /tracking` with that array body and a grouped
+  response. A `GET` with a body, a v3 response to a v3r2 URL and the missing path segment
+  all point at a copy of the v3 block with the URL edited, so it is recorded, not trusted;
+  the v3r2 types and functions follow the spec and are unchanged. The Postman collection
+  has no v3r2 request.
+- **Postman** sends the notification body (`uniqueMailPieceId`, `mailPieceIntakeDate`,
+  `notifyEventTypes: ["EMAIL_ALERT"]`, `firstName`, `lastName`, `notifications` of
+  `{email}` and `{cellNumber}`) and the proof-of-delivery body (`uniqueMailPieceID`,
+  `tableCode`, `requestType: "email"`, `email[]` and the address fields) exactly as the
+  types have them, with `X-Forwarded-For` present but disabled, so optional. Neither
+  response is shown.
+
 ### Audit of pre-existing types
 
 `trackPackage(clientName, trackingNumber)` keeps a bare string after `clientName`, against
 the repo's own rule, because it is published.
 
-| Change                                                                                                                                                                                                                                                 | Class        |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------ |
-| `UspsTrackingDetails.trackingNumber` required to optional                                                                                                                                                                                              | breaking     |
-| `mailClass` `string` to 18-value union                                                                                                                                                                                                                 | breaking     |
-| `emailEnabled`, `proofOfDeliveryEnabled`, `restoreEnabled`, `RRAMenabled`, `RREEnabled` `boolean` to `string`                                                                                                                                          | breaking     |
-| `UspsTrackingEvent.authorizedAgent` `boolean` to `string`                                                                                                                                                                                              | breaking     |
-| Added `ADPScripting`, `archiveRestoreInfo`, `associatedLabel`, `kahalaIndicator`, `approximateIntakeDate`, `uniqueTrackingId`, `predictedDeliveryTimeStamp`, `accessControl`, `extendRetentionPurchasedCode`, `extendRetentionExtraServiceCodeOptions` | non-breaking |
-| `enabledNotificationRequests` now named types; `EMail` gains `firstDisplayable` and `otherActivity`; option keys are fixed instead of `Record<string, boolean>`                                                                                        | non-breaking |
-| `trackPackage` gains optional options (`expand`, `destinationZIPCode`, `mailingDate`, `forwardedFor`)                                                                                                                                                  | non-breaking |
+| Change                                                                                                                                                                                                                                                 | Class                                                                      |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------- |
+| `UspsTrackingDetails.trackingNumber` required to optional                                                                                                                                                                                              | breaking                                                                   |
+| `mailClass` `string` to 18-value union, then to the union plus any string (`UspsTrackingMailClassValue`)                                                                                                                                               | non-breaking against v2.0.0 (still accepts any string)                     |
+| `emailEnabled`, `proofOfDeliveryEnabled`, `restoreEnabled`, `RRAMenabled`, `RREEnabled` `boolean` to `string`                                                                                                                                          | breaking                                                                   |
+| `UspsTrackingEvent.authorizedAgent` `boolean` to `string`                                                                                                                                                                                              | breaking                                                                   |
+| Added `ADPScripting`, `archiveRestoreInfo`, `associatedLabel`, `kahalaIndicator`, `approximateIntakeDate`, `uniqueTrackingId`, `predictedDeliveryTimeStamp`, `accessControl`, `extendRetentionPurchasedCode`, `extendRetentionExtraServiceCodeOptions` | non-breaking                                                               |
+| `enabledNotificationRequests` now named types; `EMail` gains `firstDisplayable` and `otherActivity`; option keys are fixed instead of `Record<string, boolean>`                                                                                        | non-breaking                                                               |
+| `trackPackage` gains optional options (`expand`, `destinationZIPCode`, `mailingDate`, `forwardedFor`)                                                                                                                                                  | non-breaking                                                               |
+| `services` `string[]` to `string \| string[]`; `mailType` enum widened to any string; event `eventCountry`, `firm`, `name` may be `null`; `RRAMEnabled`, `additionalProp` and the summary's `TrackResults` added (all from the README examples)        | breaking for readers of `services` (v2.0.0 had `string[]`); the rest widen |
 
 ### Open questions (need a real account)
 
-- Is v3 `mailClass` really the enum, or human-readable text?
+- Settled by USPS's published example (not observed): v3 `mailClass` is human-readable
+  text with HTML markup, not the enum.
+- Which summary shape a live account returns: the spec's `eventSummaries` or the README's
+  legacy `TrackResults` envelope.
 - Does v3r2 tracking have a test host?
 
 ## Pickups
@@ -921,11 +1283,54 @@ The first four rows were read from the source, not the spec.
 - `eligibility` returns a `PickupAddress`. `PickupConfirmation.confirmationNumber` is
   `readOnly`, and all its fields are optional.
 
-### Spec contradiction
+### Spec contradiction, settled by an example
 
 The GET 200 schema is an array of `PickupConfirmation`, while its description and the PUT
-body describe one. The type follows the schema, so `getPickup` returns
-`pickup: UspsPickupDetails[]`.
+body describe one. USPS's own README example (github.com/USPS/api-examples, checked
+2026-11-12; not an observed response, and dated 2023) answers the GET with **one object**,
+and v2.0.0 on `origin/master` typed `getPickup` as `pickup: UspsPickupDetails`, one object.
+`getPickup` therefore returns `{ pickup: UspsPickupDetails; etag }` again. Because the spec
+says array, a one-element array body is unwrapped to its element, and any other count
+(including empty) throws `USP_0096` rather than being trimmed: a confirmation number names
+one pickup. This is the published v2.0.0 shape, so it is not breaking against v2.0.0; it
+reverses the array type introduced earlier in this release.
+
+### What USPS's published examples show for pickups
+
+Source: USPS's own published examples (github.com/USPS/api-examples, checked 2026-11-12;
+README 2023 and a Postman collection). Not observed responses.
+
+- **Create, get and update responses are flat**, not nested: `confirmationNumber`,
+  `pickupAddress`, `packages`, `estimatedWeight`, `pickupLocation` and `pickupDate` sit
+  side by side. The spec's `PickupConfirmation` nests the pickup under
+  `carrierPickupRequest`, and the Postman PUT body does too (with `confirmationNumber` and
+  `pickupDate` beside it). `UspsPickupConfirmation` now carries both: `carrierPickupRequest`
+  and the flat fields. The README PUT body is flat, so `updatePickup` accepts either.
+  Which the live API prefers is open; the two examples disagree.
+- **Responses use strings for numbers**: `packageCount: "1"` and `estimatedWeight: "5"`,
+  with all six package types echoed (`FIRST-CLASS_PACKAGE_SERVICE`, `PRIORITY_MAIL_EXPRESS`,
+  `PRIORITY_MAIL`, `RETURNS`, `INTERNATIONAL`, `OTHER`) at count `"0"`. Requests send
+  numbers. New response types (`UspsPickupResponsePackage`) admit both.
+- **Eligibility is wrapped**: `{ pickupAddress: { firstName: null, lastName: null, firm:
+null, address, contact } }` with `null` names and a contact list of `{ eMail: null }` and
+  `{ phone: null, extension: null }`. The spec says the body is a `PickupAddress`.
+  `UspsPickupEligibilityResponse` is now the address fields plus an optional
+  `pickupAddress`, with nullable names. This is the one change that is breaking against
+  v2.0.0 for readers (fields optional and nullable, where v2.0.0 had them required).
+- **Contacts.** The README create request sends `{ phone }` (and gets `{ phone, extension }`
+  back); Postman and the spec say `{ cellNumber }`. `UspsPickupContact` admits `{ phone,
+extension? }` as a third form, additive.
+- **Address.** The README create request also sends `postalCode`, `province`,
+  `streetAddressAbbreviation: "Ave"` and `cityAbbreviation`; `secondaryAddress` and
+  `urbanization` arrive as `null`. The update response spells `streetAdress` and `ZIPLus4`,
+  almost certainly typos in the example; they are admitted as optional fields so the type
+  does not claim the example is impossible, and nothing reads them.
+- **Package types.** The README uses `FIRST-CLASS_PACKAGE_SERVICE`; Postman uses
+  `USPS_GROUND_ADVANTAGE`; both are in `UspsPackageType`.
+- **ETag and If-Match.** The README and Postman GET responses are shown without headers,
+  so the `ETag` is not exemplified. PUT and DELETE send `If-Match: <etag>` in both, which
+  is what `updatePickup` and `cancelPickup` send. The README says DELETE answers `200 OK`
+  with no body. `If-None-Match` and the 304 are not exemplified.
 
 ### Audit of pre-existing types
 
@@ -933,18 +1338,23 @@ body describe one. The type follows the schema, so `getPickup` returns
 confirmationNumber, etag)` keep a bare string after `clientName`, against the repo's own
 rule, because they are published.
 
-| Change                                                                                                                                     | Class                          |
-| ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------ |
-| `getPickup` returns `pickup: UspsPickupDetails[]`                                                                                          | breaking                       |
-| `UspsPickupConfirmation.confirmationNumber` and `pickupDate` required to optional                                                          | breaking                       |
-| `UspsPickupDetails` now an alias of `UspsPickupConfirmation`                                                                               | non-breaking                   |
-| `UspsPickupEligibilityResponse` now an alias of `UspsPickupAddress`; address `ZIPPlus4` may be `null`; read-only abbreviation fields added | non-breaking except the `null` |
-| Package items gain `averageLength`, `averageWidth`, `averageHeight`, `trackingNumbers`                                                     | non-breaking                   |
-| `getPickup` gains optional `ifNoneMatch`; confirmation and tracking numbers URL-encoded                                                    | non-breaking                   |
+| Change                                                                                                                                                                                                     | Class                                                |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| `getPickup` returns `pickup: UspsPickupDetails` (one object, as in v2.0.0 and the README example; an array body is unwrapped, `USP_0096` otherwise)                                                        | none against v2.0.0                                  |
+| `UspsPickupConfirmation.confirmationNumber` and `pickupDate` required to optional                                                                                                                          | breaking                                             |
+| `UspsPickupDetails` now an alias of `UspsPickupConfirmation`                                                                                                                                               | non-breaking                                         |
+| `UspsPickupEligibilityResponse` now an alias of `UspsPickupAddress`; address `ZIPPlus4` may be `null`; read-only abbreviation fields added                                                                 | non-breaking except the `null`                       |
+| Package items gain `averageLength`, `averageWidth`, `averageHeight`, `trackingNumbers`                                                                                                                     | non-breaking                                         |
+| `getPickup` gains optional `ifNoneMatch`; confirmation and tracking numbers URL-encoded                                                                                                                    | non-breaking                                         |
+| `UspsPickupConfirmation` gains the README's flat fields (`pickupAddress`, `packages`, `estimatedWeight`, `pickupLocation`); contacts gain `{ phone }`; response types admit string counts and `null` names | non-breaking (additive)                              |
+| `UspsPickupEligibilityResponse` is the address fields (nullable) plus optional `pickupAddress`                                                                                                             | breaking for readers (v2.0.0 had the names required) |
 
 ### Open questions (need a real account)
 
-- Does `GET /carrier-pickup/{n}` return one object or an array?
+- Settled by USPS's published example (not observed): `GET /carrier-pickup/{n}` returns one
+  object. An array, as the spec says, is also handled.
+- Does the API prefer the flat or the `carrierPickupRequest`-wrapped body on PUT, and does
+  it return the same shape it was sent?
 - Does a 304 from `If-None-Match` reach the caller as an error through core? Untested.
 
 ## Locations
@@ -974,9 +1384,51 @@ the one published quota. The spec itself states no quota.
 - `generate-signed-url` returns `{ signedURL, expiry, contentLength, rangeLimit }`. The spec
   does not say what the files contain.
 
+**What USPS's published examples show** (github.com/USPS/api-examples, checked
+2026-11-12: the README requests, Postman, and the two response files
+`dropoff-location-v3-response.json` and `postoffice-locator-v3-response.json`; not
+observed responses):
+
+- **Requests.** The drop-off example is `?mailClass=PARCEL_SELECT&destinationZIPCode=30343`
+  and the post office example `?radius=1&ZIPCode=10463`; the names match. **No example sends
+  any array filter** (`postOfficeType`, `mailingService`, ...), `LAT`, `LONG`, or a
+  paging parameter, so the comma-joined encoding stays an inference. The post office
+  example sends no `Accept` header.
+- **Drop-off response** (3 entries, a bare array as typed). Corroborated:
+  `dropShipmentKey`, `facilityName`, `dropSitePhoneNumber`, `destinationZIPCode` (a
+  3-digit string such as `"303"`), `destinationEntryFacilityType`, `acceptedPackageTypes[]`
+  (`mailClass`, `processingCategory`, `palletized: "BOTH"`), `dropShipAcceptanceTimes[]`
+  (`dayOfWeek`, `times[]` of `openTime` and `closeTime` as `HH:MM`),
+  `dropShipmentFacilityDetails` (`dock`, `canopyClearance`, `liftTypes`, `ramps`,
+  `truckManeuveringArea.surfaceType`, `levelers`, `doorDetails`, `overpassDetails`),
+  `USPSConnectDetails` (`sameDayPickUp` and `nextDayPickUp` as `"0000"` strings, three
+  empty cut-off arrays) and `timeZone`. Every enum value in the file is in the types.
+  **Contradictions, types now admit both:** `facilityAddress` carries the street fields
+  directly (`{ streetAddress, city, state, ZIPCode, ZIPPlus4 }`), where the types nested
+  them as `{ address }`; and the flag is `dstObserved`, where the spec says `DSTObserved`.
+- **Post office response** (3 entries inside `{ locations }`; no `metadata`, no
+  `warnings`). The file is **not valid JSON** (a trailing comma before the closing brace;
+  parsed here after removing it). Corroborated: `facilityName`, `facilityAddress` (flat),
+  `geoCoordinates`, `postOfficeType: "POST_OFFICE"`, `distance`, `phoneNumbers`,
+  `temporaryClosure`, `temporaryClosureDate`, `specialHours[]` of `date` and `open`,
+  `parking: "STREET"`, `passports` (`photoCost`, `appointmentRequired`), `timeZone` and
+  `DSTObserved` (capital D here, unlike the drop-off file). **Contradiction:** the id is
+  `facilityId`, where the types had `facilityID`; both are typed now. `services[].service`
+  is a plain string and the example uses values no request filter offers
+  (`PO_BOX_DELIVERY_TIME`, `LAST_COLLECTION`, `RETAIL`, `LOBBY`, `CARRIER_CALL_REFERRAL`),
+  and spells three with underscores where the filters use hyphens (`PASSPORT_WALK_IN`,
+  `SELF_SERVICE_KIOSK`, `LABEL_BROKER_SELF_SERVICE_KIOSK`): a caller cannot feed a response
+  value back into a filter. Hours here are `HH:MM:SS`, and some `times[]` have only a
+  `closeTime`.
+- **Not exemplified:** parcel-locker and files responses (Postman has the parcel-locker
+  request without parameters), pagination `metadata`, `warnings`, and any 429.
+- Breaking against v2.0.0: no; Locations is new in this release and the changes are
+  additive.
+
 Open questions (need a real account): are comma-joined array filters accepted as
-`explode: false` implies; what do the `/files` entries point at, and how long is the signed
-URL valid?
+`explode: false` implies (the examples do not test it); what do the `/files` entries point
+at, and how long is the signed URL valid? Does the real post office response carry
+`metadata`, as the spec says, or only `locations`, as the example file does?
 
 ## Shipping operations
 
@@ -1029,14 +1481,46 @@ the table in the interceptor section above).
 - **Create (`POST /containers`).** The 201 is documented only as `multipart/form-data`,
   with schema `Container`. That schema has no image property: `containerID` and `warnings`
   are read-only, `imageInfo` is write-only. The spec never says where the label image sits,
-  and there is no vendor `+json` alternative. `createUspsContainerLabel` types its return as
-  the metadata part (`UspsContainerResponse`) and sends no `Accept` header.
+  and there is no vendor `+json` alternative. **USPS's published example settles the
+  layout** (github.com/USPS/api-examples README, checked 2026-11-12; not an observed
+  response): the body is multipart with a JSON part `Content-Disposition: form-data;
+name="containerMetadata"` and a part `name="labelImage"; filename="labelImage.pdf"`,
+  `Content-Type: application/pdf`. No example, spec text or Postman header offers a JSON
+  alternative (the Postman request sends no `Accept`; the `vnd.usps.labels+json` type is
+  listed for no Containers operation), so multipart is the only form.
 - Add-packages (200) returns JSON or XML `Container`. Remove-all, remove-one and manifest
   return 204 with no body (`void`).
 - `mailingDate` is a `oneOf` of `date` and `date-time`, typed `string`. `NON_MACHINABLE` is
   still listed in `processingCategory` although its description says it converts to
   `NONSTANDARD`.
-- Open: whether core returns a parseable body for multipart, and how to reach the image.
+- **How the multipart body is read.** Core's `RequestConfig` extends axios's, so
+  `responseType: "arraybuffer"` is passed through (`plugin-labelary` and `plugin-ups` use it)
+  and axios hands back a `Buffer`; text would corrupt a binary image. Core logs a `Buffer`
+  body as `[Buffer n bytes]`. A failure status therefore carries a `Buffer`, not a parsed
+  object, in the error's `originalError`. `createUspsContainerLabel` requests bytes and
+  returns `{ metadata, labelImage? }`, where `labelImage` is `{ bytes: Buffer, contentType,
+filename? }`, through `parseContainerLabelResponse` (`src/requests/containers/utils.ts`,
+  on the generic splitter in `src/requests/multipart.ts`; no new dependency). It takes the
+  boundary from the `Content-Type` header, or from the first body line when the header is
+  missing; counts a delimiter only at a line start; accepts CRLF or LF; and ignores parts it
+  does not know. A body with no boundary that parses as JSON is returned as metadata alone;
+  anything unreadable throws `USP_0094`. **A part is base64-decoded when it says
+  `Content-Transfer-Encoding: base64` or when its whole body is base64 characters.** The README
+  shows the PDF as base64 text with no such header, which a raw PDF never looks like (it
+  starts `%PDF`), and has one stray space inside the string, which the decoder tolerates;
+  whether live responses carry raw bytes or base64 is unverified, so the parser handles both.
+  Verified against the README's own multipart block (it decodes to a 5,964-byte `%PDF-1.4`
+  file) and in tests against a binary part containing every byte value, CRLF and a
+  boundary prefix. The return type changed from the metadata object to `{ metadata,
+labelImage? }`; not breaking against v2.0.0, which had no Containers.
+- **Other Containers examples** (USPS's published examples, checked 2026-11-12).
+  The add-packages request (`{ trackingNumbers: [...] }`) and response match
+  `UspsContainerResponse`; the response has `secondaryAddress: null` (now `string | null`),
+  `warnings: []`, `containerTopology: "NESTED"` and an uppercase `MID`. The create request
+  matches `UspsContainerCreateRequest` (`imageInfo` with `imageType` and `labelType`,
+  `sortType`, `destinationEntryFacilityType`, `mailClass`, `originAddress` with
+  `secondaryAddress: ""`). Postman's close-container body is `{ mailingDate, containers }`;
+  the removals carry no body. No example shows a 204.
 
 ### Open and Distribute
 
@@ -1053,6 +1537,12 @@ named `accountNumber` field.
 - `scanFormImageType` is a plain string; its allowed values (PDF, TIFF, JPG, PNG, GIF, SVG,
   NONE) appear in prose only, so it is typed `string`.
 - Open: whether the `vnd.usps.pmod+json` `Accept` returns the documented single JSON body.
+  USPS's published examples (github.com/USPS/api-examples, checked 2026-11-12) have the
+  create and close **requests** in Postman only, with no `Accept` header and no payment
+  token, and no response. Every request key is in the types (`imcbLabelType`,
+  `imcbContainerType`, `impbContainerType`, `containerMailClass`, `enclosedMailClass`,
+  `senderAddress`, `returnAddress`, `generateScanForm`, `scanFormImageType`). Nothing there
+  confirms or contradicts the inference above.
 
 ### SCAN Forms
 
@@ -1073,13 +1563,39 @@ without the header, add `metadata` and an `accountNumber` option to `UspsScanFor
   `options.idempotencyKey`. Unlike `createLabel`, it does not default to a random UUID,
   because a key the caller never sees cannot be reused on a retry.
 - Open: does `createScanForm` need the payment token despite the undeclared header?
+- **What USPS's published examples show** (github.com/USPS/api-examples, checked
+  2026-11-12; the three `SCANForm-*-request.json` and `-response.json` files plus Postman;
+  not observed responses). The three requests (label, MID and manifestMID shipment)
+  differ only in the address and in `shipment`: `{ trackingNumbers: [...] }`,
+  `{ MID }` or `{ manifestMID }`, as `UspsScanFormShipment` has them, and carry no payment
+  token and no `Accept`. Corroborated: `form`, `imageType`, `labelType`
+  (`"8.5x11LABEL"`), `mailingDate`, `entryFacilityZIPCode`, `destinationEntryFacilityType`,
+  `overwriteMailingDate`. **Contradictions, types now admit both:** the requests send
+  `entryFacilityZIPPlus4: ""` (not in the schema; now optional), and `fromAddress` is
+  **nested**, `{ firstName, lastName, firm, address: { streetAddress, ..., country,
+countryISOCode: 840 } }`, where the spec's `SCANFormAddress` is flat
+  (`UspsScanFormNestedAddress` added; `fromAddress` is the union). The responses are
+  `multipart/form-data`, the metadata part named `Scan Form Response` and the image part
+  `label` (`label.pdf`, `application/pdf`, shown as base64 text), where the spec's multipart
+  schema names `SCANFormMetaData` and `SCANFormImage`; they carry `manifestNumber` and
+  `trackingNumbers` (corroborating the flat `UspsScanFormResponse`, whose fields are the
+  metadata part's) and the response address has lower-case `zipCode` and `zipPlus4`,
+  `countryISOCode` as a string and `streetAddress` and `secondaryAddress` swapped
+  (`UspsScanFormResponseNestedAddress`). The examples show **only the multipart form**; the
+  `vnd.usps.labels+json` shape `createScanForm` requests is not exemplified, so the `Accept`
+  choice stays the spec's word. They are dated 2023 and their multipart part names differ
+  from the current spec's, so they may predate it. Unchanged: no multipart parser for SCAN,
+  because the vendor type is requested; add one like Containers' if a live account answers
+  multipart anyway.
 
 ### Logistic Shipments, Ship Enrollment, QR Code
 
 - **Logistic Shipments.** The 201 echoes the `ShipmentTracking` schema. The example
   date-times look like `2025-10-17 13:30:00 UTC`, which is not RFC 3339 despite
   `format: date-time`. Which form the server accepts is unverified.
-- **Ship Enrollment.** `MIDs` is `minItems: 1, maxItems: 1`, so it is typed as the tuple
+- **Ship Enrollment.** USPS's published examples (checked 2026-11-12) send
+  `{ "MIDs": ["123456789"] }` (Postman, no response), matching the tuple. `MIDs` is
+  `minItems: 1, maxItems: 1`, so it is typed as the tuple
   `[string]`. `program` still lists the obsolete `OUTBOUND`, `RETURNS` and `NONE`; kept,
   with a comment. A MID that is not found returns 404, per the schema description.
 - **QR Code.** The 200 is one status with two shapes (`QRCodeResponse` or
@@ -1106,6 +1622,11 @@ without the header, add `metadata` and an `accountNumber` option to `UspsScanFor
 - Reconciliation `startDate` and `endDate` are `YYYYMMDD`, and `startTime` and `endTime` are
   `HHMMSS`, plain strings in the schema.
 - Open: is Reconciliation `items` nested or flat?
+- **USPS's published examples** (github.com/USPS/api-examples, checked 2026-11-12): Postman
+  has the single-package Adjustments `GET /adjustments/v3/adjustments/:CRID/:trackingNumber/:eventType`
+  as a request only, matching `getUspsAdjustments`. **Reconciliation Adjustments, Logistic
+  Shipments, QR Code and NCOA Data Services are not in the examples at all**, so nothing
+  above is corroborated or contradicted by them.
 
 ### NCOA Data Services
 
@@ -1130,6 +1651,10 @@ documentation, not an observed response; nobody has a USPS account here.
 | Subscriptions - Tracking v3.1.17                   | `/subscriptions-tracking/v3`                    | **not listed**                  | USP_0125 to 0129     |
 | Subscriptions - Tracking v3.2.11 (v3r2)            | `/subscriptions-tracking/v3r2`                  | **not listed**                  | USP_0130 to 0134     |
 | Subscriptions - Unpaid Packages v3.0.7             | `/subscriptions-unpaid-packages/v3`             | listed                          | USP_0135 to 0139     |
+
+USPS's published examples contain **no Subscriptions request or response** (the Postman
+collection has only a `POST /disputes/v3/dispute`, a different API), so nothing in this
+section was checked against them.
 
 Within a product the codes run list, create, get, update, delete; Addresses and NCOA have
 only create, get and delete. Functions are named `<verb>Usps<Product>Subscription(s)`, for
@@ -1258,7 +1783,13 @@ v1.0.1. Vendor documentation; nothing was called against USPS.
 | Package Campaigns | `https://apis.usps.com/informed-delivery-package-campaigns` | none listed |
 
 Mail campaigns carry no version segment, unlike most USPS APIs; request URLs are
-`/informed-delivery-campaigns/campaigns/{CRID}...`. Whether the test environment serves
+`/informed-delivery-campaigns/campaigns/{CRID}...`. USPS's published examples
+(github.com/USPS/api-examples Postman, checked 2026-11-12) use these paths, with no version
+segment, for all nine mail and six package campaign requests: corroboration of the URLs,
+not of any response. Their bodies are `"string"` placeholders, so they cannot settle the
+`IMBs` and `trackingNumbers` delimiter question below (both are single strings
+`"string"`), and the mail-campaign edit body ends with a stray `"IMBs":` after its closing
+brace, so it is not valid JSON as written. Every request key is in the types. Whether the test environment serves
 these APIs is an open question needing a real account.
 
 ### Authentication and group
@@ -1364,7 +1895,11 @@ USP_0159 is unused.
   operation paths `/fast-appointments/appointment`, so the full URL repeats the segment. Only
   the availability operation is `/fast-appointments/v3/appointment-availability`. The plugin
   sends the URL exactly as the spec composes it. Inference: it may be a spec bug; only a real
-  call settles it.
+  call settles it. **Corroborated as USPS's own published example, not observed:** the
+  Postman collection (github.com/USPS/api-examples, checked 2026-11-12) uses exactly these
+  four URLs, `/fast-appointments/v3/fast-appointments/appointment` for create, update and
+  cancel and `/fast-appointments/v3/appointment-availability`, so a repeated segment is
+  what USPS's own collection sends.
 - **Auth.** The spec declares scheme `OAuth` (scope `fast-appointments`, token URL
   `/oauth2/v3/token`) but has no top-level `security` block and no per-operation security, so
   the scope is stated but attached to no operation. The plugin sends no `scope`; whether the
@@ -1377,6 +1912,17 @@ USP_0159 is unused.
   JSON.
 - `DELETE /fast-appointments/appointment` has a request BODY (`CancellationRequest`) and no
   query parameters. It is sent as `data` on a DELETE. Some proxies drop DELETE bodies; whether
-  USPS accepts it as documented is untested.
+  USPS accepts it as documented is untested. The Postman cancel request carries the same
+  body (`consigneeAppointmentID`, `shipperAppointmentRequestID`, `CRID`, `systemID`,
+  `destinationEntry`, `cancelReasonCode`, `cancelComments`), so USPS's own collection also
+  sends a DELETE with a body; that is still not a response.
 - `SlotAvailability.mailClass` enum omits `USPS_GROUND_ADVANTAGE`, which the appointment
   `mailClass` enum includes.
+- **USPS's published examples** (Postman only, no responses; checked 2026-11-12). Every
+  request key is in the types. One discrepancy: the create and update bodies put
+  `postInductionStatus`, `containerDestination3digitZIP` and
+  `containerDestination5digitZIP` inside `bedload.uspsContainerInfo`, where the schema lists
+  them only under the pallet container info. They are now optional on
+  `bedload.uspsContainerInfo` (additive). The example's `mailClass` is `PARCEL_SELECT` and
+  the availability example's is `USPS_MARKETING_MAIL`, both typed. The collection sends no
+  headers beyond bearer auth.

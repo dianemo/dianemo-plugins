@@ -667,6 +667,8 @@ export interface UspsLabelMetadata {
   labelBrokerID?: string;
   bannerText?: string;
   retailDistributionCode?: string;
+  /** An empty string in USPS's create-label example; not in the spec's schema. */
+  parcelLockerNumber?: string;
   returnReceiptTrackingNumber?: string;
   links?: UspsLabelLink[];
   warnings?: UspsLabelWarning[];

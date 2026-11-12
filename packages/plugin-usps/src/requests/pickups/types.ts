@@ -31,13 +31,50 @@ export type UspsPickupLocationType =
   | "MAILBOX"
   | "OTHER";
 
-export type UspsPickupContact = { email: string } | { cellNumber: string };
+/**
+ * `{ email }` or `{ cellNumber }` per the spec and Postman collection. USPS's
+ * README create example (dated 2023) sends `{ phone }` instead, and the README
+ * responses echo `{ phone, extension }`, so that form is accepted too.
+ */
+export type UspsPickupContact =
+  | { email: string }
+  | { cellNumber: string }
+  | { phone: string; extension?: string };
 
-/** The domestic address as USPS returns it; the abbreviations are read-only. */
-export type UspsPickupDomesticAddress = Omit<UspsAddress, "ZIPPlus4"> & {
+/**
+ * One contact as USPS answers it. Each README response entry carries one
+ * method, with `null` for the rest, and the eligibility example spells the
+ * address `eMail`.
+ */
+export interface UspsPickupResponseContact {
+  email?: string | null;
+  /** Only in the README eligibility response. */
+  eMail?: string | null;
+  cellNumber?: string | null;
+  phone?: string | null;
+  extension?: string | null;
+}
+
+/**
+ * The domestic address as USPS returns it; the abbreviations are read-only.
+ * The README requests also send `postalCode` and `province`, and its update
+ * response has `streetAdress` and `ZIPLus4` (sic) where the other examples
+ * have `streetAddress` and `ZIPPlus4`; USPS's examples are not consistent
+ * with each other, so the misspellings are admitted rather than trusted.
+ */
+export type UspsPickupDomesticAddress = Omit<
+  UspsAddress,
+  "ZIPPlus4" | "secondaryAddress" | "urbanization"
+> & {
+  secondaryAddress?: string | null;
+  urbanization?: string | null;
   ZIPPlus4?: string | null;
   streetAddressAbbreviation?: string;
   cityAbbreviation?: string;
+  postalCode?: string;
+  province?: string;
+  streetAdress?: string;
+  ZIPLus4?: string | null;
 };
 
 export interface UspsPickupAddress {
@@ -47,6 +84,14 @@ export interface UspsPickupAddress {
   address: UspsPickupDomesticAddress;
   /** One or two contact methods. */
   contact: UspsPickupContact[];
+}
+
+/** Responses carry the counts as strings (`"1"`), requests as numbers. */
+export interface UspsPickupResponsePackage extends Omit<
+  UspsPickupPackage,
+  "packageCount"
+> {
+  packageCount: number | string;
 }
 
 export interface UspsPickupPackage {
@@ -74,14 +119,43 @@ export interface UspsSchedulePickupRequest {
   nextAvailablePickup?: boolean;
 }
 
-export type UspsPickupEligibilityResponse = UspsPickupAddress;
+/** The address block of a response: README examples return `null` for absent names. */
+export interface UspsPickupResponseAddress {
+  firstName?: string | null;
+  lastName?: string | null;
+  firm?: string | null;
+  address?: UspsPickupDomesticAddress;
+  contact?: UspsPickupResponseContact[];
+}
 
+/**
+ * The spec says eligibility answers with a `PickupAddress`; USPS's README
+ * example wraps it as `{ pickupAddress: { ... } }`. Both are readable: the
+ * fields directly, or under `pickupAddress`.
+ */
+export interface UspsPickupEligibilityResponse extends UspsPickupResponseAddress {
+  pickupAddress?: UspsPickupResponseAddress;
+}
+
+/**
+ * The spec's `PickupConfirmation` nests the pickup under
+ * `carrierPickupRequest`, and the Postman PUT example sends it that way.
+ * USPS's README create, get and update examples are flat: the same fields sit
+ * beside `confirmationNumber`, with counts and weight as strings. A response
+ * can therefore be read either way, and the PUT body may be either.
+ */
 export interface UspsPickupConfirmation {
   confirmationNumber?: string;
   pickupDate?: string;
   carrierPickupRequest?: UspsSchedulePickupRequest;
+  pickupAddress?: UspsPickupResponseAddress | UspsPickupAddress;
+  packages?: UspsPickupResponsePackage[];
+  estimatedWeight?: number | string;
+  pickupLocation?: UspsPickupLocation;
+  nextAvailablePickup?: boolean;
 }
 
+/** One pickup. `getPickup` returns this, not an array — see docs/usps-api.md#pickups. */
 export type UspsPickupDetails = UspsPickupConfirmation;
 
 export interface UspsPickupGetOptions {
@@ -90,6 +164,11 @@ export interface UspsPickupGetOptions {
    * docs/usps-api.md before relying on it.
    */
   ifNoneMatch?: string;
+}
+
+export interface UspsPickupGetResult {
+  pickup: UspsPickupDetails;
+  etag: string;
 }
 
 export interface UspsPickupUpdateOptions {

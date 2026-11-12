@@ -7,8 +7,11 @@ import type {
   UspsBaseRatesListResult,
   UspsRateBaseRatesQuery,
   UspsRateBaseRatesResult,
+  UspsRateExtraServiceQuery,
   UspsRateExtraServiceResult,
   UspsRateExtraServiceSearchQuery,
+  UspsRateExtraServiceSingleQuery,
+  UspsRateExtraServiceSingleResult,
   UspsRateLetterQuery,
   UspsRateLetterResult,
 } from "./types.js";
@@ -67,11 +70,23 @@ export const searchBaseRates = async (
   return res.data;
 };
 
-export const searchExtraServiceRates = async (
+export function searchExtraServiceRates(
+  clientName: string,
+  data: UspsRateExtraServiceQuery
+): Promise<UspsRateExtraServiceResult>;
+export function searchExtraServiceRates(
+  clientName: string,
+  data: UspsRateExtraServiceSingleQuery
+): Promise<UspsRateExtraServiceSingleResult>;
+export function searchExtraServiceRates(
   clientName: string,
   data: UspsRateExtraServiceSearchQuery
-): Promise<UspsRateExtraServiceResult> => {
-  const res = await tryHandleRequest<UspsRateExtraServiceResult>(
+): Promise<UspsRateExtraServiceSingleResult>;
+export async function searchExtraServiceRates(
+  clientName: string,
+  data: UspsRateExtraServiceSearchQuery
+): Promise<UspsRateExtraServiceSingleResult> {
+  const res = await tryHandleRequest<UspsRateExtraServiceSingleResult>(
     {
       clientName: uspsSubClient(clientName, "default"),
       requestName: "usps.rates.searchExtraServiceRates",
@@ -83,7 +98,7 @@ export const searchExtraServiceRates = async (
     "Failed to search USPS extra service rates"
   );
   return res.data;
-};
+}
 
 export const searchLetterRates = async (
   clientName: string,

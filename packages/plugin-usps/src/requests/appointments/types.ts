@@ -50,26 +50,7 @@ export interface UspsAppointment {
             IMCB?: string[];
             IMCBInfo?: "LINKED" | "SCANNED";
             siblingBarcode?: string[];
-            postInductionStatus?:
-              | "ACCEPTED"
-              | "ON_HOLD"
-              | "REJECTED"
-              | "NOT_PAID"
-              | "TRANSPORTATION_INFO_UPDATED"
-              | "DISPATCHED_FOR_INDUCTION"
-              | "DISPATCHED_FOR_PICKUP"
-              | "PICKED_UP"
-              | "WAREHOUSED"
-              | "PLANNED"
-              | "DOCKED"
-              | "MAIL_READY_FOR_PICKUP"
-              | "DELIVERED"
-              | "DEPOSITED_WITH_SHIPPER"
-              | "EDOC_SUBMITTED"
-              | "MAIL_READY_TO_BE_SHIPPED"
-              | "POSTAGE_FINALIZED"
-              | "MAIL_VERIFIED_AND_RELEASED"
-              | "MAIL_IN_COPAL_POOL";
+            postInductionStatus?: UspsAppointmentPostInductionStatus;
             containerDestination3digitZIP?: string;
             containerDestination5digitZIP?: string;
           };
@@ -107,6 +88,10 @@ export interface UspsAppointment {
           IMCB?: string[];
           IMCBInfo?: "LINKED" | "SCANNED";
           siblingBarcode?: string[];
+          /** Present in USPS's Postman example here, not in the schema. */
+          postInductionStatus?: UspsAppointmentPostInductionStatus;
+          containerDestination3digitZIP?: string;
+          containerDestination5digitZIP?: string;
         };
         sacks?: Array<{
           preSortLevel?: Array<{
@@ -450,6 +435,27 @@ export interface UspsAppointmentAvailabilityRequest {
     }>;
   };
 }
+
+export type UspsAppointmentPostInductionStatus =
+  | "ACCEPTED"
+  | "ON_HOLD"
+  | "REJECTED"
+  | "NOT_PAID"
+  | "TRANSPORTATION_INFO_UPDATED"
+  | "DISPATCHED_FOR_INDUCTION"
+  | "DISPATCHED_FOR_PICKUP"
+  | "PICKED_UP"
+  | "WAREHOUSED"
+  | "PLANNED"
+  | "DOCKED"
+  | "MAIL_READY_FOR_PICKUP"
+  | "DELIVERED"
+  | "DEPOSITED_WITH_SHIPPER"
+  | "EDOC_SUBMITTED"
+  | "MAIL_READY_TO_BE_SHIPPED"
+  | "POSTAGE_FINALIZED"
+  | "MAIL_VERIFIED_AND_RELEASED"
+  | "MAIL_IN_COPAL_POOL";
 
 export type UspsAppointmentContainerLevel =
   | "A"

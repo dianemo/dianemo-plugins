@@ -217,7 +217,12 @@ export interface UspsLocationUSPSConnect {
 export interface UspsLocationDropShipmentLocation {
   dropShipmentKey?: string;
   facilityName?: string;
-  facilityAddress?: { address?: UspsLocationAddress };
+  /**
+   * The spec nests the address one level down (`{ address }`); USPS's example
+   * response (dropoff-location-v3-response.json) carries the address fields
+   * directly on `facilityAddress`. Both are readable.
+   */
+  facilityAddress?: UspsLocationAddress & { address?: UspsLocationAddress };
   dropSitePhoneNumber?: string;
   destinationZIPCode?: string;
   destinationEntryFacilityType?: UspsLocationDestinationEntryFacilityType;
@@ -227,6 +232,8 @@ export interface UspsLocationDropShipmentLocation {
   USPSConnectDetails?: UspsLocationUSPSConnect;
   timeZone?: string;
   DSTObserved?: boolean;
+  /** The drop-off example spells it `dstObserved`; the spec says `DSTObserved`. */
+  dstObserved?: boolean;
 }
 
 export type UspsLocationDropoffLocations = UspsLocationDropShipmentLocation[];
@@ -235,11 +242,19 @@ export interface UspsLocationPostOfficeLocation {
   facilityName?: string;
   facilityAddress?: UspsLocationAddress;
   facilityID?: string;
+  /** The post-office example spells it `facilityId`; the spec says `facilityID`. */
+  facilityId?: string;
   geoCoordinates?: { latitude?: number; longitude?: number };
   postOfficeType?: UspsLocationPostOfficeType;
   /** Distance from the search point. */
   distance?: number;
   phoneNumbers?: { phone?: string; fax?: string };
+  /**
+   * Values in the example use underscores (`PASSPORT_WALK_IN`,
+   * `SELF_SERVICE_KIOSK`) where the request filters use hyphens, and include
+   * `PO_BOX_DELIVERY_TIME`, `LAST_COLLECTION`, `RETAIL`, `LOBBY` and
+   * `CARRIER_CALL_REFERRAL`, which no filter offers.
+   */
   services?: {
     service?: string;
     hours?: UspsLocationHoursOfOperation[];

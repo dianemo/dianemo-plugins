@@ -60,15 +60,48 @@ export interface UspsScanFormAddress {
   ignoreBadAddress?: boolean;
 }
 
+/** USPS's examples' `fromAddress`: the person and firm beside an `address` object. */
+export interface UspsScanFormNestedAddress {
+  firstName?: string;
+  lastName?: string;
+  firm?: string;
+  address: Omit<UspsScanFormAddress, "firstName" | "lastName" | "firm"> & {
+    country?: string;
+    /** A number (`840`) in the request example, the string `"840"` in the response. */
+    countryISOCode?: string | number;
+  };
+}
+
+/**
+ * The README response's nested address spells the ZIP fields in lower case
+ * (`zipCode`, `zipPlus4`) and has `streetAddress` and `secondaryAddress`
+ * swapped relative to the request.
+ */
+export interface UspsScanFormResponseNestedAddress {
+  firstName?: string;
+  lastName?: string;
+  firm?: string;
+  address: Partial<UspsScanFormNestedAddress["address"]> & {
+    zipCode?: string;
+    zipPlus4?: string;
+  };
+}
+
 export interface UspsScanFormRequest {
   imageInfo?: UspsScanFormImageInfo;
   /** `YYYY-MM-DD`. */
   mailingDate: string;
   overwriteMailingDate?: boolean;
   entryFacilityZIPCode: string;
+  /** Sent as `""` in USPS's examples; not declared in the schema. */
+  entryFacilityZIPPlus4?: string;
   destinationEntryFacilityType: UspsScanFormDestinationEntryFacilityType;
   shipment: UspsScanFormShipment;
-  fromAddress: UspsScanFormAddress;
+  /**
+   * Flat per the spec; USPS's examples nest the street fields one level down
+   * under `address`, so that form is accepted too (see docs/usps-api.md#scan-forms).
+   */
+  fromAddress: UspsScanFormAddress | UspsScanFormNestedAddress;
   /** Matches `^[A-Z]{3}\d{8,12}$`; ties the form to a Carrier Pickup. */
   pickupConfirmationNumber?: string;
   /** @deprecated USPS dictates the form type from `imageInfo.labelType`. */
@@ -91,7 +124,7 @@ export interface UspsScanFormResponse {
   /** The Electronic File Number (EFN). */
   manifestNumber?: string;
   trackingNumbers?: string[];
-  fromAddress?: UspsScanFormAddress;
+  fromAddress?: UspsScanFormAddress | UspsScanFormResponseNestedAddress;
   /** @deprecated */
   form?: "5630";
   /** @deprecated */

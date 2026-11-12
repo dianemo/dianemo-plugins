@@ -34,7 +34,8 @@ export interface UspsContainerImageInfo {
 
 export interface UspsContainerOriginAddress {
   streetAddress: string;
-  secondaryAddress?: string;
+  /** `null` in USPS's add-packages example response, `""` in its requests. */
+  secondaryAddress?: string | null;
   city: string;
   state: string;
   ZIPCode: string;
@@ -68,7 +69,8 @@ export interface UspsContainerCreateRequest {
 
 /**
  * The `Container` schema minus its write-only fields. The create response is
- * documented only as `multipart/form-data` — see docs/usps-api.md#containers.
+ * multipart, so `createUspsContainerLabel` parses it into
+ * `UspsContainerLabelResult` — see docs/usps-api.md#containers.
  */
 export interface UspsContainerResponse {
   containerID?: string;
@@ -84,6 +86,20 @@ export interface UspsContainerResponse {
   containerTopology?: "NESTED";
   mailingDate?: UspsContainerMailingDate;
   warnings?: UspsContainerWarning[];
+}
+
+export interface UspsContainerLabelImage {
+  bytes: Buffer;
+  /** The part's own `Content-Type`, `application/pdf` in USPS's example. */
+  contentType: string;
+  filename?: string;
+}
+
+/** The two parts of the `POST /containers` multipart response. */
+export interface UspsContainerLabelResult {
+  metadata: UspsContainerResponse;
+  /** Absent when no `labelImage` part came back (for example `imageType: "NONE"`). */
+  labelImage?: UspsContainerLabelImage;
 }
 
 export interface UspsContainerParams {

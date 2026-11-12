@@ -1,5 +1,5 @@
+import { afterEach, describe, expect, expectTypeOf, it, vi } from "vitest";
 import RequestHandler, { memoryBackend } from "@dianemo/core";
-import { afterEach, describe, expect, it, vi } from "vitest";
 import { resetBinding } from "@dianemo/plugin-kit/testing";
 import { TEST_KEY } from "../../../test/fixtures/key.js";
 import usps from "../src/index.js";
@@ -13,8 +13,13 @@ import {
 import type {
   UspsBaseRatesListQuery,
   UspsRateBaseRatesQuery,
+  UspsRateExtraServiceQuery,
+  UspsRateExtraServiceResult,
   UspsRateExtraServiceSearchQuery,
+  UspsRateExtraServiceSingleQuery,
+  UspsRateExtraServiceSingleResult,
   UspsRateLetterQuery,
+  UspsRateLetterResult,
   UspsTotalRatesQuery,
 } from "../src/requests/rates/types.js";
 
@@ -127,4 +132,65 @@ describe("usps rates", () => {
       expect(req.metadata?.uspsAccountNumber).toBeUndefined();
     }
   );
+  it("searchExtraServiceRates takes the README's singular extraService and returns its single object", async () => {
+    const handler = new RequestHandler({
+      key: TEST_KEY,
+      backend: memoryBackend(),
+    });
+    // USPS's README example response: one object, lower-case `sku`.
+    const example: UspsRateExtraServiceSingleResult = {
+      extraService: "415",
+      name: "Label Delivery",
+      sku: "DXQX0XXXXCX0000",
+      priceType: "RETAIL",
+      price: 1.25,
+      warnings: [],
+    };
+    const spy = vi
+      .spyOn(handler, "handleRequest")
+      .mockResolvedValue({ data: example } as never);
+    handler.use(usps);
+    const single: UspsRateExtraServiceSingleQuery = {
+      extraService: 415,
+      mailClass: "PARCEL_SELECT",
+      priceType: "RETAIL",
+      itemValue: 0,
+      weight: 5,
+      mailingDate: "2023-05-25",
+      accountType: "EPS",
+      accountNumber: "XXXXXXXXXX",
+    };
+    const res = await searchExtraServiceRates(CLIENT, single);
+    expect(res).toEqual(example);
+    expect(spy.mock.calls[0][0].data).toEqual(single);
+    // The array query keeps the spec's array type.
+    const arrayRes = await searchExtraServiceRates(
+      CLIENT,
+      extraQuery as UspsRateExtraServiceQuery
+    );
+    expectTypeOf(arrayRes).toEqualTypeOf<UspsRateExtraServiceResult>();
+  });
+
+  it("types USPS's letter-rates example, which has null zone and dimWeight", () => {
+    const example: UspsRateLetterResult = {
+      totalBasePrice: 1.75,
+      rates: [
+        {
+          SKU: "DFLL0XXXXR00035",
+          description: "First Class Letter Metered",
+          priceType: "RETAIL",
+          price: 1.35,
+          weight: 3.5,
+          dimWeight: null,
+          fees: [{ name: "Nonmachinable letter fee", SKU: "N/A", price: 0.4 }],
+          startDate: "2023-07-09",
+          endDate: "",
+          warnings: [],
+          mailClass: "USPS_GROUND_ADVANTAGE",
+          zone: null,
+        },
+      ],
+    };
+    expect(example.rates?.[0].zone).toBeNull();
+  });
 });

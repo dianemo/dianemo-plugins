@@ -25,7 +25,8 @@ export interface UspsAddressZipCodeParams {
 }
 
 export interface UspsAddressResponse {
-  firm?: string;
+  /** USPS's examples send `"firm": null` when there is none. */
+  firm?: string | null;
   address?: UspsDomesticAddress;
   additionalInfo?: UspsAddressAdditionalInfo;
   corrections?: UspsAddressCorrection[];
@@ -40,20 +41,29 @@ export interface UspsAddressCityStateResponse {
 }
 
 export interface UspsAddressZipCodeResponse {
-  firm?: string;
+  firm?: string | null;
   address?: UspsDomesticAddress;
 }
 
+/**
+ * USPS's own examples return every field that does not apply as an explicit
+ * `null`, and add four international-style fields (`postalCode`, `province`,
+ * `country`, `countryISOCode`) that are always `null` on a domestic address.
+ */
 export interface UspsDomesticAddress {
   streetAddress?: string;
-  streetAddressAbbreviation?: string;
-  secondaryAddress?: string;
+  streetAddressAbbreviation?: string | null;
+  secondaryAddress?: string | null;
   city?: string;
-  cityAbbreviation?: string;
+  cityAbbreviation?: string | null;
   state?: string;
   ZIPCode?: string;
   ZIPPlus4?: string | null;
-  urbanization?: string;
+  urbanization?: string | null;
+  postalCode?: string | null;
+  province?: string | null;
+  country?: string | null;
+  countryISOCode?: string | null;
   lastline?: string;
   lastlineAbbr?: string;
 }

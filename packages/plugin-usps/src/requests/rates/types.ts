@@ -276,11 +276,18 @@ interface UspsRateExtraServiceQueryBase {
 
 export interface UspsRateExtraServiceQuery extends UspsRateExtraServiceQueryBase {
   extraServices?: UspsRateExtraServiceCode[];
+  /** Exclusive with the single-code query below, so the two overloads tell apart. */
+  extraService?: never;
 }
 
-/** Deprecated by USPS and, per the spec, removed in June 2025: send an array. */
+/**
+ * Deprecated by USPS and, per the spec, removed in June 2025: send an array.
+ * The spec names the key `extraServices` with one integer; USPS's own README and
+ * Postman examples send `extraService` (singular) instead, so both are accepted.
+ */
 export interface UspsRateExtraServiceSingleQuery extends UspsRateExtraServiceQueryBase {
   extraServices?: UspsRateExtraServiceCode;
+  extraService?: UspsRateExtraServiceCode;
 }
 
 export type UspsRateExtraServiceSearchQuery =
@@ -360,6 +367,8 @@ export interface UspsExtraServiceDetail {
   extraService?: string;
   name?: string;
   SKU?: string;
+  /** Lower case in USPS's single-extra-service example; the spec says `SKU`. */
+  sku?: string;
   priceType?: UspsRatePriceType;
   price?: number;
   warnings?: UspsRateWarning[];
@@ -378,6 +387,14 @@ export type UspsRateBaseRatesResult = UspsRateOption;
 
 export type UspsRateExtraServiceResult = UspsExtraServiceDetail[];
 
+/**
+ * The spec's 200 is always an array. USPS's README and Postman examples send the
+ * single-code query and get back one bare object, so the single-code query may
+ * answer either shape.
+ */
+export type UspsRateExtraServiceSingleResult =
+  UspsExtraServiceDetail | UspsExtraServiceDetail[];
+
 export interface UspsRateLetterDetail {
   SKU?: string;
   priceType?: "RETAIL";
@@ -387,7 +404,12 @@ export interface UspsRateLetterDetail {
   fees?: UspsRateFee[];
   startDate?: string;
   endDate?: string;
-  mailClass?: "FIRST-CLASS_MAIL";
+  /** The spec says `FIRST-CLASS_MAIL`; USPS's example returns `USPS_GROUND_ADVANTAGE`. */
+  mailClass?: "FIRST-CLASS_MAIL" | "USPS_GROUND_ADVANTAGE";
+  description?: string;
+  /** `null` in USPS's example, as is `zone`. */
+  dimWeight?: number | null;
+  zone?: string | null;
   extraServices?: UspsExtraServiceDetail[];
   /** Plain strings here, unlike the object warnings elsewhere. */
   warnings?: string[];

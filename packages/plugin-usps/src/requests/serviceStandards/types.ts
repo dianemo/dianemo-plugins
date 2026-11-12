@@ -54,6 +54,7 @@ export interface UspsServiceStandardEstimatesParams extends UspsServiceStandardB
 
 export type UspsServiceStandardsParams = UspsServiceStandardBaseParams;
 
+/** `ZIPCode` and `ZIPPlus4` are JSON numbers in USPS's README example, strings in the spec. */
 export interface UspsServiceStandardAddress {
   streetAddress?: string;
   streetAddressAbbreviation?: string;
@@ -61,21 +62,24 @@ export interface UspsServiceStandardAddress {
   cityAbbreviation?: string;
   city?: string;
   state?: string;
-  ZIPCode?: string;
-  ZIPPlus4?: string;
+  ZIPCode?: string | number;
+  ZIPPlus4?: string | number;
   urbanization?: string;
 }
 
-/** Local close time per weekday as `HHMM`. */
+/**
+ * Local close time per weekday as `HHMM`. The README example mixes numbers
+ * (`1700`) and strings (`"0000"`) in one object.
+ */
 export interface UspsServiceStandardFacilityCloseTimes {
-  Monday?: string;
-  Tuesday?: string;
-  Wednesday?: string;
-  Thursday?: string;
-  Friday?: string;
-  Saturday?: string;
-  Sunday?: string;
-  holidays?: string;
+  Monday?: string | number;
+  Tuesday?: string | number;
+  Wednesday?: string | number;
+  Thursday?: string | number;
+  Friday?: string | number;
+  Saturday?: string | number;
+  Sunday?: string | number;
+  holidays?: string | number;
 }
 
 export interface UspsServiceStandardFacility extends UspsServiceStandardAddress {
@@ -84,8 +88,12 @@ export interface UspsServiceStandardFacility extends UspsServiceStandardAddress 
     | "POST_OFFICE"
     | "EXPRESS_MAIL_COLLECTION_BOX"
     | "AIR_MAIL_FACILITY"
-    | "CONTRACT_POSTAL_UNIT";
+    | "CONTRACT_POSTAL_UNIT"
+    /** The README example says `"POST OFFICE"`, with a space. */
+    | "POST OFFICE";
   closes?: UspsServiceStandardFacilityCloseTimes;
+  /** The README example's key for the same data; the spec says `closes`. */
+  closeTimes?: UspsServiceStandardFacilityCloseTimes;
 }
 
 export type UspsServiceStandardNote =
@@ -105,9 +113,10 @@ export interface UspsServiceStandardEstimate {
   destinationType?: string;
   acceptanceDateTime?: string;
   effectiveAcceptanceDate?: string;
-  cutOffTime?: string;
-  /** Two characters. */
-  serviceStandard?: string;
+  /** `HHMM`; the README example returns the number `1700`. */
+  cutOffTime?: string | number;
+  /** Two characters in the spec; the README example returns the number `2`. */
+  serviceStandard?: string | number;
   serviceStandardMessage?: string;
   /** A single facility despite the plural name. */
   acceptanceLocations?: UspsServiceStandardFacility;
@@ -122,8 +131,9 @@ export type UspsServiceStandardEstimatesResponse =
 export interface UspsServiceStandardResult {
   mailClass?: string;
   notes?: UspsServiceStandardNote;
-  originZIPCode?: string;
-  destinationZIPCode?: string;
+  /** Numbers in the README example, strings in the spec. */
+  originZIPCode?: string | number;
+  destinationZIPCode?: string | number;
   days?: number;
   effectiveAcceptanceDate?: string;
   /** Deprecated by USPS in favour of `expectedDeliveryDate`. */

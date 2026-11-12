@@ -108,6 +108,9 @@ export interface UspsInternationalLabelImageInfo {
   suppressPostage?: boolean;
   includeLabelBrokerPDF?: boolean;
   addZPLComments?: boolean;
+  /** In USPS's Postman example (`5` of `50`); not declared in this spec's schema. */
+  packageNumber?: number;
+  totalPackages?: number;
 }
 
 export type UspsInternationalLabelLabelAddress =

@@ -1,5 +1,6 @@
 import { tryHandleRequest } from "@dianemo/plugin-kit";
 import { uspsSubClient } from "../utils.js";
+import { singlePickup } from "./utils.js";
 import type {
   UspsPickupEligibilityParams,
   UspsPickupEligibilityResponse,
@@ -7,6 +8,7 @@ import type {
   UspsPickupConfirmation,
   UspsPickupDetails,
   UspsPickupGetOptions,
+  UspsPickupGetResult,
   UspsPickupUpdateOptions,
   UspsPickupUpdateResult,
 } from "./types.js";
@@ -48,15 +50,17 @@ export const schedulePickup = async (
 };
 
 /**
- * `pickup` is an array because the spec's response schema is one; its prose
- * describes a single pickup. See docs/usps-api.md.
+ * `pickup` is one object, as v2.0.0 returned and as USPS's example shows. The
+ * spec's schema says array, so an array body is unwrapped to its only element;
+ * more than one is not something a confirmation number can mean, and is
+ * rejected rather than silently trimmed. See docs/usps-api.md#pickups.
  */
 export const getPickup = async (
   clientName: string,
   confirmationNumber: string,
   options: UspsPickupGetOptions = {}
-): Promise<{ pickup: UspsPickupDetails[]; etag: string }> => {
-  const res = await tryHandleRequest<UspsPickupDetails[]>(
+): Promise<UspsPickupGetResult> => {
+  const res = await tryHandleRequest<UspsPickupDetails | UspsPickupDetails[]>(
     {
       clientName: uspsSubClient(clientName, "default"),
       requestName: "usps.pickups.get",
@@ -70,7 +74,7 @@ export const getPickup = async (
     "Failed to get USPS pickup details"
   );
   return {
-    pickup: res.data,
+    pickup: singlePickup(res.data, confirmationNumber),
     etag: (res.headers?.["etag"] as string) ?? "",
   };
 };

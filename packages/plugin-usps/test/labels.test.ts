@@ -201,7 +201,19 @@ describe("usps labels", () => {
       toAddress: address,
       returnAddress: address,
     };
-    await labels.createLabelIndicia(CLIENT, indicia, { accountNumber: ACCT });
+    spy
+      .mockResolvedValueOnce({
+        data: Buffer.from(JSON.stringify({ indiciaMetadata: { SKU: "S" } })),
+        headers: { "content-type": "application/json" },
+      } as never)
+      .mockResolvedValueOnce({
+        data: Buffer.from(JSON.stringify({ indiciaMetadata: { imb: "1" } })),
+        headers: { "content-type": "application/json" },
+      } as never);
+    const created = await labels.createLabelIndicia(CLIENT, indicia, {
+      accountNumber: ACCT,
+    });
+    expect(created).toEqual({ indiciaMetadata: { SKU: "S" } });
     await labels.createLabelIndiciaImb(CLIENT, imb, { accountNumber: ACCT });
     await labels.cancelLabelIndiciaImb(CLIENT, {
       accountNumber: ACCT,
@@ -213,6 +225,7 @@ describe("usps labels", () => {
       method: "POST",
       url: "/labels/v3/indicia",
       data: indicia,
+      responseType: "arraybuffer",
       metadata: { uspsAccountNumber: ACCT },
     });
     expect(spy.mock.calls[1][0]).toMatchObject({
@@ -220,6 +233,7 @@ describe("usps labels", () => {
       method: "POST",
       url: "/labels/v3/indicia/imb",
       data: imb,
+      responseType: "arraybuffer",
       metadata: { uspsAccountNumber: ACCT },
     });
     expect(spy.mock.calls[2][0]).toMatchObject({
@@ -228,6 +242,81 @@ describe("usps labels", () => {
       url: "/labels/v3/indicia/imb/00700123456000000001200669998",
       metadata: { uspsAccountNumber: ACCT },
     });
+  });
+
+  it("createLabelIndicia folds USPS's multipart example into the nested shape", async () => {
+    const spy = setup();
+    const pdf = Buffer.from(
+      "%PDF-1.4\r\n\u00e2\u00e3\u0000\u00ff trailer",
+      "latin1"
+    );
+    const b = "Ah2SYTymfbGnSStJLSpLScnK";
+    // The README example: no Content-Type on the response we can rely on, a flat
+    // metadata part, then two PDF parts.
+    const body = Buffer.concat([
+      Buffer.from(
+        `--${b}\r\nContent-Type: application/json\r\n` +
+          `Content-Disposition: form-data; name="indiciaMetadata"\r\n\r\n` +
+          `{"SKU":"DFLL0XXXXR00035","postage":1.36,"fees":[{"name":"Nonmachinable letter fee","SKU":"N/A","price":0.4}],"weight":3.5}\r\n` +
+          `--${b}\r\nContent-Type: application/pdf\r\n` +
+          `Content-Disposition: form-data; filename="receiptImage.pdf"; name="receiptImage"\r\n\r\n`
+      ),
+      pdf,
+      Buffer.from(
+        `\r\n--${b}\r\nContent-Type: application/pdf\r\n` +
+          `Content-Disposition: form-data; filename="indiciaImage.pdf"; name="indiciaImage"\r\n\r\n`
+      ),
+      Buffer.from(pdf.toString("base64")),
+      Buffer.from(`\r\n--${b}--\r\n`),
+    ]);
+    spy.mockResolvedValueOnce({ data: body, headers: {} } as never);
+    const res = await labels.createLabelIndicia(
+      CLIENT,
+      {
+        indiciaDescription: {
+          processingCategory: "LETTERS",
+          weight: 3.5,
+          mailingDate: "2024-07-11",
+          length: 6,
+          height: 4,
+          thickness: 0.25,
+        },
+        imageInfo: { imageType: "PDF", receiptOption: "SEPARATE_PAGE" },
+      },
+      { accountNumber: ACCT }
+    );
+    expect(res.indiciaMetadata).toMatchObject({
+      SKU: "DFLL0XXXXR00035",
+      postage: 1.36,
+      weight: 3.5,
+    });
+    // A raw binary part and a base64 text part both end up as base64 strings.
+    expect(res.receiptImage).toBe(pdf.toString("base64"));
+    expect(res.indiciaImage).toBe(pdf.toString("base64"));
+  });
+
+  it("createLabelIndicia throws USP_0095 for a body it cannot read", async () => {
+    const spy = setup();
+    spy.mockResolvedValueOnce({
+      data: Buffer.from("<html>"),
+      headers: {},
+    } as never);
+    await expect(
+      labels.createLabelIndicia(
+        CLIENT,
+        {
+          indiciaDescription: {
+            processingCategory: "LETTERS",
+            weight: 1,
+            mailingDate: "2026-11-12",
+            length: 9,
+            height: 4,
+            thickness: 0.1,
+          },
+        },
+        { accountNumber: ACCT }
+      )
+    ).rejects.toMatchObject({ code: "USP_0095" });
   });
 
   it("branding operations use the JSON upload and drop unset list params", async () => {

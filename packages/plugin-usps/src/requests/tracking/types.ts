@@ -22,6 +22,16 @@ export interface UspsTrackingTarget {
 export type UspsTrackingAccessControl = "FREE" | "IP_AGREEMENT";
 
 export interface UspsTrackingSummary {
+  /**
+   * USPS's own README example shows the summary as a legacy Web Tools
+   * envelope, `{ TrackResults: { RequestSeqNumber, TrackInfo: { "@ID",
+   * TrackSummary } } }`, with none of the fields below. Which of the two a
+   * live account gets is not settled — see docs/usps-api.md#tracking.
+   */
+  TrackResults?: {
+    RequestSeqNumber?: string | null;
+    TrackInfo?: { "@ID"?: string; TrackSummary?: string };
+  };
   trackingNumber?: string;
   expectedDeliveryDate?: string;
   expectedDeliveryTime?: string;
@@ -50,6 +60,14 @@ export type UspsTrackingMailClass =
   | "USPS_MARKETING_MAIL"
   | "PRIORITY_MAIL_SAME_DAY";
 
+/**
+ * The 18 values the spec enumerates, plus any other text: USPS's published
+ * example returns display text (`"Priority Mail<SUP>&reg;</SUP>"`), not a
+ * constant. Autocomplete still offers the enum.
+ */
+export type UspsTrackingMailClassValue =
+  UspsTrackingMailClass | (string & Record<never, never>);
+
 export interface UspsTrackingAvailableNotificationOptions {
   futureDelivery?: boolean;
   alertDelivery?: boolean;
@@ -73,7 +91,7 @@ export interface UspsTrackingDetails {
   archiveRestoreInfo?: string;
   associatedLabel?: string;
   carrierRelease?: boolean;
-  mailClass?: UspsTrackingMailClass;
+  mailClass?: UspsTrackingMailClassValue;
   destinationCity?: string;
   destinationCountryCode?: string;
   destinationState?: string;
@@ -88,11 +106,13 @@ export interface UspsTrackingDetails {
   guaranteedDetails?: string;
   itemShape?: "LETTER" | "FLAT" | "PARCEL" | "UNKNOWN";
   kahalaIndicator?: string;
+  /** The example returns `"DM"`, outside the spec's four-value enum. */
   mailType?:
     | "INTERNATIONAL_INBOUND"
     | "INTERNATIONAL_OUTBOUND"
     | "DOMESTIC_MAIL"
-    | "UNKNOWN";
+    | "UNKNOWN"
+    | (string & Record<never, never>);
   approximateIntakeDate?: string;
   mailPieceIntakeDate?: string;
   uniqueTrackingId?: string;
@@ -113,8 +133,11 @@ export interface UspsTrackingDetails {
   restoreEnabled?: string;
   returnDateNotice?: string;
   RRAMenabled?: string;
+  /** The README example spells it with a capital E. */
+  RRAMEnabled?: string;
   RREEnabled?: string;
-  services?: string[];
+  /** An array in the spec; the README's v3 example returns one string. */
+  services?: string | string[];
   serviceTypeCode?: string;
   status?: string;
   statusCategory?: string;
@@ -134,13 +157,16 @@ export interface UspsTrackingEvent {
   eventTimestamp?: string;
   GMTTimestamp?: string;
   GMTOffset?: string;
-  eventCountry?: string;
+  /** The example sends `null` for the country, firm, name and extra fields. */
+  eventCountry?: string | null;
   eventCity?: string;
   eventState?: string;
   eventZIP?: string;
-  firm?: string;
-  name?: string;
-  /** A string in the spec, not a boolean. */
+  firm?: string | null;
+  name?: string | null;
+  /** Present in the README example as `null`; not in the spec. */
+  additionalProp?: unknown;
+  /** A string in the spec, not a boolean; the example sends `"false"`. */
   authorizedAgent?: string;
   eventCode?: string;
   veriPoint?: boolean;

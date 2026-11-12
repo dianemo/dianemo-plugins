@@ -1,4 +1,5 @@
 import { tryHandleRequest } from "@dianemo/plugin-kit";
+import { readIndiciaBody } from "./utils.js";
 import { uspsSubClient } from "../utils.js";
 import type {
   UspsLabelAccountOptions,
@@ -11,7 +12,10 @@ import type {
 } from "./types.js";
 
 // Every success content type of the indicia operations has the same schema;
-// plain JSON is asked for because the spec lists multipart/form-data first.
+// plain JSON is asked for because the spec lists multipart/form-data first, but
+// USPS's own example shows multipart anyway, so the body is requested as bytes
+// and read by `readIndiciaBody`. A failure status therefore reaches the caller
+// with a `Buffer` body — see docs/usps-api.md#labels.
 const JSON_ACCEPT = { Accept: "application/json" };
 
 export const createLabelIndicia = async (
@@ -19,7 +23,7 @@ export const createLabelIndicia = async (
   data: UspsLabelIndiciaRequest,
   options: UspsLabelAccountOptions
 ): Promise<UspsLabelIndiciaResponse> => {
-  const res = await tryHandleRequest<UspsLabelIndiciaResponse>(
+  const res = await tryHandleRequest<Buffer>(
     {
       clientName: uspsSubClient(clientName, "labels"),
       requestName: "usps.labels.createLabelIndicia",
@@ -27,12 +31,16 @@ export const createLabelIndicia = async (
       url: "/labels/v3/indicia",
       data,
       headers: JSON_ACCEPT,
+      responseType: "arraybuffer",
       metadata: { uspsAccountNumber: options.accountNumber },
     },
     "USP_0023",
     "Failed to create USPS indicia"
   );
-  return res.data;
+  return readIndiciaBody<UspsLabelIndiciaResponse>(
+    res.data,
+    res.headers?.["content-type"] as string | undefined
+  );
 };
 
 export const createLabelIndiciaImb = async (
@@ -40,7 +48,7 @@ export const createLabelIndiciaImb = async (
   data: UspsLabelIndiciaImbRequest,
   options: UspsLabelAccountOptions
 ): Promise<UspsLabelIndiciaImbResponse> => {
-  const res = await tryHandleRequest<UspsLabelIndiciaImbResponse>(
+  const res = await tryHandleRequest<Buffer>(
     {
       clientName: uspsSubClient(clientName, "labels"),
       requestName: "usps.labels.createLabelIndiciaImb",
@@ -48,12 +56,16 @@ export const createLabelIndiciaImb = async (
       url: "/labels/v3/indicia/imb",
       data,
       headers: JSON_ACCEPT,
+      responseType: "arraybuffer",
       metadata: { uspsAccountNumber: options.accountNumber },
     },
     "USP_0024",
     "Failed to create USPS IMB indicia"
   );
-  return res.data;
+  return readIndiciaBody<UspsLabelIndiciaImbResponse>(
+    res.data,
+    res.headers?.["content-type"] as string | undefined
+  );
 };
 
 export const cancelLabelIndiciaImb = async (
