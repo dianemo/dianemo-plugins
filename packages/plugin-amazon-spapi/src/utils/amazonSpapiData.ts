@@ -155,6 +155,9 @@ export type SPAPIEndpointName =
   | "notificationsCreateDestination"
   | "notificationsGetDestination"
   | "notificationsDeleteDestination"
+  | "awdListInventory"
+  | "ordersV2SearchOrders"
+  | "ordersV2GetOrder"
   | "ordersGetOrders"
   | "ordersGetOrder"
   | "ordersGetOrderBuyerInfo"
@@ -1036,6 +1039,24 @@ export const spapiEndpoints: SPAPIEndpoints = {
     method: "DELETE",
     rateLimit: 1,
     burstLimit: 5,
+  },
+  awdListInventory: {
+    url: "/awd/2024-05-09/inventory",
+    method: "GET",
+    rateLimit: 2,
+    burstLimit: 2,
+  },
+  ordersV2SearchOrders: {
+    url: "/orders/2026-01-01/orders",
+    method: "GET",
+    rateLimit: 0.0167,
+    burstLimit: 20,
+  },
+  ordersV2GetOrder: {
+    url: "/orders/2026-01-01/orders/{orderId}",
+    method: "GET",
+    rateLimit: 0.5,
+    burstLimit: 30,
   },
   ordersGetOrders: {
     url: "/orders/v0/orders",
