@@ -162,11 +162,12 @@ where a `grantId` routes it to the key `setGrantTokens` writes. See
 shipped as a blocker once and was re-introduced twice while being fixed elsewhere;
 `test/auth.test.ts` asserts against it.
 
-**Never put a `requestInterceptor` inside `refreshConfig`.** Core deep-copies that object
-with `structuredClone`, which cannot clone a function, so every request in the package
-throws `DataCloneError` before any HTTP. Per-request work goes in
-`requestOptions.requestInterceptor`, which is not cloned and where `config.requestId` is
-available. See `docs/core-behaviour.md#refreshconfig-is-deep-copied-so-it-cannot-hold-a-function`.
+**Never put a `requestInterceptor` inside `refreshConfig`** while the package's peer is
+`@dianemo/core ^2.0.0`. Core before 2.1.1 deep-copies that object with `structuredClone`,
+which cannot clone a function, so every request in the package throws `DataCloneError`
+before any HTTP. Per-request work goes in `requestOptions.requestInterceptor`, which is
+not cloned and where `config.requestId` is available. See
+`docs/core-behaviour.md#refreshconfig-is-deep-copied-so-it-cannot-hold-a-function`.
 
 If a request needs a _different_ credential from the client's, the auth header cannot be
 replaced by an interceptor — core merges it afterwards. Use a sub-client declaring
@@ -274,3 +275,7 @@ silently skipping it. No plugin in the catalogue is currently exempt.
 Run the `pre-commit-checks` skill. In particular `npm run exports` (the new package's
 map does not exist yet) and `npm run verify:pack` (which is the only thing that proves
 the package works as published rather than as the repo sees it).
+
+A new package needs a version plan like any other change, and its first version is
+published once by hand before CI can publish it — see
+`/docs/releasing.md#a-new-package-is-published-once-by-hand`.

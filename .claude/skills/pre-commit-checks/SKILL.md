@@ -174,27 +174,23 @@ Note `git status --short` distinguishes staged (`M `) from unstaged (` M`) — a
 Never commit `.env`. Do not sweep unrelated files into a feature commit; a formatting
 pass over a file you did not otherwise touch belongs in its own commit.
 
-## 10. Version bumps for anything published
+## 10. A version plan for anything published
 
 ```bash
-npm run check:versions                    # vs origin/master
-npm run check:versions -- --base=<ref>    # vs another branch
+npm run version-plan          # writes .nx/version-plans/<name>.md
+npm run version-plan:check    # vs origin/master
 ```
 
-Every package here publishes independently, so its own `version` is the only thing
-telling a consumer its code moved. Nothing else in this repo notices when that is
-missed: `src/` can change while build, test, pack and README verification all pass.
+**Required whenever the change touches a package outside Markdown and its `test/`.**
+Nothing else in this repo notices when it is missed: `src/` can change while build,
+test, pack and README verification all pass, and without a plan the change is never
+released.
 
-The check compares against the **merge base**, and only `src/**`, `tsconfig.json` and
-`package.json` demand a bump — docs, READMEs and tests ship without altering a byte a
-consumer runs, and requiring a bump for a typo would train everyone to bump reflexively.
-It also fails a version that moved _down_.
-
-Bump with npm rather than by hand, so the lockfile follows:
-
-```bash
-npm version patch --no-git-tag-version -w @dianemo/plugin-<name>
-```
+The plan names each changed package and its bump, and its body is the release note Nx
+writes into that package's `CHANGELOG.md`. **Do not edit a `version` field or a
+`CHANGELOG.md` yourself** — the release PR owns both, and a version bumped in any other
+PR is never published. `/docs/releasing.md` has the whole flow, including why a
+`plugin-kit` release does not re-release the plugins.
 
 It compares commits, not the working tree, so it reports nothing until you have
 committed. CI runs it on every PR.
@@ -214,15 +210,16 @@ a new package must do that no amount of local correctness will catch.
 is the only enforcement there is — nothing above is caught by a git hook — so treat a
 red pipeline on a fresh PR as a step you skipped, not as CI finding something clever.
 
-Three jobs. `verify` and `package` run on a clean checkout with `npm ci`; `versions`
-runs on pull requests only, checks out full history to reach the merge base, and
-installs nothing:
+Two jobs, both on a clean checkout with `npm ci`:
 
-| job        | runs                                                                  |
-| ---------- | --------------------------------------------------------------------- |
-| `verify`   | `build`, then `sort-imports:check`, `format`, `lint`, `check`, `test` |
-| `versions` | `check-version-bumps.mjs` against the PR's merge base                 |
-| `package`  | `build`, then `verify:pack`, `verify:readme`                          |
+| job       | runs                                                                  |
+| --------- | --------------------------------------------------------------------- |
+| `verify`  | `build`, then `sort-imports:check`, `format`, `lint`, `check`, `test` |
+| `package` | `build`, then `verify:pack`, `verify:readme`                          |
+
+`.github/workflows/version-plan-check.yml` adds a third on pull requests only:
+`nx release plan:check` against `origin/master`. It skips a release PR, whose branch
+starts `chore/release-`.
 
 Three differences from running the steps locally, each of which has produced a
 "passes here, fails there" report:

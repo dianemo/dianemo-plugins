@@ -4,6 +4,9 @@ on:
   push:
     branches: [master]
   pull_request:
+  # create-release-pr.yml starts this on the release branch, whose push — made
+  # with the built-in token — starts no workflows of its own.
+  workflow_dispatch:
 
 jobs:
   verify:
@@ -32,31 +35,6 @@ jobs:
           npm run lint
           npm run check
           npm test
-
-  # Every package is published independently, so its own version is the only
-  # signal to a consumer that its code moved. The registry rejects a republish
-  # of an unchanged version, but not until publish time — long after review.
-  # Nothing else in this repo notices, because src/ and package.json can change
-  # while every test, build and pack still passes.
-  versions:
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    steps:
-      # fetch-depth: 0 so the merge base with the target branch is reachable.
-      # Comparing against the base tip instead would demand bumps for every
-      # commit that landed on master after this branch started.
-      - uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
-
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 22
-
-      # No `npm ci`: the script reads package.json files and shells out to git,
-      # so it needs nothing installed.
-      - name: Check version bumps
-        run: node scripts/check-version-bumps.mjs --base=${{ github.event.pull_request.base.sha }}
 
   # The suite above loads each plugin from packages/<name>/src, which never
   # consults package.json — so the exports map, the files list and the emitted
