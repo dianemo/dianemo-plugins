@@ -80,7 +80,7 @@ publisher:
 
 ```bash
 npm publish -w @dianemo/plugin-<name> --access public
-npm trust github @dianemo/plugin-<name> --repo dianemo/dianemo-plugins --file publish.yml
+scripts/trust-publishers.sh @dianemo/plugin-<name>
 ```
 
 Until both are done `publish.yml` stops at that package, so after the by-hand publish
