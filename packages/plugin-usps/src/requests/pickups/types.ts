@@ -31,44 +31,74 @@ export type UspsPickupLocationType =
   | "MAILBOX"
   | "OTHER";
 
-export interface UspsSchedulePickupRequest {
-  pickupDate: string;
-  pickupAddress: {
-    firstName: string;
-    lastName: string;
-    firm?: string;
-    address: UspsAddress;
-    contact: Array<{ email: string } | { cellNumber: string }>;
-  };
-  packages: Array<{
-    packageType: UspsPackageType;
-    packageCount: number;
-  }>;
-  estimatedWeight: number;
-  pickupLocation: {
-    packageLocation: UspsPickupLocationType;
-    specialInstructions?: string;
-    dogPresent?: boolean;
-  };
-  nextAvailablePickup?: boolean;
-}
+export type UspsPickupContact = { email: string } | { cellNumber: string };
 
-export interface UspsPickupEligibilityResponse {
+/** The domestic address as USPS returns it; the abbreviations are read-only. */
+export type UspsPickupDomesticAddress = Omit<UspsAddress, "ZIPPlus4"> & {
+  ZIPPlus4?: string | null;
+  streetAddressAbbreviation?: string;
+  cityAbbreviation?: string;
+};
+
+export interface UspsPickupAddress {
   firstName: string;
   lastName: string;
   firm?: string;
-  address: UspsAddress;
-  contact: Array<{ email: string } | { cellNumber: string }>;
+  address: UspsPickupDomesticAddress;
+  /** One or two contact methods. */
+  contact: UspsPickupContact[];
 }
+
+export interface UspsPickupPackage {
+  packageType: UspsPackageType;
+  packageCount: number;
+  averageLength?: number;
+  averageWidth?: number;
+  averageHeight?: number;
+  trackingNumbers?: string[];
+}
+
+export interface UspsPickupLocation {
+  packageLocation: UspsPickupLocationType;
+  specialInstructions?: string;
+  dogPresent?: boolean;
+}
+
+export interface UspsSchedulePickupRequest {
+  /** YYYY-MM-DD */
+  pickupDate: string;
+  pickupAddress: UspsPickupAddress;
+  packages: UspsPickupPackage[];
+  estimatedWeight: number;
+  pickupLocation: UspsPickupLocation;
+  nextAvailablePickup?: boolean;
+}
+
+export type UspsPickupEligibilityResponse = UspsPickupAddress;
 
 export interface UspsPickupConfirmation {
-  confirmationNumber: string;
-  pickupDate: string;
+  confirmationNumber?: string;
+  pickupDate?: string;
   carrierPickupRequest?: UspsSchedulePickupRequest;
 }
 
-export interface UspsPickupDetails {
+export type UspsPickupDetails = UspsPickupConfirmation;
+
+export interface UspsPickupGetOptions {
+  /**
+   * A 304 has no body and is likely to reject as an error; see
+   * docs/usps-api.md before relying on it.
+   */
+  ifNoneMatch?: string;
+}
+
+export interface UspsPickupUpdateOptions {
   confirmationNumber: string;
-  pickupDate: string;
-  carrierPickupRequest?: UspsSchedulePickupRequest;
+  /** ETag from getPickup; valid one hour or until a PUT or DELETE uses it. */
+  ifMatch: string;
+}
+
+export interface UspsPickupUpdateResult {
+  pickup: UspsPickupConfirmation;
+  etag: string;
 }

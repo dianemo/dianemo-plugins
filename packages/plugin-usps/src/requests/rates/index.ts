@@ -5,6 +5,12 @@ import type {
   UspsTotalRatesResult,
   UspsBaseRatesListQuery,
   UspsBaseRatesListResult,
+  UspsRateBaseRatesQuery,
+  UspsRateBaseRatesResult,
+  UspsRateExtraServiceResult,
+  UspsRateExtraServiceSearchQuery,
+  UspsRateLetterQuery,
+  UspsRateLetterResult,
 } from "./types.js";
 
 export const getTotalRates = async (
@@ -39,6 +45,60 @@ export const getBaseRatesList = async (
     },
     "USP_0009",
     "Failed to get USPS base rates list"
+  );
+  return res.data;
+};
+
+export const searchBaseRates = async (
+  clientName: string,
+  data: UspsRateBaseRatesQuery
+): Promise<UspsRateBaseRatesResult> => {
+  const res = await tryHandleRequest<UspsRateBaseRatesResult>(
+    {
+      clientName: uspsSubClient(clientName, "default"),
+      requestName: "usps.rates.searchBaseRates",
+      method: "POST",
+      url: "/prices/v3/base-rates/search",
+      data,
+    },
+    "USP_0053",
+    "Failed to search USPS base rates"
+  );
+  return res.data;
+};
+
+export const searchExtraServiceRates = async (
+  clientName: string,
+  data: UspsRateExtraServiceSearchQuery
+): Promise<UspsRateExtraServiceResult> => {
+  const res = await tryHandleRequest<UspsRateExtraServiceResult>(
+    {
+      clientName: uspsSubClient(clientName, "default"),
+      requestName: "usps.rates.searchExtraServiceRates",
+      method: "POST",
+      url: "/prices/v3/extra-service-rates/search",
+      data,
+    },
+    "USP_0054",
+    "Failed to search USPS extra service rates"
+  );
+  return res.data;
+};
+
+export const searchLetterRates = async (
+  clientName: string,
+  data: UspsRateLetterQuery
+): Promise<UspsRateLetterResult> => {
+  const res = await tryHandleRequest<UspsRateLetterResult>(
+    {
+      clientName: uspsSubClient(clientName, "default"),
+      requestName: "usps.rates.searchLetterRates",
+      method: "POST",
+      url: "/prices/v3/letter-rates/search",
+      data,
+    },
+    "USP_0055",
+    "Failed to search USPS letter rates"
   );
   return res.data;
 };

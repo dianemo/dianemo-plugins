@@ -1,6 +1,6 @@
 # @dianemo/plugin-usps
 
-USPS plugin — labels, pickups, and payment-token caching
+USPS plugin — labels, prices, tracking, pickups, addresses, subscriptions and payment-token caching
 
 A plugin for [dianemo](https://github.com/dianemo/dianemo), which distributes one API rate limit
 across every process that draws on it.

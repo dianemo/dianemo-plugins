@@ -22,14 +22,58 @@ describe("plugin-fedex", () => {
   it("exposes every request function on the namespace", () => {
     const { fedex: requests } = newHandler().use(fedex);
     expect(Object.keys(requests).sort()).toEqual([
+      "addOpenShipmentPackages",
       "cancelPickup",
       "cancelShipment",
+      "cancelTag",
       "checkPickupAvailability",
+      "confirmConsolidation",
+      "confirmOpenShipment",
+      "createConsolidation",
+      "createConsolidationShipment",
+      "createOpenShipment",
       "createPickup",
+      "createTag",
+      "deleteConsolidation",
+      "deleteConsolidationShipments",
+      "deleteOpenShipment",
+      "deleteOpenShipmentPackages",
+      "estimateDutiesAndTaxes",
+      "findLocations",
+      "getConfirmConsolidationResults",
+      "getConsolidationShipmentResults",
       "getFedexRatesAndTransitTimes",
+      "getOpenShipmentResults",
+      "getPackageAndServiceOptions",
+      "getRegulatoryProfile",
+      "getServicesAndTransitTimes",
+      "getShipmentAsyncResults",
+      "getSpecialServiceOptions",
+      "getTrackingDocuments",
+      "groundEndOfDayClose",
       "makeFedexPurchaseRequest",
+      "modifyConsolidation",
+      "modifyOpenShipment",
+      "modifyOpenShipmentPackages",
+      "reprintEndOfDayClose",
+      "retrieveConsolidation",
+      "retrieveOpenShipment",
+      "retrieveOpenShipmentPackages",
+      "retrieveRegulatoryDetails",
+      "searchHarmonizedCodes",
+      "sendTrackingNotification",
+      "trackByReferences",
+      "trackByTrackingControlNumber",
+      "trackMultiplePieceShipment",
       "trackPackages",
+      "uploadEncodedImage",
+      "uploadEtdDocument",
+      "uploadImage",
+      "uploadMultipleEncodedEtdDocuments",
+      "uploadMultipleEtdDocuments",
       "validateFedExAddress",
+      "validatePostalCode",
+      "validateShipment",
     ]);
   });
 
@@ -151,6 +195,37 @@ describe("plugin-fedex", () => {
       (clients[0].requestOptions as { defaults: { baseURL?: string } }).defaults
         .baseURL
     ).toBe("https://apis.fedex.com");
+  });
+
+  it("declares a documents sub-client without disturbing the parent", async () => {
+    const handler = newHandler();
+    let builder: ((creds: unknown) => unknown) | undefined;
+    vi.spyOn(handler, "registerClientTemplate").mockImplementation(
+      async (_name, b) => {
+        builder = b as (creds: unknown) => unknown;
+      }
+    );
+
+    await fedex.registerTemplate(handler);
+    const clients = builder?.({
+      instanceId: "production",
+      clientId: "id",
+      clientSecret: "secret",
+      baseUrl: "https://apis.fedex.com",
+    }) as Array<{ name: string; subClients: Array<Record<string, unknown>> }>;
+
+    // The parent keeps its own baseURL and budget, so every pre-existing
+    // request function still resolves `fedex:_:production` as in v1.0.0.
+    expect(clients).toHaveLength(1);
+    expect(clients[0].subClients).toEqual([
+      {
+        name: "documents",
+        rateLimit: [{ type: "sharedLimit", clientName: "fedex:_:production" }],
+        requestOptions: {
+          defaults: { baseURL: "https://documentapi.prod.fedex.com" },
+        },
+      },
+    ]);
   });
 
   it("fails loudly if a request runs before registration", async () => {

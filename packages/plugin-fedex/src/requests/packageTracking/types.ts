@@ -1,15 +1,10 @@
-import { CurrencyCodes } from "@dianemo/plugin-kit";
 import {
-  FedExDimensions,
-  FedExPackageType,
-  FedExResponse,
-  FedExServiceType,
-  FedExSubPackagingType,
-  FedExWeight,
+  FedExDimensionUnit,
+  FedExWeightUnit,
   FedexCarrierCodes,
 } from "../types.js";
 
-const _FedExTrackingStatusCodeEnum = {
+export const FedExTrackingStatusCodes = {
   AA: "At Airport",
   AC: "At Canada Post facility",
   AD: "At Delivery",
@@ -67,7 +62,7 @@ const _FedExTrackingStatusCodeEnum = {
   SP: "Split Status",
 } as const;
 
-type FedExTrackingStatusCode = keyof typeof _FedExTrackingStatusCodeEnum;
+export type FedExTrackingStatusCode = keyof typeof FedExTrackingStatusCodes;
 
 type PackageIdentifierType =
   | "BILL_OF_LADING"
@@ -102,28 +97,12 @@ type PackageIdentifierType =
   | "TRANSPORTATION_CONTROL_NUMBER"
   | "VIRTUAL_CONSOLIDATION";
 
-type ConsolidationDetailEventType = "ADDED" | "REMOVED" | "EXCLUDED";
-
-type FedExAddressClassification =
-  "BUSINESS" | "RESIDENTIAL" | "MIXED" | "UNKNOWN";
-
-type FedExLocationType =
-  | "FEDEX_AUTHORIZED_SHIP_CENTER"
-  | "FEDEX_OFFICE"
-  | "FEDEX_SELF_SERVICE_LOCATION"
-  | "FEDEX_STAFFED"
-  | "RETAIL_ALLICANCE_LOCATION"
-  | "FEDEX_GROUND_TERMINAL"
-  | "FEDEX_ONSITE";
-
-type FedExDelayType =
+type FedExTrackDelayType =
   "WEATHER" | "OPERATIONAL" | "LOCAL" | "GENERAL" | "CLEARANCE";
 
-type FedExDelaySubType = "SNOW" | "TORNADO" | "EARTHQUAKE" | string;
+type FedExTrackDelayStatus = "DELAYED" | "ON_TIME" | "EARLY";
 
-type FedExDelayStatus = "DELAYED" | "ON_TIME" | "EARLY";
-
-type FedExServiceCommitMessageType =
+type FedExTrackServiceCommitMessageType =
   | "BROKER_DELIVERED_DESCRIPTION"
   | "CANCELLED_DESCRIPTION"
   | "DELIVERY_IN_MULTIPLE_PIECE_SHIPMENT"
@@ -139,22 +118,7 @@ type FedExServiceCommitMessageType =
   | "USPS_DELIVERED"
   | "USPS_DELIVERING";
 
-type FedExDistanceUnit = "KM" | "MI";
-
-type FedExImageSize = "SMALL" | "LARGE";
-
-type FedExImageType = "SIGNATURE_PROOF_OF_DELIVERY" | "BILL_OF_LADING";
-
-type FedExDeliveryOption =
-  | "DISPUTE_DELIVERY"
-  | "INDIRECT_SIGNATURE_RELEASE"
-  | "REDIRECT_TO_HOLD_AT_LOCATION"
-  | "REROUTE"
-  | "RESCHEDULE"
-  | "RETURN_TO_SHIPPER"
-  | "SUPPLEMENT_ADDRESS";
-
-type FedExDateAndTimeType =
+type FedExTrackDateAndTimeType =
   | "ACTUAL_DELIVERY"
   | "ACTUAL_PICKUP"
   | "ACTUAL_TENDER"
@@ -169,7 +133,19 @@ type FedExDateAndTimeType =
   | "SHIP"
   | "SHIPMENT_DATA_RECEIVED";
 
-type FedExCustomDeliveryOptionType =
+type FedExTrackWindowType =
+  FedExTrackDateAndTimeType | "TYPICAL" | "PROJECTED" | "PRE_DELIVERY";
+
+type FedExTrackDeliveryOption =
+  | "DISPUTE_DELIVERY"
+  | "INDIRECT_SIGNATURE_RELEASE"
+  | "REDIRECT_TO_HOLD_AT_LOCATION"
+  | "REROUTE"
+  | "RESCHEDULE"
+  | "RETURN_TO_SHIPPER"
+  | "SUPPLEMENT_ADDRESS";
+
+type FedExTrackCustomDeliveryOptionType =
   | "REROUTE"
   | "APPOINTMENT"
   | "DATE_CERTAIN"
@@ -177,288 +153,487 @@ type FedExCustomDeliveryOptionType =
   | "REDIRECT_TO_HOLD_AT_LOCATION"
   | "ELECTRONIC_SIGNATURE_RELEASE";
 
-type FedExPieceCountType = "DESTINATION" | "ORIGIN";
+type FedExTrackDeliveryLocationType =
+  | "RECEPTIONIST_OR_FRONT_DESK"
+  | "SHIPPING_RECEIVING"
+  | "MAILROOM"
+  | "RESIDENCE"
+  | "GUARD_OR_SECURITY_STATION"
+  | "FEDEX_LOCATION"
+  | "IN_BOND_OR_CAGE"
+  | "PHARMACY"
+  | "GATE_HOUSE"
+  | "MANAGER_OFFICE"
+  | "MAIN_OFFICE"
+  | "LEASING_OFFICE"
+  | "RENTAL_OFFICE"
+  | "APARTMENT_OFFICE"
+  | "OTHER";
 
-interface FedExWindow {
-  description?: string;
-  window?: {
-    begins: string;
-    ends: string;
-  };
-  type?: FedExDateAndTimeType;
+type FedExTrackScanLocationType =
+  | "AIRPORT"
+  | "CUSTOMS_BROKER"
+  | "CUSTOMER"
+  | "DELIVERY_LOCATION"
+  | "DESTINATION_AIRPORT"
+  | "DROP_BOX"
+  | "DESTINATION_FEDEX_FACILITY"
+  | "ENROUTE"
+  | "FEDEX_FACILITY"
+  | "INTERLINE_CARRIER"
+  | "FEDEX_OFFICE_LOCATION"
+  | "NON_FEDEX_FACILITY"
+  | "ORIGIN_AIRPORT"
+  | "ORIGIN_FEDEX_FACILITY"
+  | "PORT_OF_ENTRY"
+  | "PICKUP_LOCATION"
+  | "PLANE"
+  | "SORT_FACILITY"
+  | "SHIP_AND_GET_LOCATION"
+  | "TURNPOINT"
+  | "VEHICLE";
+
+type FedExTrackFacilityType =
+  | "FEDEX_AUTHORIZED_SHIP_CENTER"
+  | "FEDEX_OFFICE"
+  | "FEDEX_SELF_SERVICE_LOCATION"
+  | "FEDEX_GROUND_TERMINAL"
+  | "FEDEX_ONSITE"
+  | "FEDEX_EXPRESS_STATION"
+  | "FEDEX_FACILITY"
+  | "FEDEX_FREIGHT_SERVICE_CENTER"
+  | "FEDEX_HOME_DELIVERY_STATION"
+  | "FEDEX_SHIP_AND_GET"
+  | "FEDEX_SHIPSITE"
+  | "FEDEX_SMART_POST_HUB";
+
+export type FedExTrackAssociatedType =
+  "OUTBOUND_LINK_TO_RETURN" | "STANDARD_MPS" | "GROUP_MPS";
+
+export type FedExTrackDocumentType =
+  "SIGNATURE_PROOF_OF_DELIVERY" | "BILL_OF_LADING" | "FREIGHT_BILLING_DOCUMENT";
+
+/** Envelope for every Track endpoint; unlike FedExResponse, nothing in it is required. */
+export interface FedExTrackResponse<T extends object> {
+  transactionId?: string;
+  customerTransactionId?: string;
+  output?: T;
 }
 
-interface FedExDistance {
-  unit: FedExDistanceUnit;
-  value: number;
+export interface FedExTrackAlert {
+  code?: string;
+  alertType?: "NOTE" | "WARNING";
+  message?: string;
 }
 
-interface FedExReason {
-  description: string;
-  type: string;
+export interface FedExTrackingNumberInfo {
+  trackingNumber: string;
+  carrierCode?: FedexCarrierCodes;
+  trackingNumberUniqueId?: string;
 }
 
-interface FedExDelayDetail {
-  type: FedExDelayType;
-  subType: FedExDelaySubType;
-  status: FedExDelayStatus;
+export interface FedExTrackingInfo {
+  /** Format YYYY-MM-DD */
+  shipDateBegin?: string;
+  /** Format YYYY-MM-DD */
+  shipDateEnd?: string;
+  trackingNumberInfo: FedExTrackingNumberInfo;
 }
 
 export interface TrackPackagesRequest {
   includeDetailedScans: boolean;
-  trackingInfo: {
-    /** Format YYYY-MM-DD */
-    shipDateBegin?: string;
-    /** Format YYYY-MM-DD */
-    shipDateEnd?: string;
-    trackingNumberInfo: {
-      trackingNumber: string;
-      carrierCode?: FedexCarrierCodes;
-      trackingNumberUniqueId?: string;
-    };
-  }[];
+  trackingInfo: FedExTrackingInfo[];
 }
 
-export type TrackPackagesResponse = FedExResponse<TrackPackagesOutput>;
-
-interface TrackPackagesOutput {
-  completeTrackResults: CompleteTrackResults[];
+export interface FedExTrackOutput {
+  completeTrackResults?: FedExTrackCompleteResult[];
+  alerts?: FedExTrackAlert[];
 }
 
-interface CompleteTrackResults {
-  trackingNumber: string;
-  trackResults: TrackResult[];
+export type TrackPackagesResponse = FedExTrackResponse<FedExTrackOutput>;
+
+export interface FedExTrackCompleteResult {
+  trackingNumber?: string;
+  trackResults?: TrackResult[];
+}
+
+export interface FedExTrackError {
+  code?: string;
+  parameterList?: { value?: string; key?: string }[];
+  message?: string;
 }
 
 export interface TrackResult {
-  trackingNumberInfo: TrackingNumberInfo;
-  additionalTrackingInfo: AdditionalTrackingInfo;
-  serviceDetail: ServiceDetail;
-  latestStatusDetail: LatestStatusDetail;
-  serviceCommitMessage: ServiceCommitMessage;
-  availableImages: AvailableImage[];
-  deliveryDetails: DeliveryDetails;
-  scanEvents: ScanEvent[];
-  packageDetails: PackageDetails;
-  estimatedDeliveryTimeWindow: FedExWindow;
-  recipientInformation: TrackPackageContactAndAddress;
-  standardTransitTimeWindow: FedExWindow;
-  shipmentDetails: ShipmentDetails;
-  availableNotifications: string[];
-  shipperInformation: TrackPackageContactAndAddress;
-  lastUpdatedDestinationAddress: TrackPackageAddress;
-  distanceToDestination?: FedExDistance;
+  trackingNumberInfo?: Partial<FedExTrackingNumberInfo>;
+  additionalTrackingInfo?: AdditionalTrackingInfo;
+  distanceToDestination?: FedExTrackDistance;
   consolidationDetail?: ConsolidationDetail[];
   meterNumber?: string;
   returnDetail?: ReturnDetail;
-  destinationLocation?: TrackPackageLocation;
+  serviceDetail?: ServiceDetail;
+  destinationLocation?: TrackLocation;
+  latestStatusDetail?: LatestStatusDetail;
+  serviceCommitMessage?: ServiceCommitMessage;
   informationNotes?: InformationNote[];
-  error?: {
-    code: string;
-    parameterList: {
-      value: string;
-      key: string;
-    }[];
-    message: string;
-  };
+  error?: FedExTrackError;
   specialHandlings?: SpecialHandling[];
-  goodsClassificationCode?: string;
+  availableImages?: AvailableImage[];
+  deliveryDetails?: DeliveryDetails;
+  scanEvents?: ScanEvent[];
   dateAndTimes?: DateAndTime[];
-  holdAtLocation?: TrackPackageLocation;
+  packageDetails?: PackageDetails;
+  goodsClassificationCode?: string;
+  holdAtLocation?: TrackLocation;
   customDeliveryOptions?: CustomDeliveryOption[];
+  estimatedDeliveryTimeWindow?: TimeWindow;
   pieceCounts?: PieceCount[];
-  originLocation?: TrackPackageLocation;
-  reasonDetail?: FedExReason;
+  originLocation?: OriginLocation;
+  recipientInformation?: TrackContactAndAddress;
+  standardTransitTimeWindow?: TimeWindow;
+  shipmentDetails?: ShipmentDetails;
+  reasonDetail?: Reason;
+  availableNotifications?: string[];
+  shipperInformation?: TrackContactAndAddress;
+  lastUpdatedDestinationAddress?: TrackAddress;
 }
 
-interface TrackingNumberInfo {
-  trackingNumber: string;
-  carrierCode: FedexCarrierCodes;
-  trackingNumberUniqueId: string;
+interface FedExTrackDistance {
+  units?: "KM" | "MI";
+  value?: number;
+}
+
+interface Reason {
+  description?: string;
+  type?: string;
 }
 
 interface AdditionalTrackingInfo {
-  hasAssociatedShipments: boolean;
-  nickname: string;
+  hasAssociatedShipments?: boolean;
+  nickname?: string;
   packageIdentifiers?: PackageIdentifier[];
   shipmentNotes?: string;
 }
 
 interface PackageIdentifier {
-  type: PackageIdentifierType;
-  value: string;
-  trackingNumberUniqueId: string;
+  type?: PackageIdentifierType;
+  /** An array on the wire, although the spec's example is a bare string. */
+  value?: string[];
+  trackingNumberUniqueId?: string;
 }
 
 interface ConsolidationDetail {
-  timeStamp: string;
-  consolidationID: string;
-  reasonDetail: FedExReason;
-  packageCount: number;
-  eventType: ConsolidationDetailEventType;
+  timeStamp?: string;
+  consolidationID?: string;
+  reasonDetail?: Reason;
+  packageCount?: number;
+  eventType?: string;
 }
 
 interface ReturnDetail {
-  authorizationName: string;
-  reasonDetail: FedExReason[];
+  authorizationName?: string;
+  reasonDetail?: Reason[];
 }
 
 interface ServiceDetail {
-  descripition: string;
-  shortDescription: string;
-  type: FedExServiceType;
+  description?: string;
+  shortDescription?: string;
+  type?: string;
 }
 
-interface TrackPackageAddress {
-  residential: boolean;
-  addressClassification?: FedExAddressClassification;
+interface TrackAddress {
+  addressClassification?: string;
+  residential?: boolean;
   streetLines?: string[];
   city?: string;
   stateOrProvinceCode?: string;
-  urbanizationCode?: string;
   postalCode?: string;
   countryCode?: string;
   countryName?: string;
 }
 
+interface TrackContactAndAddress {
+  address?: TrackAddress;
+}
+
+interface TrackLocation {
+  locationId?: string;
+  locationContactAndAddress?: TrackContactAndAddress;
+  locationType?: FedExTrackFacilityType;
+}
+
+interface OriginLocation {
+  locationId?: string;
+  locationContactAndAddress?: TrackContactAndAddress;
+}
+
+interface DelayDetail {
+  type?: FedExTrackDelayType;
+  /** The spec's enum is the illustrative list SNOW, TORNADO, "EARTHQUAKE etc". */
+  subType?: string;
+  status?: FedExTrackDelayStatus;
+}
+
 interface LatestStatusDetail {
-  scanLocation: TrackPackageAddress;
-  code: string;
-  derivedCode: string;
-  statusByLocale: string;
-  description: string;
-  delayDetail?: FedExDelayDetail;
-  ancillaryDetails: {
-    reason: string;
-    reasonDescription: string;
-    action: string;
-    actionDescription: string;
+  scanLocation?: TrackAddress;
+  code?: string;
+  derivedCode?: string;
+  ancillaryDetails?: {
+    reason?: string;
+    reasonDescription?: string;
+    action?: string;
+    actionDescription?: string;
   }[];
+  statusByLocale?: string;
+  description?: string;
+  delayDetail?: DelayDetail;
 }
 
 interface ServiceCommitMessage {
-  message: string;
-  type: FedExServiceCommitMessageType;
+  message?: string;
+  type?: FedExTrackServiceCommitMessageType;
 }
 
 interface InformationNote {
-  code: string;
-  description: string;
+  code?: string;
+  description?: string;
 }
 
 interface SpecialHandling {
-  type: string;
-  description: string;
-  paymentType: string;
+  description?: string;
+  type?: string;
+  paymentType?: string;
 }
 
 interface AvailableImage {
-  size: FedExImageSize;
-  type: FedExImageType;
+  size?: "SMALL" | "LARGE";
+  type?: "SIGNATURE_PROOF_OF_DELIVERY" | "BILL_OF_LADING";
 }
 
 interface DeliveryDetails {
-  destinationServiceArea: string;
-  deliveryAttempts: number;
-  deliveryOptionEligibilityDetails: {
-    option: FedExDeliveryOption;
-    eligibility: string;
-  }[];
   receivedByName?: string;
+  destinationServiceArea?: string;
   destinationServiceAreaDescription?: string;
   locationDescription?: string;
-  actualDeliveryAddress?: TrackPackageAddress;
+  actualDeliveryAddress?: TrackAddress;
   deliveryToday?: boolean;
-  locationType?: FedExLocationType;
+  locationType?: FedExTrackDeliveryLocationType;
   signedByName?: string;
   officeOrderDeliveryMethod?: string;
+  /** A string on the wire, not a number. */
+  deliveryAttempts?: string;
+  deliveryOptionEligibilityDetails?: {
+    option?: FedExTrackDeliveryOption;
+    eligibility?: string;
+  }[];
 }
 
 export interface ScanEvent {
-  date: string;
-  derivedStatus: FedExTrackingStatusCode;
-  scanLocation: TrackPackageAddress;
+  /** ISO 8601 with offset, e.g. 2018-02-02T12:01:00-07:00 */
+  date?: string;
+  /** Status text such as "Picked Up", not a code; the code is eventType. */
+  derivedStatus?: string;
+  scanLocation?: TrackAddress;
   locationId?: string;
-  locationType: FedExLocationType;
-  exceptionDescription: string;
+  locationType?: FedExTrackScanLocationType;
+  exceptionDescription?: string;
   eventDescription?: string;
-  eventType: FedExTrackingStatusCode;
-  derivedStatusCode: string;
+  /** Scan code such as "PU"; see FedExTrackingStatusCodes for the known ones. */
+  eventType?: string;
+  derivedStatusCode?: string;
   exceptionCode?: string;
-  delayDetail?: FedExDelayDetail;
+  delayDetail?: DelayDetail;
 }
 
 interface DateAndTime {
-  dateTime: string;
-  type: FedExDateAndTimeType;
+  dateTime?: string;
+  type?: FedExTrackDateAndTimeType;
+}
+
+interface TrackWeight {
+  unit?: FedExWeightUnit;
+  /** A string on the wire, e.g. "22222.0". */
+  value?: string;
+}
+
+interface TrackDimensions {
+  length?: number;
+  width?: number;
+  height?: number;
+  units?: FedExDimensionUnit;
 }
 
 interface PackageDetails {
-  physicalPackagingType: FedExSubPackagingType;
-  sequenceNumber: string;
+  physicalPackagingType?: string;
+  sequenceNumber?: string;
   undeliveredCount?: string;
-  packagingDescription: {
-    type: FedExPackageType;
-    description: string;
+  packagingDescription?: Reason;
+  count?: string;
+  weightAndDimensions?: {
+    weight?: TrackWeight[];
+    dimensions?: TrackDimensions[];
   };
-  count: string;
-  weightAndDimensions: {
-    weight: FedExWeight[];
-    dimensions: FedExDimensions[];
-  };
-  packageContent: string[];
+  packageContent?: string[];
   contentPieceCount?: string;
-  declaredValue?: {
-    currency: CurrencyCodes;
-    value: number;
-  };
+  declaredValue?: { currency?: string; value?: number };
 }
 
-interface TrackPackageContactAndAddress {
-  contact?: {
-    personName: string;
-    phoneNumber: string;
-    companyName: string;
-  };
-  address: TrackPackageAddress;
-}
-
-interface TrackPackageLocation {
-  locationId: string;
-  locationContactAndAddress: TrackPackageContactAndAddress;
-  locationType: FedExLocationType;
+interface TimeWindow {
+  description?: string;
+  window?: { begins?: string; ends?: string };
+  type?: FedExTrackWindowType;
 }
 
 interface CustomDeliveryOption {
-  requestedAppointmentDetail: {
-    date: string;
-    window: FedExWindow[];
-  };
-  description: string;
-  type: FedExCustomDeliveryOptionType;
+  requestedAppointmentDetail?: { date?: string; window?: TimeWindow[] };
+  description?: string;
+  type?: FedExTrackCustomDeliveryOptionType;
+  status?: string;
 }
 
 interface PieceCount {
-  count: string;
-  description: string;
-  type: FedExPieceCountType;
+  count?: string;
+  description?: string;
+  type?: "DESTINATION" | "ORIGIN";
 }
 
 interface ShipmentDetails {
-  possessionStatus: boolean;
   contents?: {
-    itemNumber: string;
-    receivedQuantity: string;
-    description: string;
-    partNumber: string;
+    itemNumber?: string;
+    receivedQuantity?: string;
+    description?: string;
+    partNumber?: string;
   }[];
   beforePossessionStatus?: boolean;
-  weight?: FedExWeight[];
+  weight?: TrackWeight[];
   contentPieceCount?: string;
   splitShipments?: {
-    pieceCount: string;
-    statusDescription: string;
-    timestamp: string;
-    statusCode: string;
+    pieceCount?: string;
+    statusDescription?: string;
+    timestamp?: string;
+    statusCode?: string;
   }[];
 }
+
+export interface FedExTrackAssociatedRequest {
+  includeDetailedScans?: boolean;
+  masterTrackingNumberInfo: FedExTrackingInfo;
+  associatedType: FedExTrackAssociatedType;
+  pagingDetails?: {
+    resultsPerPage?: number;
+    /** Omit on the first request; echo the token from the previous page after. */
+    pagingToken?: string;
+  };
+}
+
+export type FedExTrackAssociatedResponse = FedExTrackResponse<FedExTrackOutput>;
+
+export interface FedExTrackNotificationRequest {
+  senderContactName: string;
+  senderEMailAddress: string;
+  trackingEventNotificationDetail: {
+    trackingNotifications: {
+      notificationDetail: {
+        localization: { languageCode: string; localeCode?: string };
+        emailDetail: { emailAddress: string; name?: string };
+        /** HTML or TEXT. */
+        notificationType: string;
+      };
+      /** BROKER, OTHER, RECIPIENT or SHIPPER. */
+      role?: string;
+      /** ON_DELIVERY, ON_ESTIMATED_DELIVERY, ON_EXCEPTION or ON_TENDER. */
+      notificationEventTypes: string[];
+      currentResultRequestedFlag?: boolean;
+    }[];
+    personalMessage?: string;
+    /** Untyped in the spec; described as a true/false switch. */
+    supportHTML?: boolean | "true" | "false";
+  };
+  trackingNumberInfo: FedExTrackingNumberInfo;
+  shipDateBegin?: string;
+  shipDateEnd?: string;
+}
+
+export interface FedExTrackNotificationOutput {
+  /** Capitalised on the wire, unlike every other field here. */
+  TrackingNumberInfo?: FedExTrackingNumberInfo;
+  destinationAddress?: {
+    classification?: string;
+    residential?: boolean;
+    streetLines: string[];
+    city?: string;
+    stateOrProvinceCode?: string;
+    postalCode?: string;
+    countryCode: string;
+    countryName?: string;
+  };
+  /** One inner array of event names per recipient. */
+  recipientDetails?: string[][];
+  alerts?: FedExTrackAlert[];
+}
+
+export type FedExTrackNotificationResponse =
+  FedExTrackResponse<FedExTrackNotificationOutput>;
+
+export interface FedExTrackReferencesRequest {
+  referencesInformation: {
+    carrierCode?: string;
+    type?: PackageIdentifierType;
+    value: string;
+    accountNumber?: string;
+    /** Format YYYY-MM-DD */
+    shipDateBegin: string;
+    /** Format YYYY-MM-DD. Spelled shipDateEndDate in the spec schema only. */
+    shipDateEndDate: string;
+    destinationCountryCode?: string;
+    destinationPostalCode?: string;
+  };
+  includeDetailedScans?: boolean;
+}
+
+export interface FedExTrackReferencesOutput extends FedExTrackOutput {
+  cxsErrors?: FedExTrackError[];
+  successful?: boolean;
+}
+
+export type FedExTrackReferencesResponse =
+  FedExTrackResponse<FedExTrackReferencesOutput>;
+
+export interface FedExTrackTcnRequest {
+  /** Only one TCN is supported per request. */
+  tcnInfo: {
+    value: string;
+    carrierCode?: string;
+    shipDateBegin?: string;
+    shipDateEnd?: string;
+  };
+  includeDetailedScans?: boolean;
+}
+
+export type FedExTrackTcnResponse = FedExTrackResponse<FedExTrackOutput>;
+
+export interface FedExTrackDocumentsRequest {
+  trackDocumentDetail: {
+    documentType: FedExTrackDocumentType;
+    /** PDF or PNG, case sensitive; PNG is not offered for BILL_OF_LADING or FREIGHT_BILLING_DOCUMENT. */
+    documentFormat?: "PDF" | "PNG";
+  };
+  /** One to 30 entries. */
+  trackDocumentSpecification: {
+    trackingNumberInfo: FedExTrackingNumberInfo;
+    shipDateBegin?: string;
+    shipDateEnd?: string;
+    accountNumber?: string;
+  }[];
+}
+
+export interface FedExTrackDocumentsOutput {
+  localization?: { languageCode: string; localeCode?: string };
+  documentType?: string;
+  documentFormat?: string;
+  /** Base64-encoded document bytes inside the JSON body; decode before saving. */
+  document?: string[];
+  alerts?: FedExTrackAlert[];
+}
+
+export type FedExTrackDocumentsResponse =
+  FedExTrackResponse<FedExTrackDocumentsOutput>;

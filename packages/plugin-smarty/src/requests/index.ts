@@ -1,5 +1,10 @@
 import { tryHandleRequest } from "@dianemo/plugin-kit";
 import { buildClientName } from "@dianemo/core";
+import {
+  smartyQueryParams,
+  smartySubClient,
+  type SmartySubClient,
+} from "./utils.js";
 import type {
   SmartyIntlCandidate,
   SmartyIntlRequest,
@@ -13,15 +18,32 @@ export interface SmartyCallOptions {
   organizationId: string | null;
   /** Per-environment integration alias, e.g. `production` or `sandbox`. */
   alias?: string;
+  /**
+   * US Street only: sent as the `license` query parameter (never in the
+   * body), comma-separated and applied left to right. International takes its
+   * own `license` on the request.
+   */
+  license?: string;
 }
 
-function smartyClient(opts: SmartyCallOptions, sub: "us" | "intl"): string {
+/** Options for the batch call, which takes the parent client name directly. */
+export interface SmartyUsBatchOptions {
+  license?: string;
+}
+
+function smartyClient(
+  opts: SmartyCallOptions,
+  sub: Extract<SmartySubClient, "us" | "intl">
+): string {
   const alias = opts.alias ?? "production";
-  return `${buildClientName("smarty", {
+  const parent = buildClientName("smarty", {
     organizationId: opts.organizationId,
     instanceId: alias,
-  })}:${sub}`;
+  });
+  return smartySubClient(parent, sub);
 }
+
+const licenseParams = (license?: string) => (license ? { license } : undefined);
 
 /**
  * Defaults to one strict candidate. `body` is spread last, so a caller can
@@ -38,6 +60,7 @@ export const verifySmartyUs = async (
       requestName: "smarty.us.verify",
       method: "POST",
       url: "/street-address",
+      params: licenseParams(options.license),
       data: [
         {
           candidates: 1,
@@ -52,17 +75,41 @@ export const verifySmartyUs = async (
   return res.data ?? [];
 };
 
+/**
+ * The multi-address form of POST /street-address: up to 100 lookups or 32 KB
+ * per request. No defaults are injected, so Smarty's own apply per lookup
+ * (`candidates` 1, `match` strict). Candidates from every lookup come back
+ * flattened; `input_index` says which lookup each belongs to.
+ */
+export const verifySmartyUsBatch = async (
+  clientName: string,
+  lookups: SmartyUsRequest[],
+  { license }: SmartyUsBatchOptions = {}
+): Promise<SmartyUsCandidate[]> => {
+  const res = await tryHandleRequest<SmartyUsCandidate[]>(
+    {
+      clientName: smartySubClient(clientName, "us"),
+      requestName: "smarty.us.verifyBatch",
+      method: "POST",
+      url: "/street-address",
+      params: licenseParams(license),
+      data: lookups,
+    },
+    "SMT_0010",
+    "Smarty US batch verification failed"
+  );
+  return res.data ?? [];
+};
+
 /** The international endpoint is GET-only, and takes one address per request. */
 export const verifySmartyIntl = async (
   params: SmartyIntlRequest,
   options: SmartyCallOptions
 ): Promise<SmartyIntlCandidate[]> => {
-  // Strip undefined keys before serialization — axios will otherwise emit
-  // them as bare query keys.
-  const cleaned: Record<string, string> = {};
-  for (const [k, v] of Object.entries(params)) {
-    if (v !== undefined && v !== null && v !== "") cleaned[k] = String(v);
-  }
+  const cleaned = smartyQueryParams({
+    license: options.license,
+    ...params,
+  });
 
   const res = await tryHandleRequest<SmartyIntlCandidate[]>(
     {
@@ -77,3 +124,9 @@ export const verifySmartyIntl = async (
   );
   return res.data ?? [];
 };
+
+export * from "./intlAutocomplete/index.js";
+export * from "./usAutocomplete/index.js";
+export * from "./usExtract/index.js";
+export * from "./usReverseGeo/index.js";
+export * from "./usZipcode/index.js";

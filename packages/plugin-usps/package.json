@@ -1,7 +1,7 @@
 {
   "name": "@dianemo/plugin-usps",
-  "version": "2.0.0",
-  "description": "USPS plugin — labels, pickups, and payment-token caching",
+  "version": "3.0.0",
+  "description": "USPS plugin — labels, prices, tracking, pickups, addresses, subscriptions and payment-token caching",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -18,13 +18,61 @@
       "types": "./dist/requests/addresses/index.d.ts",
       "default": "./dist/requests/addresses/index.js"
     },
+    "./requests/adjustments": {
+      "types": "./dist/requests/adjustments/index.d.ts",
+      "default": "./dist/requests/adjustments/index.js"
+    },
+    "./requests/appointments": {
+      "types": "./dist/requests/appointments/index.d.ts",
+      "default": "./dist/requests/appointments/index.js"
+    },
+    "./requests/containers": {
+      "types": "./dist/requests/containers/index.d.ts",
+      "default": "./dist/requests/containers/index.js"
+    },
     "./requests/index": {
       "types": "./dist/requests/index.d.ts",
       "default": "./dist/requests/index.js"
     },
+    "./requests/internationalLabels": {
+      "types": "./dist/requests/internationalLabels/index.d.ts",
+      "default": "./dist/requests/internationalLabels/index.js"
+    },
+    "./requests/internationalPrices": {
+      "types": "./dist/requests/internationalPrices/index.d.ts",
+      "default": "./dist/requests/internationalPrices/index.js"
+    },
+    "./requests/internationalServiceStandards": {
+      "types": "./dist/requests/internationalServiceStandards/index.d.ts",
+      "default": "./dist/requests/internationalServiceStandards/index.js"
+    },
     "./requests/labels": {
       "types": "./dist/requests/labels/index.d.ts",
       "default": "./dist/requests/labels/index.js"
+    },
+    "./requests/locations": {
+      "types": "./dist/requests/locations/index.d.ts",
+      "default": "./dist/requests/locations/index.js"
+    },
+    "./requests/logisticsShipments": {
+      "types": "./dist/requests/logisticsShipments/index.d.ts",
+      "default": "./dist/requests/logisticsShipments/index.js"
+    },
+    "./requests/mailCampaigns": {
+      "types": "./dist/requests/mailCampaigns/index.d.ts",
+      "default": "./dist/requests/mailCampaigns/index.js"
+    },
+    "./requests/ncoaDataServices": {
+      "types": "./dist/requests/ncoaDataServices/index.d.ts",
+      "default": "./dist/requests/ncoaDataServices/index.js"
+    },
+    "./requests/openAndDistribute": {
+      "types": "./dist/requests/openAndDistribute/index.d.ts",
+      "default": "./dist/requests/openAndDistribute/index.js"
+    },
+    "./requests/packageCampaigns": {
+      "types": "./dist/requests/packageCampaigns/index.d.ts",
+      "default": "./dist/requests/packageCampaigns/index.js"
     },
     "./requests/payments": {
       "types": "./dist/requests/payments/index.d.ts",
@@ -34,9 +82,33 @@
       "types": "./dist/requests/pickups/index.d.ts",
       "default": "./dist/requests/pickups/index.js"
     },
+    "./requests/qrCode": {
+      "types": "./dist/requests/qrCode/index.d.ts",
+      "default": "./dist/requests/qrCode/index.js"
+    },
     "./requests/rates": {
       "types": "./dist/requests/rates/index.d.ts",
       "default": "./dist/requests/rates/index.js"
+    },
+    "./requests/scanForms": {
+      "types": "./dist/requests/scanForms/index.d.ts",
+      "default": "./dist/requests/scanForms/index.js"
+    },
+    "./requests/serviceStandards": {
+      "types": "./dist/requests/serviceStandards/index.d.ts",
+      "default": "./dist/requests/serviceStandards/index.js"
+    },
+    "./requests/shipEnrollment": {
+      "types": "./dist/requests/shipEnrollment/index.d.ts",
+      "default": "./dist/requests/shipEnrollment/index.js"
+    },
+    "./requests/shippingOptions": {
+      "types": "./dist/requests/shippingOptions/index.d.ts",
+      "default": "./dist/requests/shippingOptions/index.js"
+    },
+    "./requests/subscriptions": {
+      "types": "./dist/requests/subscriptions/index.d.ts",
+      "default": "./dist/requests/subscriptions/index.js"
     },
     "./requests/tracking": {
       "types": "./dist/requests/tracking/index.d.ts",
@@ -45,6 +117,10 @@
     "./requests/types": {
       "types": "./dist/requests/types.d.ts",
       "default": "./dist/requests/types.js"
+    },
+    "./requests/userInfo": {
+      "types": "./dist/requests/userInfo/index.d.ts",
+      "default": "./dist/requests/userInfo/index.js"
     },
     "./requests/utils": {
       "types": "./dist/requests/utils.d.ts",
@@ -58,13 +134,125 @@
       "types": "./dist/requests/addresses/types.d.ts",
       "default": "./dist/requests/addresses/types.js"
     },
+    "./requests/adjustments/index": {
+      "types": "./dist/requests/adjustments/index.d.ts",
+      "default": "./dist/requests/adjustments/index.js"
+    },
+    "./requests/adjustments/types": {
+      "types": "./dist/requests/adjustments/types.d.ts",
+      "default": "./dist/requests/adjustments/types.js"
+    },
+    "./requests/appointments/index": {
+      "types": "./dist/requests/appointments/index.d.ts",
+      "default": "./dist/requests/appointments/index.js"
+    },
+    "./requests/appointments/types": {
+      "types": "./dist/requests/appointments/types.d.ts",
+      "default": "./dist/requests/appointments/types.js"
+    },
+    "./requests/containers/index": {
+      "types": "./dist/requests/containers/index.d.ts",
+      "default": "./dist/requests/containers/index.js"
+    },
+    "./requests/containers/types": {
+      "types": "./dist/requests/containers/types.d.ts",
+      "default": "./dist/requests/containers/types.js"
+    },
+    "./requests/internationalLabels/index": {
+      "types": "./dist/requests/internationalLabels/index.d.ts",
+      "default": "./dist/requests/internationalLabels/index.js"
+    },
+    "./requests/internationalLabels/types": {
+      "types": "./dist/requests/internationalLabels/types.d.ts",
+      "default": "./dist/requests/internationalLabels/types.js"
+    },
+    "./requests/internationalPrices/index": {
+      "types": "./dist/requests/internationalPrices/index.d.ts",
+      "default": "./dist/requests/internationalPrices/index.js"
+    },
+    "./requests/internationalPrices/types": {
+      "types": "./dist/requests/internationalPrices/types.d.ts",
+      "default": "./dist/requests/internationalPrices/types.js"
+    },
+    "./requests/internationalServiceStandards/index": {
+      "types": "./dist/requests/internationalServiceStandards/index.d.ts",
+      "default": "./dist/requests/internationalServiceStandards/index.js"
+    },
+    "./requests/internationalServiceStandards/types": {
+      "types": "./dist/requests/internationalServiceStandards/types.d.ts",
+      "default": "./dist/requests/internationalServiceStandards/types.js"
+    },
+    "./requests/labels/branding": {
+      "types": "./dist/requests/labels/branding.d.ts",
+      "default": "./dist/requests/labels/branding.js"
+    },
     "./requests/labels/index": {
       "types": "./dist/requests/labels/index.d.ts",
       "default": "./dist/requests/labels/index.js"
     },
+    "./requests/labels/indicia": {
+      "types": "./dist/requests/labels/indicia.d.ts",
+      "default": "./dist/requests/labels/indicia.js"
+    },
+    "./requests/labels/labels": {
+      "types": "./dist/requests/labels/labels.d.ts",
+      "default": "./dist/requests/labels/labels.js"
+    },
     "./requests/labels/types": {
       "types": "./dist/requests/labels/types.d.ts",
       "default": "./dist/requests/labels/types.js"
+    },
+    "./requests/locations/index": {
+      "types": "./dist/requests/locations/index.d.ts",
+      "default": "./dist/requests/locations/index.js"
+    },
+    "./requests/locations/types": {
+      "types": "./dist/requests/locations/types.d.ts",
+      "default": "./dist/requests/locations/types.js"
+    },
+    "./requests/locations/utils": {
+      "types": "./dist/requests/locations/utils.d.ts",
+      "default": "./dist/requests/locations/utils.js"
+    },
+    "./requests/logisticsShipments/index": {
+      "types": "./dist/requests/logisticsShipments/index.d.ts",
+      "default": "./dist/requests/logisticsShipments/index.js"
+    },
+    "./requests/logisticsShipments/types": {
+      "types": "./dist/requests/logisticsShipments/types.d.ts",
+      "default": "./dist/requests/logisticsShipments/types.js"
+    },
+    "./requests/mailCampaigns/index": {
+      "types": "./dist/requests/mailCampaigns/index.d.ts",
+      "default": "./dist/requests/mailCampaigns/index.js"
+    },
+    "./requests/mailCampaigns/types": {
+      "types": "./dist/requests/mailCampaigns/types.d.ts",
+      "default": "./dist/requests/mailCampaigns/types.js"
+    },
+    "./requests/ncoaDataServices/index": {
+      "types": "./dist/requests/ncoaDataServices/index.d.ts",
+      "default": "./dist/requests/ncoaDataServices/index.js"
+    },
+    "./requests/ncoaDataServices/types": {
+      "types": "./dist/requests/ncoaDataServices/types.d.ts",
+      "default": "./dist/requests/ncoaDataServices/types.js"
+    },
+    "./requests/openAndDistribute/index": {
+      "types": "./dist/requests/openAndDistribute/index.d.ts",
+      "default": "./dist/requests/openAndDistribute/index.js"
+    },
+    "./requests/openAndDistribute/types": {
+      "types": "./dist/requests/openAndDistribute/types.d.ts",
+      "default": "./dist/requests/openAndDistribute/types.js"
+    },
+    "./requests/packageCampaigns/index": {
+      "types": "./dist/requests/packageCampaigns/index.d.ts",
+      "default": "./dist/requests/packageCampaigns/index.js"
+    },
+    "./requests/packageCampaigns/types": {
+      "types": "./dist/requests/packageCampaigns/types.d.ts",
+      "default": "./dist/requests/packageCampaigns/types.js"
     },
     "./requests/payments/index": {
       "types": "./dist/requests/payments/index.d.ts",
@@ -82,6 +270,14 @@
       "types": "./dist/requests/pickups/types.d.ts",
       "default": "./dist/requests/pickups/types.js"
     },
+    "./requests/qrCode/index": {
+      "types": "./dist/requests/qrCode/index.d.ts",
+      "default": "./dist/requests/qrCode/index.js"
+    },
+    "./requests/qrCode/types": {
+      "types": "./dist/requests/qrCode/types.d.ts",
+      "default": "./dist/requests/qrCode/types.js"
+    },
     "./requests/rates/index": {
       "types": "./dist/requests/rates/index.d.ts",
       "default": "./dist/requests/rates/index.js"
@@ -90,6 +286,86 @@
       "types": "./dist/requests/rates/types.d.ts",
       "default": "./dist/requests/rates/types.js"
     },
+    "./requests/scanForms/index": {
+      "types": "./dist/requests/scanForms/index.d.ts",
+      "default": "./dist/requests/scanForms/index.js"
+    },
+    "./requests/scanForms/types": {
+      "types": "./dist/requests/scanForms/types.d.ts",
+      "default": "./dist/requests/scanForms/types.js"
+    },
+    "./requests/serviceStandards/index": {
+      "types": "./dist/requests/serviceStandards/index.d.ts",
+      "default": "./dist/requests/serviceStandards/index.js"
+    },
+    "./requests/serviceStandards/types": {
+      "types": "./dist/requests/serviceStandards/types.d.ts",
+      "default": "./dist/requests/serviceStandards/types.js"
+    },
+    "./requests/shipEnrollment/index": {
+      "types": "./dist/requests/shipEnrollment/index.d.ts",
+      "default": "./dist/requests/shipEnrollment/index.js"
+    },
+    "./requests/shipEnrollment/types": {
+      "types": "./dist/requests/shipEnrollment/types.d.ts",
+      "default": "./dist/requests/shipEnrollment/types.js"
+    },
+    "./requests/shippingOptions/index": {
+      "types": "./dist/requests/shippingOptions/index.d.ts",
+      "default": "./dist/requests/shippingOptions/index.js"
+    },
+    "./requests/shippingOptions/types": {
+      "types": "./dist/requests/shippingOptions/types.d.ts",
+      "default": "./dist/requests/shippingOptions/types.js"
+    },
+    "./requests/subscriptions/addresses": {
+      "types": "./dist/requests/subscriptions/addresses.d.ts",
+      "default": "./dist/requests/subscriptions/addresses.js"
+    },
+    "./requests/subscriptions/adjustments": {
+      "types": "./dist/requests/subscriptions/adjustments.d.ts",
+      "default": "./dist/requests/subscriptions/adjustments.js"
+    },
+    "./requests/subscriptions/disputes": {
+      "types": "./dist/requests/subscriptions/disputes.d.ts",
+      "default": "./dist/requests/subscriptions/disputes.js"
+    },
+    "./requests/subscriptions/index": {
+      "types": "./dist/requests/subscriptions/index.d.ts",
+      "default": "./dist/requests/subscriptions/index.js"
+    },
+    "./requests/subscriptions/ncoa": {
+      "types": "./dist/requests/subscriptions/ncoa.d.ts",
+      "default": "./dist/requests/subscriptions/ncoa.js"
+    },
+    "./requests/subscriptions/packageTransactionDetails": {
+      "types": "./dist/requests/subscriptions/packageTransactionDetails.d.ts",
+      "default": "./dist/requests/subscriptions/packageTransactionDetails.js"
+    },
+    "./requests/subscriptions/payloads": {
+      "types": "./dist/requests/subscriptions/payloads.d.ts",
+      "default": "./dist/requests/subscriptions/payloads.js"
+    },
+    "./requests/subscriptions/tracking": {
+      "types": "./dist/requests/subscriptions/tracking.d.ts",
+      "default": "./dist/requests/subscriptions/tracking.js"
+    },
+    "./requests/subscriptions/trackingV3r2": {
+      "types": "./dist/requests/subscriptions/trackingV3r2.d.ts",
+      "default": "./dist/requests/subscriptions/trackingV3r2.js"
+    },
+    "./requests/subscriptions/types": {
+      "types": "./dist/requests/subscriptions/types.d.ts",
+      "default": "./dist/requests/subscriptions/types.js"
+    },
+    "./requests/subscriptions/unpaidPackages": {
+      "types": "./dist/requests/subscriptions/unpaidPackages.d.ts",
+      "default": "./dist/requests/subscriptions/unpaidPackages.js"
+    },
+    "./requests/subscriptions/utils": {
+      "types": "./dist/requests/subscriptions/utils.d.ts",
+      "default": "./dist/requests/subscriptions/utils.js"
+    },
     "./requests/tracking/index": {
       "types": "./dist/requests/tracking/index.d.ts",
       "default": "./dist/requests/tracking/index.js"
@@ -97,6 +373,22 @@
     "./requests/tracking/types": {
       "types": "./dist/requests/tracking/types.d.ts",
       "default": "./dist/requests/tracking/types.js"
+    },
+    "./requests/tracking/typesV3r2": {
+      "types": "./dist/requests/tracking/typesV3r2.d.ts",
+      "default": "./dist/requests/tracking/typesV3r2.js"
+    },
+    "./requests/tracking/utils": {
+      "types": "./dist/requests/tracking/utils.d.ts",
+      "default": "./dist/requests/tracking/utils.js"
+    },
+    "./requests/userInfo/index": {
+      "types": "./dist/requests/userInfo/index.d.ts",
+      "default": "./dist/requests/userInfo/index.js"
+    },
+    "./requests/userInfo/types": {
+      "types": "./dist/requests/userInfo/types.d.ts",
+      "default": "./dist/requests/userInfo/types.js"
     }
   },
   "files": [

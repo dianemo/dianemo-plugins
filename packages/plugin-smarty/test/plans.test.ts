@@ -45,8 +45,37 @@ describe("smarty rate-limit plan", () => {
     expect(loaded["smarty:_:main:intl"]).toEqual([
       expect.objectContaining(limit(3_500)),
     ]);
+    expect(loaded["smarty:_:main:usReverseGeo"]).toEqual([
+      expect.objectContaining(limit(3_500)),
+    ]);
     // Core gives a client that declares nothing an unmetered placeholder.
     expect(loaded["smarty:_:main"]).toEqual([
+      expect.objectContaining({ type: "noLimit" }),
+    ]);
+  });
+
+  it("declares Smarty's default limit for every surface", async () => {
+    const handler = await newHandler();
+    await handler.addLocalTemplateClient("smarty", creds);
+
+    const loaded = Object.fromEntries(
+      handler.getLoadedClients().map((c) => [c.name, c.rateLimit])
+    );
+    const perSecond: Record<string, number> = {
+      us: 25_000,
+      usZipcode: 25_000,
+      usExtract: 25_000,
+      usReverseGeo: 3_500,
+      intl: 3_500,
+      intlAutocomplete: 400,
+    };
+    for (const [surface, n] of Object.entries(perSecond)) {
+      expect(loaded[`smarty:_:main:${surface}`]).toEqual([
+        expect.objectContaining(limit(n)),
+      ]);
+    }
+    // Smarty's table gives US Autocomplete no limit; this is declared, not a default.
+    expect(loaded["smarty:_:main:usAutocomplete"]).toEqual([
       expect.objectContaining({ type: "noLimit" }),
     ]);
   });

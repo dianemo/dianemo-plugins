@@ -3,20 +3,44 @@ import {
   UpsPickupCreationRequest,
   UpsPickupCreationResponse,
   UpsPickupCancelResponse,
+  UpsPickupGetPoliticalDivision1ListResponse,
+  UpsPickupGetServiceCenterFacilitiesRequest,
+  UpsPickupGetServiceCenterFacilitiesResponse,
+  UpsPickupPendingStatusResponse,
+  UpsPickupPendingStatusOptions,
+  UpsPickupPoliticalDivisionsOptions,
   UpsPickupRateRequest,
   UpsPickupRateResponse,
+  UpsPickupTriggerGWNRequest,
+  UpsPickupTriggerGWNResponse,
   UpsPickupType,
 } from "./types.js";
 
 /** A dated version; a stale pin answers silently — see docs/ups-api.md#version-pins */
 const PICKUP_VERSION = "v2409";
 
-/** Schedule a UPS on-call pickup. Returns the PRN (Pickup Request Number). */
-export const createPickup = async (
+/**
+ * Schedule a UPS on-call pickup. Returns the PRN (Pickup Request Number).
+ *
+ * The same endpoint also takes a `PickupTriggerGWNRequest`, which triggers a
+ * Smart Pickup instead of creating an on-call one; the response is that
+ * trigger's own shape — see docs/ups-api.md#pickup-operations.
+ */
+export async function createPickup(
   clientName: string,
   data: UpsPickupCreationRequest
-): Promise<UpsPickupCreationResponse> => {
-  const res = await tryHandleRequest<UpsPickupCreationResponse>(
+): Promise<UpsPickupCreationResponse>;
+export async function createPickup(
+  clientName: string,
+  data: UpsPickupTriggerGWNRequest
+): Promise<UpsPickupTriggerGWNResponse>;
+export async function createPickup(
+  clientName: string,
+  data: UpsPickupCreationRequest | UpsPickupTriggerGWNRequest
+): Promise<UpsPickupCreationResponse | UpsPickupTriggerGWNResponse> {
+  const res = await tryHandleRequest<
+    UpsPickupCreationResponse | UpsPickupTriggerGWNResponse
+  >(
     {
       clientName,
       requestName: "ups.pickup.create",
@@ -28,14 +52,14 @@ export const createPickup = async (
     "Failed to create UPS pickup"
   );
   return res.data;
-};
+}
 
 /**
  * Cancel a UPS on-call pickup by PRN.
  *
  * The trailing `02` is Cancel's `CancelBy` — `01` cancels by account number
- * instead. It is a different enum from the one on the Rate path below; see
- * docs/ups-api.md#pickup-path-segments.
+ * instead (see `cancelPickupByAccountNumber`). It is a different enum from the
+ * one on the Rate path below; see docs/ups-api.md#pickup-path-segments.
  */
 export const cancelPickup = async (
   clientName: string,
@@ -48,6 +72,28 @@ export const cancelPickup = async (
       method: "DELETE",
       url: `/api/shipments/${PICKUP_VERSION}/pickup/02`,
       headers: { Prn: prn },
+    },
+    "UPS_0043",
+    "Failed to cancel UPS pickup"
+  );
+  return res.data;
+};
+
+/**
+ * Cancel by account number (`CancelBy` = `01`): the spec sends no `Prn` header
+ * and no account number on this path, so which account is cancelled is not
+ * visible from the request — see docs/ups-api.md#pickup-operations. Shares
+ * `cancelPickup`'s code because it is the same failure, one endpoint.
+ */
+export const cancelPickupByAccountNumber = async (
+  clientName: string
+): Promise<UpsPickupCancelResponse> => {
+  const res = await tryHandleRequest<UpsPickupCancelResponse>(
+    {
+      clientName,
+      requestName: "ups.pickup.cancelByAccountNumber",
+      method: "DELETE",
+      url: `/api/shipments/${PICKUP_VERSION}/pickup/01`,
     },
     "UPS_0011",
     "Failed to cancel UPS pickup"
@@ -82,11 +128,62 @@ export const getPickupRate = async (
   return res.data;
 };
 
-export type {
-  UpsPickupCreationRequest,
-  UpsPickupCreationResponse,
-  UpsPickupCancelResponse,
-  UpsPickupRateRequest,
-  UpsPickupRateResponse,
-  UpsPickupType,
-} from "./types.js";
+/** Pending pickups on an account. `pickuptype` is the same enum as Rate's. */
+export const getPickupPendingStatus = async (
+  clientName: string,
+  { accountNumber, pickupType }: UpsPickupPendingStatusOptions
+): Promise<UpsPickupPendingStatusResponse> => {
+  const res = await tryHandleRequest<UpsPickupPendingStatusResponse>(
+    {
+      clientName,
+      requestName: "ups.pickup.getPendingStatus",
+      method: "GET",
+      url: `/api/shipments/${PICKUP_VERSION}/pickup/${pickupType}`,
+      headers: { AccountNumber: accountNumber },
+    },
+    "UPS_0030",
+    "Failed to get UPS pickup pending status"
+  );
+  return res.data;
+};
+
+/** The Political Division 1 (state / province) list for a country. */
+export const getPickupPoliticalDivisions = async (
+  clientName: string,
+  { countryCode }: UpsPickupPoliticalDivisionsOptions
+): Promise<UpsPickupGetPoliticalDivision1ListResponse> => {
+  const res =
+    await tryHandleRequest<UpsPickupGetPoliticalDivision1ListResponse>(
+      {
+        clientName,
+        requestName: "ups.pickup.getPoliticalDivisions",
+        method: "GET",
+        url: `/api/pickup/${PICKUP_VERSION}/countries/${encodeURIComponent(countryCode)}`,
+      },
+      "UPS_0031",
+      "Failed to get UPS pickup political divisions"
+    );
+  return res.data;
+};
+
+/** Drop-off and pickup service centre facilities near an origin address. */
+export const getPickupServiceCenterFacilities = async (
+  clientName: string,
+  data: UpsPickupGetServiceCenterFacilitiesRequest
+): Promise<UpsPickupGetServiceCenterFacilitiesResponse> => {
+  const res =
+    await tryHandleRequest<UpsPickupGetServiceCenterFacilitiesResponse>(
+      {
+        clientName,
+        requestName: "ups.pickup.getServiceCenterFacilities",
+        method: "POST",
+        url: `/api/pickup/${PICKUP_VERSION}/servicecenterlocations`,
+        data,
+      },
+      "UPS_0032",
+      "Failed to get UPS pickup service center facilities"
+    );
+  return res.data;
+};
+
+export type * from "./types.js";

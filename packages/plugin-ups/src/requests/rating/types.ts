@@ -6,10 +6,19 @@ import { CurrencyCodes } from "@dianemo/plugin-kit";
 export enum UPSRequestOption {
   Rate = "Rate",
   Shop = "Shop",
+  Ratetimeintransit = "Ratetimeintransit",
+  Shoptimeintransit = "Shoptimeintransit",
 }
+
 export interface RateOptions {
-  additionalinfo?: UPSAdditionalInfoOptions[] | undefined;
+  /**
+   * Overrides the Rate/Shop choice `getUpsRate` otherwise derives from whether
+   * the shipment carries a service code. Rate is the only option valid for
+   * Ground Freight Pricing.
+   */
   requestOption?: UPSRequestOption;
+  /** Sent as `?additionalinfo=`; also implied by `DeliveryTimeInformation`. */
+  additionalinfo?: UPSAdditionalInfoOptions[] | undefined;
   version?: UPSVersion;
 }
 
@@ -69,6 +78,7 @@ export interface AdjustedHeight {
 
 export interface AdjustedHeightUnitOfMeasurement {
   Code: AdjustedHeightUnitOfMeasurementCode;
+  Description?: string;
 }
 
 export interface HandlingUnit {
@@ -80,6 +90,7 @@ export interface HandlingUnit {
 
 export interface HandlingUnitType {
   Code: HandlingUnitTypeCode;
+  Description?: string;
 }
 
 export interface Dimensions {
@@ -91,6 +102,7 @@ export interface Dimensions {
 
 export interface HandlingUnitDimensionsUnitOfMeasurement {
   Code: HandlingUnitDimensionsUnitOfMeasurementCode;
+  Description?: string;
 }
 
 /**
@@ -117,6 +129,7 @@ export interface FRSPaymentInformation {
 
 export interface FRSPaymentInformationType {
   Code: FRSPaymentInformationTypeCode;
+  Description?: string;
 }
 
 export interface FRSPaymentInformationAddress {
@@ -200,7 +213,7 @@ export enum SimpleRateCodes {
 export enum UPSPremierCategories {
   UPSPremierSilver = "01",
   UPSPremierGold = "02",
-  UPSPremierPlatinum = "03 ",
+  UPSPremierPlatinum = "03",
 }
 
 export interface PackagingType {
@@ -216,19 +229,19 @@ export interface PackageDimensions {
    *
    * Required for GB to GB and Poland to Poland shipments.
    */
-  Length?: string;
+  Length: string;
   /**
    * Width of the package used to determine dimensional weight.
    *
    * Required for GB to GB and Poland to Poland shipments.
    */
-  Width?: string;
+  Width: string;
   /**
    * Height of the package used to determine dimensional weight.
    *
    * Required for GB to GB and Poland to Poland shipments.
    */
-  Height?: string;
+  Height: string;
 }
 
 export interface PackageDimensionsUnitOfMeasurement {
@@ -251,6 +264,7 @@ export interface DimWeight {
 
 export interface DimWeightUnitOfMeasurement {
   Code: DimWeightUnitOfMeasurementCode;
+  Description?: string;
 }
 
 /**
@@ -308,12 +322,18 @@ export interface NMFC {
 }
 
 export interface PackageServiceOptions {
-  DeliveryConfirmation?: DeliveryConfirmation;
+  /**
+   * The spec's package-level DCISType table (1 Unsupported, 2 Signature, 3 Adult
+   * Signature) differs from its shipment-level one (1 Signature, 2 Adult) — see
+   * docs/ups-api.md.
+   */
+  DeliveryConfirmation?: UpsRatingPackageDeliveryConfirmation;
   AccessPointCOD?: AccessPointCOD;
   COD?: COD;
   DeclaredValue?: DeclaredValue;
   ShipperDeclaredValue?: ShipperDeclaredValue;
   ShipperReleaseIndicator?: Indicator;
+  ProactiveIndicator?: Indicator;
   RefrigerationIndicator?: Indicator;
   Insurance?: Insurance;
   UPSPremiumCareIndicator?: Indicator;
@@ -348,20 +368,22 @@ export interface HazMat {
   QValue?: string;
   OverPackedIndicator?: Indicator;
   AllPackedInOneIndicator?: Indicator;
-  HazMatChemicalRecord?: HazMatChemicalRecord;
+  HazMatChemicalRecord: HazMatChemicalRecord | HazMatChemicalRecord[];
 }
 
 export interface HazMatChemicalRecord {
   ChemicalRecordIdentifier?: string;
   ClassDivisionNumber?: string;
   IDNumber?: string;
-  TransportationMode?: TransportationsModes;
-  RegulationSet?: RegulationSets;
+  TransportationMode: TransportationsModes;
+  RegulationSet: RegulationSets;
   EmergencyPhone?: string;
   EmergencyContact?: string;
   ReportableQuantity?: string;
   SubRiskClass?: string;
+  /** @deprecated Not a UPS field: the wire name is `PackagingGroupType`. */
   PackingGroupType?: PackingGroupTypes;
+  PackagingGroupType?: PackingGroupTypes;
   Quantity?: string;
   UOM?: string;
   PackagingInstructionCode?: string;
@@ -420,6 +442,12 @@ export interface Insurance {
   BasicFlexibleParcelIndicator?: BasicFlexibleParcelIndicator;
   ExtendedFlexibleParcelIndicator?: ExtendedFlexibleParcelIndicator;
   TimeInTransitFlexibleParcelIndicator?: TimeInTransitFlexibleParcelIndicator;
+  PackageProtection?: UpsRatingPackageProtection;
+}
+
+export interface UpsRatingPackageProtection {
+  CurrencyCode: CurrencyCodes;
+  MonetaryValue: string;
 }
 
 export interface TimeInTransitFlexibleParcelIndicator {
@@ -468,6 +496,16 @@ export interface AccessPointCOD {
 
 export interface DeliveryConfirmation {
   DCISType: DCISType;
+}
+
+export interface UpsRatingPackageDeliveryConfirmation {
+  DCISType: DCISType | UpsRatingPackageDCISType;
+}
+
+export enum UpsRatingPackageDCISType {
+  Unsupported = "1",
+  DeliveryConfirmationSignatureRequired = "2",
+  DeliveryConfirmationAdultSignatureRequired = "3",
 }
 
 export enum DCISType {
@@ -546,7 +584,7 @@ export interface BillReceiver {
    * All other accounts must be either a daily pickup account, an occasional account, a drop shipper account, or a nonshipping account.
    */
   AccountNumber: string;
-  Address: BillReceiverAddress;
+  Address?: BillReceiverAddress;
 }
 
 export interface BillReceiverAddress {
@@ -554,7 +592,7 @@ export interface BillReceiverAddress {
    * The postal code for the UPS account's pickup address.
    * The pickup postal code was entered in the UPS system when the account was set-up.
    */
-  PostalCode: string;
+  PostalCode?: string;
 }
 
 export interface BillThirdParty {
@@ -571,6 +609,9 @@ export interface BillThirdParty {
 }
 
 export interface BillThirdPartyAddress {
+  AddressLine?: string[] | string;
+  City?: string;
+  StateProvinceCode?: string;
   /**
    * The postal code must be the same as the UPS account pickup address postal code.
    *
@@ -639,10 +680,16 @@ export interface RateRequest {
 }
 
 export interface Request {
+  /**
+   * The spec's `required` list names RequestOption but defines no such property
+   * (the option is the URL's `{requestoption}` segment), while its examples do
+   * send it — see docs/ups-api.md.
+   */
   RequestOption?: UPSRequestOption;
   TransactionReference?: {
-    CustomerContext: string;
-    TransactionIdentifier: string;
+    CustomerContext?: string;
+    /** @deprecated Not in the Rating spec. */
+    TransactionIdentifier?: string;
   };
 
   SubVersion?: string;
@@ -926,6 +973,7 @@ export enum ServiceCode {
   WorldwideExpress = "07",
   WorldwideExpedited = "08",
   Standard = "11",
+  UPSHeavyGoods = "75",
   WorldwideExpressPlus = "54",
   Saver = "65",
   UPSWorldwideExpressFreight = "96",
@@ -943,7 +991,7 @@ export interface Shipment {
   ShipTo: ShipTo;
   ShipFrom?: ShipFrom;
   AlternateDeliveryAddress?: AlternateDelivery;
-  ShipmentIndicationType?: ShipmentIndicationType;
+  ShipmentIndicationType?: ShipmentIndicationType | ShipmentIndicationType[];
   PaymentDetails?: PaymentDetails;
   FRSPaymentInformation?: FRSPaymentInformation;
   FreightShipmentInformation?: FreightShipmentInformation;
@@ -971,6 +1019,7 @@ export interface Shipment {
   ShipmentCharges?: ShipmentCharges;
 }
 
+/** @deprecated Not in the Rating spec; use `PaymentDetails`. */
 export interface ShipmentCharges {
   BillShipper: {
     AccountNumber: string;
@@ -980,6 +1029,13 @@ export interface ShipmentCharges {
 export interface DeliveryTimeInformation {
   PackageBillType: PackageBillType;
   Pickup?: Pickup;
+  ReturnContractServices?: UpsRatingReturnContractService[];
+}
+
+export interface UpsRatingReturnContractService {
+  /** "01" is Heavy Goods; any other code is ignored. */
+  Code: string;
+  Description?: string;
 }
 
 export interface Pickup {
@@ -999,13 +1055,13 @@ export enum PackageBillType {
 }
 
 export interface PromotionalDiscountInformation {
-  PromoCode?: string;
-  PromoAliasCode?: string;
+  PromoCode: string;
+  PromoAliasCode: string;
 }
 
 export interface InvoiceLineTotal {
-  CurrencyCode?: CurrencyCodes;
-  MonetaryValue?: string;
+  CurrencyCode: CurrencyCodes;
+  MonetaryValue: string;
 }
 
 export interface ShipmentRatingOptions {
@@ -1029,7 +1085,7 @@ export interface Shipper {
   /**
    * If there is no ShipFrom address, this will be used.
    */
-  Address: UpsAddress;
+  Address: UpsRatingRequiredLineAddress;
 }
 
 export interface ShipTo {
@@ -1042,6 +1098,7 @@ export interface ShipFrom {
   Address: UpsAddress;
   Name?: string;
   AttentionName?: string;
+  /** @deprecated Not in the Rating spec; ShipFrom has no such field. */
   ShipperNumber?: string;
 }
 
@@ -1059,17 +1116,21 @@ export interface AlternateDelivery {
 
 export interface ShipmentIndicationType {
   Code: ShipmentIndicationTypeCode;
+  Description?: string;
 }
 
-export interface ShipToAddress extends UpsAddress {
+/** Shipper and ShipTo require `AddressLine`; ShipFrom and the others do not. */
+export interface UpsRatingRequiredLineAddress extends UpsAddress {
+  AddressLine: string[] | string;
+}
+
+export interface ShipToAddress extends UpsRatingRequiredLineAddress {
   ResidentialAddressIndicator?: string;
 }
 
 export interface AlternateDeliveryAddress extends UpsAddress {
-  /**
-   * Maximum of 3 lines.
-   */
-  AddressLines: string[];
+  /** @deprecated Not in the Rating spec; the field is `AddressLine`. */
+  AddressLines?: string[];
   ResidentialAddressIndicator?: Indicator;
   /**
    * Not valid with Shipment Indication Types:
@@ -1102,8 +1163,12 @@ export interface ShipmentTotalWeightUnitOfMeasurement {
 }
 
 export interface ShipmentServiceOptions {
+  GlobalCheckoutIndicator?: Indicator;
   SaturdayPickupIndicator?: Indicator;
   SaturdayDeliveryIndicator?: Indicator;
+  SundayDeliveryIndicator?: Indicator;
+  /** Shop only; overrides the Saturday/Sunday indicators. 1 weekday+Sat, 2 weekday+Sun, 3 all. */
+  AvailableServicesOption?: "1" | "2" | "3";
   AccessPointCOD?: AccessPointCOD;
   DeliverToAddresseeOnlyIndicator?: Indicator;
   DirectDeliveryOnlyIndicator?: Indicator;
@@ -1115,14 +1180,26 @@ export interface ShipmentServiceOptions {
   PickupOptions?: PickupOptions;
   DeliveryOptions?: DeliveryOptions;
   RestrictedArticles?: RestrictedArticles;
+  ShipperExportDeclarationIndicator?: Indicator;
+  CommercialInvoiceRemovalIndicator?: Indicator;
   ImportControl?: ImportControl;
   ReturnService?: ReturnService;
+  VerifiedDelivery?: UpsRatingVerifiedDelivery;
   SDLShipmentIndicator?: Indicator;
   EPRAIndicator?: Indicator;
+  /** 01 White Glove, 02 Room of Choice, 03 Installation; needs a Heavy Goods contract. */
+  InsideDelivery?: "01" | "02" | "03";
+  ItemDisposalIndicator?: Indicator;
+}
+
+export interface UpsRatingVerifiedDelivery {
+  /** "2" is VDS, a shipper-generated PIN — the only documented value. */
+  SecurePINType: string;
 }
 
 export interface ReturnService {
   Code: ReturnServiceCodes;
+  Description?: string;
 }
 
 export enum ReturnServiceCodes {
@@ -1146,6 +1223,7 @@ export enum ReturnServiceCodes {
 
 export interface ImportControl {
   Code: ImportControlCodes;
+  Description?: string;
 }
 
 export enum ImportControlCodes {
@@ -1159,13 +1237,16 @@ export enum ImportControlCodes {
 export interface RestrictedArticles {
   AlcoholicBeveragesIndicator?: Indicator;
   DiagnosticSpecimensIndicator?: Indicator;
+  PerishablesIndicator?: Indicator;
   PlantsIndicator?: Indicator;
   SeedsIndicator?: Indicator;
   SpecialExceptionsIndicator?: Indicator;
   TobaccoIndicator?: Indicator;
   ECigarettesIndicator?: Indicator;
   HempCBDIndicator?: Indicator;
+  /** @deprecated Belongs on `ShipmentServiceOptions`, not here. */
   ShipperExportDeclarationIndicator?: Indicator;
+  /** @deprecated Belongs on `ShipmentServiceOptions`, not here. */
   CommercialInvoiceRemovalIndicator?: Indicator;
 }
 
@@ -1178,15 +1259,6 @@ export interface PickupOptions {
   HoldForPickupIndicator?: Indicator;
 }
 
-export interface DeliveryConfirmation {
-  DCISType: DCISType;
-}
-
-export interface AccessPointCOD {
-  CurrencyCode: CurrencyCodes;
-  MonetaryValue: string;
-}
-
 /** Response Types */
 export interface RateResponseObject {
   status: number;
@@ -1197,121 +1269,199 @@ export interface RateResponseObject {
   data: RateResponse;
 }
 export interface RateResponse {
-  Response: {
-    ResponseStatus: {
-      Code: string;
-      Description: string;
-    };
-    Alert: {
-      Code: string;
-      Description: string;
-    }[];
-    TransactionReference: {
-      CustomerContext: string;
-      TransactionIdentifier: string;
-    };
-  };
+  Response: UpsRatingResponse;
   RatedShipment: RatedShipment[];
 }
 
+export interface UpsRatingResponse {
+  ResponseStatus: UpsRatingCodeDescription;
+  Alert?: UpsRatingCodeDescription[];
+  AlertDetail?: UpsRatingAlertDetail[];
+  TransactionReference?: {
+    CustomerContext?: string;
+  };
+}
+
+export interface UpsRatingCodeDescription {
+  Code: string;
+  Description: string;
+}
+
+export interface UpsRatingAlertDetail extends UpsRatingCodeDescription {
+  ElementLevelInformation?: {
+    /** H header, S shipment, P package, C commodity. */
+    Level: string;
+    /** Only returned when Level is P or C. */
+    ElementIdentifier?: { Code: string; Value: string }[];
+  };
+}
+
+export interface UpsRatingMoney {
+  CurrencyCode: string;
+  MonetaryValue: string;
+}
+
+export interface UpsRatingUnitOfMeasurement {
+  Code: string;
+  Description: string;
+}
+
+export interface UpsRatingWeight {
+  UnitOfMeasurement: UpsRatingUnitOfMeasurement;
+  Weight: string;
+}
+
+export interface UpsRatingItemizedCharge extends UpsRatingMoney {
+  Code: string;
+  Description?: string;
+  SubType?: string;
+}
+
+export interface UpsRatingTaxCharge {
+  Type: string;
+  MonetaryValue: string;
+}
+
+export interface UpsRatingRateModifier {
+  /** Example: "ORM". */
+  ModifierType: string;
+  ModifierDesc: string;
+  /** Signed, e.g. "-1.00". */
+  Amount: string;
+}
+
+export enum UpsRateMethod {
+  ShipmentLevel = "01",
+  PackageLevel = "02",
+}
+
+export enum UpsRateBillableWeightMethod {
+  ShipmentBillableWeight = "01",
+  PackageBillableWeight = "02",
+}
+
+/**
+ * For v2409 UPS always returns the repeating containers as arrays; the spec says
+ * earlier versions collapse a single element into a bare object, which these
+ * types do not model.
+ */
 export interface RatedShipment {
-  Service: {
-    Code: string;
-    Description: string;
-  };
-  RatedShipmentAlert: {
-    Code: string;
-    Description: string;
-  }[];
-  BillingWeight: {
-    UnitOfMeasurement: {
-      Code: string;
-      Description: string;
-    };
-    Weight: string;
-  };
+  Disclaimer?: UpsRatingCodeDescription[];
+  Service: { Code: string; Description?: string };
+  /** 1, 3 or 4 for US/Alaska/Hawaii origins; 1, 5 or 6 elsewhere. */
+  RateChart?: string;
+  /** Only returned for subversion 2409 or later. */
+  Zone?: string;
+  RatedShipmentAlert?: UpsRatingCodeDescription[];
+  /** Only returned when `RatingMethodRequestedIndicator` was sent. */
+  BillableWeightCalculationMethod?: UpsRateBillableWeightMethod;
+  /** Only returned when `RatingMethodRequestedIndicator` was sent. */
+  RatingMethod?: UpsRateMethod;
+  BillingWeight: UpsRatingWeight;
+  TransportationCharges: UpsRatingMoney;
+  BaseServiceCharge?: UpsRatingMoney;
+  ItemizedCharges?: UpsRatingItemizedCharge[];
+  /** Ground Freight Pricing only. */
+  FRSShipmentData?: UpsRatingFRSShipmentData;
+  ServiceOptionsCharges: UpsRatingMoney;
+  TaxCharges?: UpsRatingTaxCharge[];
+  TotalCharges: UpsRatingMoney;
+  TotalChargesWithTaxes?: UpsRatingMoney;
+  NegotiatedRateCharges?: UpsRatingNegotiatedRateCharges;
+  RatedPackage: UpsRatingRatedPackage[];
+  /** Only with a `*timeintransit` option and `DeliveryTimeInformation`. */
+  TimeInTransit?: UpsRatingTimeInTransit;
+  GuaranteedDelivery?: UpsRatingGuaranteedDelivery;
+  RoarRatedIndicator?: string;
+}
+
+export interface UpsRatingFRSShipmentData {
   TransportationCharges: {
-    CurrencyCode: string;
-    MonetaryValue: string;
+    GrossCharge: UpsRatingMoney;
+    DiscountAmount: UpsRatingMoney;
+    DiscountPercentage: string;
+    NetCharge: UpsRatingMoney;
   };
-  ServiceOptionsCharges: {
-    CurrencyCode: string;
-    MonetaryValue: string;
+  FreightDensityRate?: { Density: string; TotalCubicFeet: string };
+  HandlingUnits?: {
+    Quantity: string;
+    Type: { Code: string; Description?: string };
+    Dimensions: {
+      UnitOfMeasurement: UpsRatingUnitOfMeasurement;
+      Length: string;
+      Width: string;
+      Height: string;
+    };
+    AdjustedHeight?: {
+      Value: string;
+      UnitOfMeasurement: UpsRatingUnitOfMeasurement;
+    };
+  }[];
+}
+
+export interface UpsRatingNegotiatedRateCharges {
+  BaseServiceCharge?: UpsRatingMoney[];
+  RateModifier?: UpsRatingRateModifier[];
+  ItemizedCharges?: UpsRatingItemizedCharge[];
+  TaxCharges?: UpsRatingTaxCharge[];
+  TotalCharge: UpsRatingMoney;
+  TotalChargesWithTaxes?: UpsRatingMoney;
+}
+
+export interface UpsRatingRatedPackage {
+  BaseServiceCharge?: UpsRatingMoney;
+  TransportationCharges?: UpsRatingMoney;
+  ServiceOptionsCharges?: UpsRatingMoney;
+  TotalCharges?: UpsRatingMoney;
+  Weight?: string;
+  BillingWeight?: UpsRatingWeight;
+  /** Only for UPS Worldwide Express Freight (Midday) with dry ice or an oversize pallet. */
+  Accessorial?: { Code: string; Description?: string }[];
+  ItemizedCharges?: UpsRatingItemizedCharge[];
+  NegotiatedCharges?: {
+    RateModifier?: UpsRatingRateModifier[];
+    ItemizedCharges?: UpsRatingItemizedCharge[];
   };
-  TotalCharges: {
-    CurrencyCode: string;
-    MonetaryValue: string;
-  };
-  GuaranteedDelivery: {
+  SimpleRate?: { Code: string };
+  RateModifier?: UpsRatingRateModifier[];
+}
+
+export interface UpsRatingTimeInTransit {
+  /** YYYYMMDD */
+  PickupDate: string;
+  DocumentsOnlyIndicator?: string;
+  PackageBillType?: string;
+  ServiceSummary: UpsRatingServiceSummary;
+  /** 01 dutiable through 09 section 321 low value; international requests. */
+  AutoDutyCode?: string;
+  Disclaimer?: string;
+}
+
+export interface UpsRatingServiceSummary {
+  Service: { Description?: string };
+  GuaranteedIndicator?: string;
+  Disclaimer?: string;
+  EstimatedArrival: {
+    Arrival: { Date: string; Time?: string };
     BusinessDaysInTransit: string;
-    DeliveryByTime: string;
+    Pickup: { Date: string; Time?: string };
+    DayOfWeek: string;
+    CustomerCenterCutoff?: string;
+    DelayCount?: string;
+    HolidayCount?: string;
+    RestDays?: string;
+    TotalTransitDays?: string;
   };
-  NegotiatedRateCharges?: {
-    ItemizedCharges?: {
-      Code: string;
-      Description?: string;
-      CurrencyCode: string;
-      MonetaryValue: string;
-      SubType?: string;
-    }[];
-    TaxCharges?: {
-      Type: string;
-      MonetaryValue: string;
-    }[];
-    TotalChargesWithTaxes?: {
-      CurrencyCode: string;
-      MonetaryValue: string;
-    };
-    TotalCharge: {
-      CurrencyCode: string;
-      MonetaryValue: string;
-    };
-  };
-  RatedPackage: {
-    TransportationCharges: {
-      CurrencyCode: string;
-      MonetaryValue: string;
-    };
-    ServiceOptionsCharges: {
-      CurrencyCode: string;
-      MonetaryValue: string;
-    };
-    TotalCharges: {
-      CurrencyCode: string;
-      MonetaryValue: string;
-    };
-    Weight: string;
-    BillingWeight: {
-      UnitOfMeasurement: {
-        Code: string;
-        Description: string;
-      };
-      Weight: string;
-    };
-  };
-  TimeInTransit: {
-    PickupDate: string;
-    PackageBillType: string;
-    Disclaimer: string;
-    ServiceSummary: {
-      Service: {
-        Description: string;
-      };
-      EstimatedArrival: {
-        Arrival: {
-          Date: string;
-          Time: string;
-        };
-        BusinessDaysInTransit: string;
-        Pickup: {
-          Date: string;
-          Time: string;
-        };
-        DayOfWeek: string;
-        CustomerCenterCutoff: string;
-      };
-      GuaranteedIndicator: string;
-      SaturdayDelivery: string;
-    };
-  };
+  /** "1" available at extra charge; "0" unavailable or free. */
+  SaturdayDelivery?: string;
+  SaturdayDeliveryDisclaimer?: string;
+  /** "1" available at extra charge; "0" unavailable or free. */
+  SundayDelivery?: string;
+  SundayDeliveryDisclaimer?: string;
+}
+
+export interface UpsRatingGuaranteedDelivery {
+  BusinessDaysInTransit?: string;
+  DeliveryByTime?: string;
+  ScheduledDeliveryDate?: string;
 }

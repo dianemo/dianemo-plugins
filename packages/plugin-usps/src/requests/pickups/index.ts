@@ -6,6 +6,9 @@ import type {
   UspsSchedulePickupRequest,
   UspsPickupConfirmation,
   UspsPickupDetails,
+  UspsPickupGetOptions,
+  UspsPickupUpdateOptions,
+  UspsPickupUpdateResult,
 } from "./types.js";
 
 export const checkEligibility = async (
@@ -44,16 +47,24 @@ export const schedulePickup = async (
   return res.data;
 };
 
+/**
+ * `pickup` is an array because the spec's response schema is one; its prose
+ * describes a single pickup. See docs/usps-api.md.
+ */
 export const getPickup = async (
   clientName: string,
-  confirmationNumber: string
-): Promise<{ pickup: UspsPickupDetails; etag: string }> => {
-  const res = await tryHandleRequest<UspsPickupDetails>(
+  confirmationNumber: string,
+  options: UspsPickupGetOptions = {}
+): Promise<{ pickup: UspsPickupDetails[]; etag: string }> => {
+  const res = await tryHandleRequest<UspsPickupDetails[]>(
     {
       clientName: uspsSubClient(clientName, "default"),
       requestName: "usps.pickups.get",
       method: "GET",
-      url: `/pickup/v3/carrier-pickup/${confirmationNumber}`,
+      url: `/pickup/v3/carrier-pickup/${encodeURIComponent(confirmationNumber)}`,
+      headers: options.ifNoneMatch
+        ? { "If-None-Match": options.ifNoneMatch }
+        : undefined,
     },
     "USP_0011",
     "Failed to get USPS pickup details"
@@ -74,7 +85,7 @@ export const cancelPickup = async (
       clientName: uspsSubClient(clientName, "default"),
       requestName: "usps.pickups.cancel",
       method: "DELETE",
-      url: `/pickup/v3/carrier-pickup/${confirmationNumber}`,
+      url: `/pickup/v3/carrier-pickup/${encodeURIComponent(confirmationNumber)}`,
       headers: {
         "If-Match": etag,
       },
@@ -82,4 +93,27 @@ export const cancelPickup = async (
     "USP_0007",
     "Failed to cancel USPS pickup"
   );
+};
+
+export const updatePickup = async (
+  clientName: string,
+  { confirmationNumber, ifMatch }: UspsPickupUpdateOptions,
+  data: UspsPickupConfirmation
+): Promise<UspsPickupUpdateResult> => {
+  const res = await tryHandleRequest<UspsPickupConfirmation>(
+    {
+      clientName: uspsSubClient(clientName, "default"),
+      requestName: "usps.pickups.update",
+      method: "PUT",
+      url: `/pickup/v3/carrier-pickup/${encodeURIComponent(confirmationNumber)}`,
+      headers: { "If-Match": ifMatch },
+      data,
+    },
+    "USP_0070",
+    "Failed to update USPS pickup"
+  );
+  return {
+    pickup: res.data,
+    etag: (res.headers?.["etag"] as string) ?? "",
+  };
 };

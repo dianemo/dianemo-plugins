@@ -1,95 +1,34 @@
 import { FedExResponse } from "../types.js";
 
 export interface FedExValidateAddressRequest {
-  /** Format yyyy-mm-dd */
+  /** YYYY-MM-DD */
   inEffectAsOfTimestamp?: string;
   validateAddressControlParameters?: {
     includeResolutionTokens?: boolean;
   };
+  /** At most 100 per request. */
   addressesToValidate: FedExValidateAddressAddress[];
 }
 
-interface FedExValidateAddressAddress {
-  address: {
-    streetLines: string[];
-    city?: string;
-    stateOrProvinceCode?: string;
-    postalCode?: string;
-    countryCode: string;
-  };
-  contact?: {
-    personName: string;
-    phoneNumber: string;
-    parsedPersonName?: {
-      firstName: string;
-      lastName: string;
-      middleName?: string;
-      suffix?: string;
-    };
-    companyName?: string;
-    phoneExtension?: string;
-    emailAddress?: string;
-    faxNumber?: string;
-    contactId?: string;
-    stateTaxId?: string;
-    fedralTaxId?: string;
-  };
-  contactAncillaryDetail?: {
-    emailAddresses?: {
-      emailNotificationFormatType?: "SMS_TEXT_MESSAGE" | "HTML" | "TEXT";
-      address?: string;
-      permissions?: "GRANT" | "DENY";
-    }[];
-    socialMediaDeails?: {
-      attributes?: string;
-      platformId?: string;
-    }[];
-    gender?: "MALE" | "FEMALE" | "UNKNOWN";
-    prefix?: string;
-    phoneNumberDetails: {
-      number: {
-        areaCode: string;
-        extension?: string;
-        countryCode: string;
-        personalIdentificationNumber: string;
-        localNumber: string;
-      };
-      permissions: "GRANT" | "DENY";
-      usage: "PRIMARY" | "SECONDARY";
-      type?: "FAX" | "MOBILE" | "PAGER" | "HOME" | "WORK";
-      phoneNotificationFormatType?: "SMS_TEXT_MESSAGE";
-    }[];
-    companyName?: {
-      division?: string;
-      companyCd?: string;
-      name: string;
-      department?: string;
-      storeId?: string;
-    };
-    title?: string;
-  };
-  addressAncillaryDetail?: {
-    locationInCity?: string;
-    suite?: string;
-    addressVerificationOverrideReason?: string;
-    locationInProperty?: string;
-    addtionalDescriptions?: string;
-    department?: string;
-    roomFloor?: string;
-    crossStreet?: string;
-    building?: string;
-    apartment?: string;
-    room?: string;
-  };
+export interface FedExValidateAddressAddress {
+  address: FedExValidateAddressInput;
   clientReferenceId?: string;
-  urbanizationCode?: string;
+}
+
+export interface FedExValidateAddressInput {
+  /** At most three lines are read; the spec recommends 35 characters per line. */
+  streetLines: string[];
+  city: string;
+  stateOrProvinceCode?: string;
+  postalCode: string;
+  countryCode?: string;
 }
 
 export type FedExValidateAddressResponse =
   FedExResponse<FedExValidateAddressOutput>;
 
 export interface FedExValidateAddressOutput {
-  resolvedAddresses: FedExResolvedAddress[];
+  resolvedAddresses?: FedExResolvedAddress[];
 }
 
 export interface FedExResolvedAddress {
@@ -97,26 +36,19 @@ export interface FedExResolvedAddress {
   city?: string;
   stateOrProvinceCode?: string;
   countryCode?: string;
+  /** The spec leaves the element type unset; its description lists message codes such as INVALID.SUITE.NUMBER. */
   customerMessage?: string[];
-  cityToken?: {
-    changed?: boolean;
-    value?: string;
-  }[];
-  /** 1st most reliable  postal code for validation*/
+  cityToken?: FedExResolutionToken[];
+  /** Not in the spec; kept from v1.0.0, source unknown. */
   postalCode?: string;
-  /** 2nd most reliable  postal code for validation*/
   parsedPostalCode?: {
     base?: string;
     addOn?: string;
     deliveryPoint?: string;
   };
-  /**3rd most reliable  postal code for validation*/
-  postalCodeToken?: {
-    changed?: boolean;
-    value?: string;
-  };
+  postalCodeToken?: FedExResolutionToken;
   classification?: "MIXED" | "UNKNOWN" | "RESIDENTIAL" | "BUSINESS";
-  postOfficeBox?: string;
+  postOfficeBox?: FedExAddressFlag;
   normalizedStatusNameDPV?: boolean;
   standardizedStatusNameMatchSource?: string;
   resolutionMethodName?:
@@ -127,40 +59,60 @@ export interface FedExResolvedAddress {
     | "TELEATLAS_GEO_VALIDATE";
   ruralRouteHighwayContract?: boolean;
   generalDelivery?: boolean;
-  attributes?: {
-    POBox?: BooleanString;
-    POBoxOnlyZIP?: BooleanString;
-    SplitZip?: BooleanString;
-    SuiteRequiredButMissing?: BooleanString;
-    InvalidSuiteNumber?: BooleanString;
-    ResolutionInput?: string;
-    DPV?: BooleanString;
-    ResolutionMethod?: string;
-    DataVintage?: string;
-    MatchSource?: string;
-    CountrySupported?: BooleanString;
-    ValidlyFormed?: BooleanString;
-    Matched?: string;
-    /* `Resolved` is documented but does not appear on responses; do not rely on it. */
-    Resolved?: BooleanString;
-    Inserted?: BooleanString;
-    MultiUnitBase?: BooleanString;
-    ZIP11Match?: BooleanString;
-    ZIP4Match?: BooleanString;
-    UniqueZIP?: BooleanString;
-    StreetAddress?: BooleanString;
-    RRConversion?: BooleanString;
-    ValidMultiUnit?: BooleanString;
-    AddressType?: "RAW" | "NORMALIZED" | "STANDARDIZED";
-    AddressPrecision?:
-      | "MULTI_TENANT_UNIT"
-      | "MULTI_TENANT_BASE"
-      | "PO_BOX"
-      | "UNIQUE_ZIP"
-      | "STREET_ADDRESS"
-      | "MULTI_TENANT_UNIT";
-    MultipleMatches?: BooleanString;
-  };
+  attributes?: FedExResolvedAddressAttributes;
+}
+
+export interface FedExResolutionToken {
+  changed?: boolean;
+  value?: string;
+}
+
+export interface FedExResolvedAddressAttributes {
+  POBox?: FedExAddressFlag;
+  POBoxOnlyZIP?: FedExAddressFlag;
+  SplitZip?: FedExAddressFlag;
+  /** The spec types these two as strings with the example "false". */
+  SuiteRequiredButMissing?: string;
+  InvalidSuiteNumber?: string;
+  ResolutionInput?: string;
+  DPV?: FedExAddressFlag;
+  ResolutionMethod?: string;
+  DataVintage?: string;
+  MatchSource?: string;
+  CountrySupported?: FedExAddressFlag;
+  ValidlyFormed?: FedExAddressFlag;
+  Matched?: FedExAddressFlag;
+  /** Documented in the spec but absent from responses seen when v1.0.0 was written; do not rely on it. */
+  Resolved?: FedExAddressFlag;
+  Inserted?: FedExAddressFlag;
+  MultiUnitBase?: FedExAddressFlag;
+  ZIP11Match?: FedExAddressFlag;
+  ZIP4Match?: FedExAddressFlag;
+  UniqueZIP?: FedExAddressFlag;
+  StreetAddress?: FedExAddressFlag;
+  RRConversion?: FedExAddressFlag;
+  ValidMultiUnit?: FedExAddressFlag;
+  /** The spec types this as a free string and lists these values in prose. */
+  AddressType?: "RAW" | "NORMALIZED" | "STANDARDIZED";
+  /** The spec types this as a free string and lists these values in prose. */
+  AddressPrecision?:
+    | "MULTI_TENANT_UNIT"
+    | "MULTI_TENANT_BASE"
+    | "PO_BOX"
+    | "UNIQUE_ZIP"
+    | "STREET_ADDRESS"
+    | "Street"
+    | "StreetBuilding"
+    | "StreetOrganization"
+    | "StreetName";
+  MultipleMatches?: FedExAddressFlag;
 }
 
 export type BooleanString = "true" | "false";
+
+/**
+ * The spec types these flags as booleans. v1.0.0 typed most of them as the
+ * strings "true" and "false", apparently from observed responses; that is
+ * unverified, so both are accepted until a real account settles it.
+ */
+export type FedExAddressFlag = boolean | BooleanString;

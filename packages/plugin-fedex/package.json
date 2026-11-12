@@ -1,7 +1,7 @@
 {
   "name": "@dianemo/plugin-fedex",
-  "version": "2.0.0",
-  "description": "FedEx plugin — shipping, rates, tracking, pickups, and address validation",
+  "version": "3.0.0",
+  "description": "FedEx plugin — shipping, rates, tracking, pickups, address validation, trade documents and customs",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -18,9 +18,37 @@
       "types": "./dist/requests/addressValidation/index.d.ts",
       "default": "./dist/requests/addressValidation/index.js"
     },
+    "./requests/consolidation": {
+      "types": "./dist/requests/consolidation/index.d.ts",
+      "default": "./dist/requests/consolidation/index.js"
+    },
+    "./requests/dutiesAndTaxes": {
+      "types": "./dist/requests/dutiesAndTaxes/index.d.ts",
+      "default": "./dist/requests/dutiesAndTaxes/index.js"
+    },
+    "./requests/endOfDayClose": {
+      "types": "./dist/requests/endOfDayClose/index.d.ts",
+      "default": "./dist/requests/endOfDayClose/index.js"
+    },
+    "./requests/globalTrade": {
+      "types": "./dist/requests/globalTrade/index.d.ts",
+      "default": "./dist/requests/globalTrade/index.js"
+    },
+    "./requests/harmonizedCode": {
+      "types": "./dist/requests/harmonizedCode/index.d.ts",
+      "default": "./dist/requests/harmonizedCode/index.js"
+    },
     "./requests/index": {
       "types": "./dist/requests/index.d.ts",
       "default": "./dist/requests/index.js"
+    },
+    "./requests/locationSearch": {
+      "types": "./dist/requests/locationSearch/index.d.ts",
+      "default": "./dist/requests/locationSearch/index.js"
+    },
+    "./requests/openShip": {
+      "types": "./dist/requests/openShip/index.d.ts",
+      "default": "./dist/requests/openShip/index.js"
     },
     "./requests/packageTracking": {
       "types": "./dist/requests/packageTracking/index.d.ts",
@@ -30,6 +58,10 @@
       "types": "./dist/requests/pickupRequest/index.d.ts",
       "default": "./dist/requests/pickupRequest/index.js"
     },
+    "./requests/postalCodeValidation": {
+      "types": "./dist/requests/postalCodeValidation/index.d.ts",
+      "default": "./dist/requests/postalCodeValidation/index.js"
+    },
     "./requests/purchaser": {
       "types": "./dist/requests/purchaser/index.d.ts",
       "default": "./dist/requests/purchaser/index.js"
@@ -38,9 +70,21 @@
       "types": "./dist/requests/ratesAndTransitTimes/index.d.ts",
       "default": "./dist/requests/ratesAndTransitTimes/index.js"
     },
+    "./requests/regulatory": {
+      "types": "./dist/requests/regulatory/index.d.ts",
+      "default": "./dist/requests/regulatory/index.js"
+    },
+    "./requests/serviceAvailability": {
+      "types": "./dist/requests/serviceAvailability/index.d.ts",
+      "default": "./dist/requests/serviceAvailability/index.js"
+    },
     "./requests/shipping": {
       "types": "./dist/requests/shipping/index.d.ts",
       "default": "./dist/requests/shipping/index.js"
+    },
+    "./requests/tradeDocuments": {
+      "types": "./dist/requests/tradeDocuments/index.d.ts",
+      "default": "./dist/requests/tradeDocuments/index.js"
     },
     "./requests/types": {
       "types": "./dist/requests/types.d.ts",
@@ -53,6 +97,62 @@
     "./requests/addressValidation/types": {
       "types": "./dist/requests/addressValidation/types.d.ts",
       "default": "./dist/requests/addressValidation/types.js"
+    },
+    "./requests/consolidation/index": {
+      "types": "./dist/requests/consolidation/index.d.ts",
+      "default": "./dist/requests/consolidation/index.js"
+    },
+    "./requests/consolidation/types": {
+      "types": "./dist/requests/consolidation/types.d.ts",
+      "default": "./dist/requests/consolidation/types.js"
+    },
+    "./requests/dutiesAndTaxes/index": {
+      "types": "./dist/requests/dutiesAndTaxes/index.d.ts",
+      "default": "./dist/requests/dutiesAndTaxes/index.js"
+    },
+    "./requests/dutiesAndTaxes/types": {
+      "types": "./dist/requests/dutiesAndTaxes/types.d.ts",
+      "default": "./dist/requests/dutiesAndTaxes/types.js"
+    },
+    "./requests/endOfDayClose/index": {
+      "types": "./dist/requests/endOfDayClose/index.d.ts",
+      "default": "./dist/requests/endOfDayClose/index.js"
+    },
+    "./requests/endOfDayClose/types": {
+      "types": "./dist/requests/endOfDayClose/types.d.ts",
+      "default": "./dist/requests/endOfDayClose/types.js"
+    },
+    "./requests/globalTrade/index": {
+      "types": "./dist/requests/globalTrade/index.d.ts",
+      "default": "./dist/requests/globalTrade/index.js"
+    },
+    "./requests/globalTrade/types": {
+      "types": "./dist/requests/globalTrade/types.d.ts",
+      "default": "./dist/requests/globalTrade/types.js"
+    },
+    "./requests/harmonizedCode/index": {
+      "types": "./dist/requests/harmonizedCode/index.d.ts",
+      "default": "./dist/requests/harmonizedCode/index.js"
+    },
+    "./requests/harmonizedCode/types": {
+      "types": "./dist/requests/harmonizedCode/types.d.ts",
+      "default": "./dist/requests/harmonizedCode/types.js"
+    },
+    "./requests/locationSearch/index": {
+      "types": "./dist/requests/locationSearch/index.d.ts",
+      "default": "./dist/requests/locationSearch/index.js"
+    },
+    "./requests/locationSearch/types": {
+      "types": "./dist/requests/locationSearch/types.d.ts",
+      "default": "./dist/requests/locationSearch/types.js"
+    },
+    "./requests/openShip/index": {
+      "types": "./dist/requests/openShip/index.d.ts",
+      "default": "./dist/requests/openShip/index.js"
+    },
+    "./requests/openShip/types": {
+      "types": "./dist/requests/openShip/types.d.ts",
+      "default": "./dist/requests/openShip/types.js"
     },
     "./requests/packageTracking/index": {
       "types": "./dist/requests/packageTracking/index.d.ts",
@@ -70,6 +170,14 @@
       "types": "./dist/requests/pickupRequest/types.d.ts",
       "default": "./dist/requests/pickupRequest/types.js"
     },
+    "./requests/postalCodeValidation/index": {
+      "types": "./dist/requests/postalCodeValidation/index.d.ts",
+      "default": "./dist/requests/postalCodeValidation/index.js"
+    },
+    "./requests/postalCodeValidation/types": {
+      "types": "./dist/requests/postalCodeValidation/types.d.ts",
+      "default": "./dist/requests/postalCodeValidation/types.js"
+    },
     "./requests/purchaser/index": {
       "types": "./dist/requests/purchaser/index.d.ts",
       "default": "./dist/requests/purchaser/index.js"
@@ -86,6 +194,22 @@
       "types": "./dist/requests/ratesAndTransitTimes/types.d.ts",
       "default": "./dist/requests/ratesAndTransitTimes/types.js"
     },
+    "./requests/regulatory/index": {
+      "types": "./dist/requests/regulatory/index.d.ts",
+      "default": "./dist/requests/regulatory/index.js"
+    },
+    "./requests/regulatory/types": {
+      "types": "./dist/requests/regulatory/types.d.ts",
+      "default": "./dist/requests/regulatory/types.js"
+    },
+    "./requests/serviceAvailability/index": {
+      "types": "./dist/requests/serviceAvailability/index.d.ts",
+      "default": "./dist/requests/serviceAvailability/index.js"
+    },
+    "./requests/serviceAvailability/types": {
+      "types": "./dist/requests/serviceAvailability/types.d.ts",
+      "default": "./dist/requests/serviceAvailability/types.js"
+    },
     "./requests/shipping/index": {
       "types": "./dist/requests/shipping/index.d.ts",
       "default": "./dist/requests/shipping/index.js"
@@ -93,6 +217,22 @@
     "./requests/shipping/types": {
       "types": "./dist/requests/shipping/types.d.ts",
       "default": "./dist/requests/shipping/types.js"
+    },
+    "./requests/tradeDocuments/index": {
+      "types": "./dist/requests/tradeDocuments/index.d.ts",
+      "default": "./dist/requests/tradeDocuments/index.js"
+    },
+    "./requests/tradeDocuments/multipart": {
+      "types": "./dist/requests/tradeDocuments/multipart.d.ts",
+      "default": "./dist/requests/tradeDocuments/multipart.js"
+    },
+    "./requests/tradeDocuments/types": {
+      "types": "./dist/requests/tradeDocuments/types.d.ts",
+      "default": "./dist/requests/tradeDocuments/types.js"
+    },
+    "./requests/tradeDocuments/utils": {
+      "types": "./dist/requests/tradeDocuments/utils.d.ts",
+      "default": "./dist/requests/tradeDocuments/utils.js"
     }
   },
   "files": [

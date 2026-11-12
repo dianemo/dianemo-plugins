@@ -1,7 +1,7 @@
 {
   "name": "@dianemo/plugin-ups",
-  "version": "2.0.0",
-  "description": "UPS plugin — rating, shipping, and tracking",
+  "version": "3.0.0",
+  "description": "UPS plugin — shipping, rating, tracking, pickups, customs, delivery intercept and freight forwarding",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -18,17 +18,85 @@
       "types": "./dist/requests/addressValidation/index.d.ts",
       "default": "./dist/requests/addressValidation/index.js"
     },
+    "./requests/commerceGuard": {
+      "types": "./dist/requests/commerceGuard/index.d.ts",
+      "default": "./dist/requests/commerceGuard/index.js"
+    },
+    "./requests/customsDetail": {
+      "types": "./dist/requests/customsDetail/index.d.ts",
+      "default": "./dist/requests/customsDetail/index.js"
+    },
+    "./requests/dangerousGoods": {
+      "types": "./dist/requests/dangerousGoods/index.d.ts",
+      "default": "./dist/requests/dangerousGoods/index.js"
+    },
+    "./requests/deliveryDefense": {
+      "types": "./dist/requests/deliveryDefense/index.d.ts",
+      "default": "./dist/requests/deliveryDefense/index.js"
+    },
+    "./requests/deliveryIntercept": {
+      "types": "./dist/requests/deliveryIntercept/index.d.ts",
+      "default": "./dist/requests/deliveryIntercept/index.js"
+    },
+    "./requests/descriptionGuidance": {
+      "types": "./dist/requests/descriptionGuidance/index.d.ts",
+      "default": "./dist/requests/descriptionGuidance/index.js"
+    },
+    "./requests/exportAssure": {
+      "types": "./dist/requests/exportAssure/index.d.ts",
+      "default": "./dist/requests/exportAssure/index.js"
+    },
+    "./requests/forwarding": {
+      "types": "./dist/requests/forwarding/index.d.ts",
+      "default": "./dist/requests/forwarding/index.js"
+    },
+    "./requests/guaranteedQuote": {
+      "types": "./dist/requests/guaranteedQuote/index.d.ts",
+      "default": "./dist/requests/guaranteedQuote/index.js"
+    },
     "./requests/index": {
       "types": "./dist/requests/index.d.ts",
       "default": "./dist/requests/index.js"
+    },
+    "./requests/landedCost": {
+      "types": "./dist/requests/landedCost/index.d.ts",
+      "default": "./dist/requests/landedCost/index.js"
+    },
+    "./requests/locator": {
+      "types": "./dist/requests/locator/index.d.ts",
+      "default": "./dist/requests/locator/index.js"
     },
     "./requests/packageTracking": {
       "types": "./dist/requests/packageTracking/index.d.ts",
       "default": "./dist/requests/packageTracking/index.js"
     },
+    "./requests/paperlessDocuments": {
+      "types": "./dist/requests/paperlessDocuments/index.d.ts",
+      "default": "./dist/requests/paperlessDocuments/index.js"
+    },
     "./requests/pickup": {
       "types": "./dist/requests/pickup/index.d.ts",
       "default": "./dist/requests/pickup/index.js"
+    },
+    "./requests/pickupNotificationPreferences": {
+      "types": "./dist/requests/pickupNotificationPreferences/index.d.ts",
+      "default": "./dist/requests/pickupNotificationPreferences/index.js"
+    },
+    "./requests/pickupPoints": {
+      "types": "./dist/requests/pickupPoints/index.d.ts",
+      "default": "./dist/requests/pickupPoints/index.js"
+    },
+    "./requests/preNotification": {
+      "types": "./dist/requests/preNotification/index.d.ts",
+      "default": "./dist/requests/preNotification/index.js"
+    },
+    "./requests/protectedDeliveryToken": {
+      "types": "./dist/requests/protectedDeliveryToken/index.d.ts",
+      "default": "./dist/requests/protectedDeliveryToken/index.js"
+    },
+    "./requests/quantumView": {
+      "types": "./dist/requests/quantumView/index.d.ts",
+      "default": "./dist/requests/quantumView/index.js"
     },
     "./requests/rating": {
       "types": "./dist/requests/rating/index.d.ts",
@@ -38,9 +106,37 @@
       "types": "./dist/requests/shipping/index.d.ts",
       "default": "./dist/requests/shipping/index.js"
     },
+    "./requests/smartPickup": {
+      "types": "./dist/requests/smartPickup/index.d.ts",
+      "default": "./dist/requests/smartPickup/index.js"
+    },
+    "./requests/supplyChainSymphony": {
+      "types": "./dist/requests/supplyChainSymphony/index.d.ts",
+      "default": "./dist/requests/supplyChainSymphony/index.js"
+    },
+    "./requests/timeInTransit": {
+      "types": "./dist/requests/timeInTransit/index.d.ts",
+      "default": "./dist/requests/timeInTransit/index.js"
+    },
+    "./requests/trackAlert": {
+      "types": "./dist/requests/trackAlert/index.d.ts",
+      "default": "./dist/requests/trackAlert/index.js"
+    },
+    "./requests/tradeDirect": {
+      "types": "./dist/requests/tradeDirect/index.d.ts",
+      "default": "./dist/requests/tradeDirect/index.js"
+    },
     "./requests/types": {
       "types": "./dist/requests/types.d.ts",
       "default": "./dist/requests/types.js"
+    },
+    "./requests/utils": {
+      "types": "./dist/requests/utils.d.ts",
+      "default": "./dist/requests/utils.js"
+    },
+    "./requests/worldEase": {
+      "types": "./dist/requests/worldEase/index.d.ts",
+      "default": "./dist/requests/worldEase/index.js"
     },
     "./requests/addressValidation/index": {
       "types": "./dist/requests/addressValidation/index.d.ts",
@@ -50,6 +146,118 @@
       "types": "./dist/requests/addressValidation/types.d.ts",
       "default": "./dist/requests/addressValidation/types.js"
     },
+    "./requests/commerceGuard/index": {
+      "types": "./dist/requests/commerceGuard/index.d.ts",
+      "default": "./dist/requests/commerceGuard/index.js"
+    },
+    "./requests/commerceGuard/types": {
+      "types": "./dist/requests/commerceGuard/types.d.ts",
+      "default": "./dist/requests/commerceGuard/types.js"
+    },
+    "./requests/customsDetail/index": {
+      "types": "./dist/requests/customsDetail/index.d.ts",
+      "default": "./dist/requests/customsDetail/index.js"
+    },
+    "./requests/customsDetail/types": {
+      "types": "./dist/requests/customsDetail/types.d.ts",
+      "default": "./dist/requests/customsDetail/types.js"
+    },
+    "./requests/dangerousGoods/index": {
+      "types": "./dist/requests/dangerousGoods/index.d.ts",
+      "default": "./dist/requests/dangerousGoods/index.js"
+    },
+    "./requests/dangerousGoods/types": {
+      "types": "./dist/requests/dangerousGoods/types.d.ts",
+      "default": "./dist/requests/dangerousGoods/types.js"
+    },
+    "./requests/deliveryDefense/index": {
+      "types": "./dist/requests/deliveryDefense/index.d.ts",
+      "default": "./dist/requests/deliveryDefense/index.js"
+    },
+    "./requests/deliveryDefense/types": {
+      "types": "./dist/requests/deliveryDefense/types.d.ts",
+      "default": "./dist/requests/deliveryDefense/types.js"
+    },
+    "./requests/deliveryIntercept/index": {
+      "types": "./dist/requests/deliveryIntercept/index.d.ts",
+      "default": "./dist/requests/deliveryIntercept/index.js"
+    },
+    "./requests/deliveryIntercept/types": {
+      "types": "./dist/requests/deliveryIntercept/types.d.ts",
+      "default": "./dist/requests/deliveryIntercept/types.js"
+    },
+    "./requests/descriptionGuidance/index": {
+      "types": "./dist/requests/descriptionGuidance/index.d.ts",
+      "default": "./dist/requests/descriptionGuidance/index.js"
+    },
+    "./requests/descriptionGuidance/types": {
+      "types": "./dist/requests/descriptionGuidance/types.d.ts",
+      "default": "./dist/requests/descriptionGuidance/types.js"
+    },
+    "./requests/exportAssure/index": {
+      "types": "./dist/requests/exportAssure/index.d.ts",
+      "default": "./dist/requests/exportAssure/index.js"
+    },
+    "./requests/exportAssure/types": {
+      "types": "./dist/requests/exportAssure/types.d.ts",
+      "default": "./dist/requests/exportAssure/types.js"
+    },
+    "./requests/forwarding/documents": {
+      "types": "./dist/requests/forwarding/documents.d.ts",
+      "default": "./dist/requests/forwarding/documents.js"
+    },
+    "./requests/forwarding/index": {
+      "types": "./dist/requests/forwarding/index.d.ts",
+      "default": "./dist/requests/forwarding/index.js"
+    },
+    "./requests/forwarding/info": {
+      "types": "./dist/requests/forwarding/info.d.ts",
+      "default": "./dist/requests/forwarding/info.js"
+    },
+    "./requests/forwarding/orders": {
+      "types": "./dist/requests/forwarding/orders.d.ts",
+      "default": "./dist/requests/forwarding/orders.js"
+    },
+    "./requests/forwarding/quotes": {
+      "types": "./dist/requests/forwarding/quotes.d.ts",
+      "default": "./dist/requests/forwarding/quotes.js"
+    },
+    "./requests/forwarding/shipments": {
+      "types": "./dist/requests/forwarding/shipments.d.ts",
+      "default": "./dist/requests/forwarding/shipments.js"
+    },
+    "./requests/forwarding/types": {
+      "types": "./dist/requests/forwarding/types.d.ts",
+      "default": "./dist/requests/forwarding/types.js"
+    },
+    "./requests/forwarding/utils": {
+      "types": "./dist/requests/forwarding/utils.d.ts",
+      "default": "./dist/requests/forwarding/utils.js"
+    },
+    "./requests/guaranteedQuote/index": {
+      "types": "./dist/requests/guaranteedQuote/index.d.ts",
+      "default": "./dist/requests/guaranteedQuote/index.js"
+    },
+    "./requests/guaranteedQuote/types": {
+      "types": "./dist/requests/guaranteedQuote/types.d.ts",
+      "default": "./dist/requests/guaranteedQuote/types.js"
+    },
+    "./requests/landedCost/index": {
+      "types": "./dist/requests/landedCost/index.d.ts",
+      "default": "./dist/requests/landedCost/index.js"
+    },
+    "./requests/landedCost/types": {
+      "types": "./dist/requests/landedCost/types.d.ts",
+      "default": "./dist/requests/landedCost/types.js"
+    },
+    "./requests/locator/index": {
+      "types": "./dist/requests/locator/index.d.ts",
+      "default": "./dist/requests/locator/index.js"
+    },
+    "./requests/locator/types": {
+      "types": "./dist/requests/locator/types.d.ts",
+      "default": "./dist/requests/locator/types.js"
+    },
     "./requests/packageTracking/index": {
       "types": "./dist/requests/packageTracking/index.d.ts",
       "default": "./dist/requests/packageTracking/index.js"
@@ -58,6 +266,14 @@
       "types": "./dist/requests/packageTracking/types.d.ts",
       "default": "./dist/requests/packageTracking/types.js"
     },
+    "./requests/paperlessDocuments/index": {
+      "types": "./dist/requests/paperlessDocuments/index.d.ts",
+      "default": "./dist/requests/paperlessDocuments/index.js"
+    },
+    "./requests/paperlessDocuments/types": {
+      "types": "./dist/requests/paperlessDocuments/types.d.ts",
+      "default": "./dist/requests/paperlessDocuments/types.js"
+    },
     "./requests/pickup/index": {
       "types": "./dist/requests/pickup/index.d.ts",
       "default": "./dist/requests/pickup/index.js"
@@ -65,6 +281,46 @@
     "./requests/pickup/types": {
       "types": "./dist/requests/pickup/types.d.ts",
       "default": "./dist/requests/pickup/types.js"
+    },
+    "./requests/pickupNotificationPreferences/index": {
+      "types": "./dist/requests/pickupNotificationPreferences/index.d.ts",
+      "default": "./dist/requests/pickupNotificationPreferences/index.js"
+    },
+    "./requests/pickupNotificationPreferences/types": {
+      "types": "./dist/requests/pickupNotificationPreferences/types.d.ts",
+      "default": "./dist/requests/pickupNotificationPreferences/types.js"
+    },
+    "./requests/pickupPoints/index": {
+      "types": "./dist/requests/pickupPoints/index.d.ts",
+      "default": "./dist/requests/pickupPoints/index.js"
+    },
+    "./requests/pickupPoints/types": {
+      "types": "./dist/requests/pickupPoints/types.d.ts",
+      "default": "./dist/requests/pickupPoints/types.js"
+    },
+    "./requests/preNotification/index": {
+      "types": "./dist/requests/preNotification/index.d.ts",
+      "default": "./dist/requests/preNotification/index.js"
+    },
+    "./requests/preNotification/types": {
+      "types": "./dist/requests/preNotification/types.d.ts",
+      "default": "./dist/requests/preNotification/types.js"
+    },
+    "./requests/protectedDeliveryToken/index": {
+      "types": "./dist/requests/protectedDeliveryToken/index.d.ts",
+      "default": "./dist/requests/protectedDeliveryToken/index.js"
+    },
+    "./requests/protectedDeliveryToken/types": {
+      "types": "./dist/requests/protectedDeliveryToken/types.d.ts",
+      "default": "./dist/requests/protectedDeliveryToken/types.js"
+    },
+    "./requests/quantumView/index": {
+      "types": "./dist/requests/quantumView/index.d.ts",
+      "default": "./dist/requests/quantumView/index.js"
+    },
+    "./requests/quantumView/types": {
+      "types": "./dist/requests/quantumView/types.d.ts",
+      "default": "./dist/requests/quantumView/types.js"
     },
     "./requests/rating/index": {
       "types": "./dist/requests/rating/index.d.ts",
@@ -81,6 +337,54 @@
     "./requests/shipping/types": {
       "types": "./dist/requests/shipping/types.d.ts",
       "default": "./dist/requests/shipping/types.js"
+    },
+    "./requests/smartPickup/index": {
+      "types": "./dist/requests/smartPickup/index.d.ts",
+      "default": "./dist/requests/smartPickup/index.js"
+    },
+    "./requests/smartPickup/types": {
+      "types": "./dist/requests/smartPickup/types.d.ts",
+      "default": "./dist/requests/smartPickup/types.js"
+    },
+    "./requests/supplyChainSymphony/index": {
+      "types": "./dist/requests/supplyChainSymphony/index.d.ts",
+      "default": "./dist/requests/supplyChainSymphony/index.js"
+    },
+    "./requests/supplyChainSymphony/types": {
+      "types": "./dist/requests/supplyChainSymphony/types.d.ts",
+      "default": "./dist/requests/supplyChainSymphony/types.js"
+    },
+    "./requests/timeInTransit/index": {
+      "types": "./dist/requests/timeInTransit/index.d.ts",
+      "default": "./dist/requests/timeInTransit/index.js"
+    },
+    "./requests/timeInTransit/types": {
+      "types": "./dist/requests/timeInTransit/types.d.ts",
+      "default": "./dist/requests/timeInTransit/types.js"
+    },
+    "./requests/trackAlert/index": {
+      "types": "./dist/requests/trackAlert/index.d.ts",
+      "default": "./dist/requests/trackAlert/index.js"
+    },
+    "./requests/trackAlert/types": {
+      "types": "./dist/requests/trackAlert/types.d.ts",
+      "default": "./dist/requests/trackAlert/types.js"
+    },
+    "./requests/tradeDirect/index": {
+      "types": "./dist/requests/tradeDirect/index.d.ts",
+      "default": "./dist/requests/tradeDirect/index.js"
+    },
+    "./requests/tradeDirect/types": {
+      "types": "./dist/requests/tradeDirect/types.d.ts",
+      "default": "./dist/requests/tradeDirect/types.js"
+    },
+    "./requests/worldEase/index": {
+      "types": "./dist/requests/worldEase/index.d.ts",
+      "default": "./dist/requests/worldEase/index.js"
+    },
+    "./requests/worldEase/types": {
+      "types": "./dist/requests/worldEase/types.d.ts",
+      "default": "./dist/requests/worldEase/types.js"
     }
   },
   "files": [

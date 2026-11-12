@@ -10,3 +10,9 @@ export type UspsRateGroup = "default" | "labels";
  */
 export const uspsSubClient = (clientName: string, group: UspsRateGroup) =>
   `${clientName}:${group}`;
+
+/**
+ * The one request the payment-token interceptor must never touch: minting the
+ * token dispatches it on the same sub-client the interceptor guards.
+ */
+export const USPS_PAYMENT_AUTHORIZE_REQUEST_NAME = "usps.payments.authorize";

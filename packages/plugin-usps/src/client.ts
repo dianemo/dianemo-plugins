@@ -1,4 +1,5 @@
 import { acquireLock, releaseLock, LOCK_TTL_MS } from "@dianemo/plugin-kit";
+import { USPS_PAYMENT_AUTHORIZE_REQUEST_NAME } from "./requests/utils.js";
 import { UspsPaymentAccountType } from "./requests/payments/types.js";
 import type { UspsPaymentRole } from "./requests/payments/types.js";
 import { authorizePayment } from "./requests/payments/index.js";
@@ -39,6 +40,15 @@ declare module "@dianemo/core" {
 }
 
 const DEFAULT_PAYMENT_ACCOUNT_TYPE: UspsPaymentAccountType = "EPS";
+
+// The v1.0.0 label functions, which the interceptor used to recognise by
+// `usps.labels` prefix. Kept by name so a missing account number on one of
+// them still fails loudly; every later function opts in through metadata alone.
+const TOKEN_REQUIRED_REQUEST_NAMES: ReadonlySet<string> = new Set([
+  "usps.labels.create",
+  "usps.labels.void",
+  "usps.labels.reprint",
+]);
 
 function credsFingerprint(creds: UspsCredentials): string {
   // Stable hash of every creds field the interceptor closes over. Lets
@@ -147,14 +157,28 @@ export async function registerUspsTemplate(handler: RequestHandler) {
               // Only on this sub-client: the payment token gates label
               // requests, and only labels and payments are dispatched here.
               requestInterceptor: async (config) => {
-                if (!config.requestName.startsWith("usps.labels"))
+                // The mint below calls `authorizePayment`, which is dispatched
+                // on this very sub-client; it must never be handed a token
+                // to mint, or minting would wait on itself.
+                if (config.requestName === USPS_PAYMENT_AUTHORIZE_REQUEST_NAME)
                   return config;
 
+                // A function signals that its operation needs the token by
+                // setting the account number, whatever its request name.
                 const accountNumber = config.metadata?.uspsAccountNumber;
                 if (
                   typeof accountNumber !== "string" ||
                   accountNumber.length === 0
                 ) {
+                  // Absent is "no token needed" for everything except the
+                  // original three label functions, which always needed it
+                  // and keep failing loudly; present-but-unusable fails for
+                  // every function rather than reaching USPS tokenless.
+                  if (
+                    config.metadata?.uspsAccountNumber === undefined &&
+                    !TOKEN_REQUIRED_REQUEST_NAMES.has(config.requestName)
+                  )
+                    return config;
                   throw new Error(
                     `${config.requestName} requires metadata.uspsAccountNumber to mint X-Payment-Authorization-Token`
                   );
@@ -292,8 +316,8 @@ async function mintAndCachePaymentToken(
     accountNumber,
     fingerprint,
     paymentAuthorizationToken,
-    // A margin under a claimed 8-hour maximum that no USPS page actually
-    // states — see docs/usps-api.md#payment-token-ttl
+    // A margin under the eight hours the Payments spec states (v3.1.20, downloaded
+    // 2026-11-12) — see docs/usps-api.md#payment-token-ttl
     7 * 60 * 60
   );
   return paymentAuthorizationToken;

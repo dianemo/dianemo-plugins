@@ -15,3 +15,8 @@ export default definePlugin({
 export { registerSmartyTemplate } from "./client.js";
 export * from "./requests/index.js";
 export * from "./requests/types.js";
+export * from "./requests/intlAutocomplete/types.js";
+export * from "./requests/usAutocomplete/types.js";
+export * from "./requests/usExtract/types.js";
+export * from "./requests/usReverseGeo/types.js";
+export * from "./requests/usZipcode/types.js";
