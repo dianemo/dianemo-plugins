@@ -3,6 +3,7 @@ import { tryHandleRequest } from "@dianemo/plugin-kit";
 import { RequestError } from "@dianemo/core";
 import {
   NeweggFeedResponse,
+  NeweggFeedResult,
   NeweggGetFeedStatusData,
   NeweggSubmitFeedResponse,
 } from "./types.js";
@@ -38,6 +39,27 @@ export const getFeedStatus = async (
     });
   }
   return feedData;
+};
+
+/**
+ * The per-row outcome of a finished feed, which `getFeedStatus` does not carry:
+ * status reports only that processing ended, not which rows failed or why.
+ */
+export const getFeedResult = async (
+  clientName: string,
+  feedId: string
+): Promise<NeweggFeedResult> => {
+  const res = await tryHandleRequest<NeweggFeedResult>(
+    {
+      clientName: neweggSubClient(clientName, "getFeedResult"),
+      requestName: "newegg.feeds.getResult",
+      url: `/datafeedmgmt/feeds/result/${feedId}`,
+      method: "GET",
+    },
+    "NWG_0015",
+    "Failed to get Newegg feed result"
+  );
+  return res.data;
 };
 
 export const submitFeed = async (

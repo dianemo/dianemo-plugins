@@ -9,6 +9,8 @@ import {
   NeweggItemPriceUpdate,
   NeweggPricingFeedItemData,
   NeweggSubmitPricingFeedData,
+  NeweggUpdateInventoryAndPriceData,
+  NeweggUpdateInventoryAndPriceResponse,
   NeweggUpdateItemPricingData,
   NeweggUpdateItemPricingResponse,
 } from "./types.js";
@@ -65,6 +67,29 @@ export const updateItemPricing = async (
     },
     "NWG_0012",
     "Failed to update Newegg item pricing"
+  );
+  return res.data;
+};
+
+/**
+ * Writes inventory and price in one call. The separate `updateItemInventory`
+ * and `updateItemPricing` are two calls against two per-endpoint budgets, and
+ * a failure between them leaves the item priced but not stocked.
+ */
+export const updateItemInventoryAndPrice = async (
+  clientName: string,
+  data: NeweggUpdateInventoryAndPriceData
+): Promise<NeweggUpdateInventoryAndPriceResponse> => {
+  const res = await tryHandleRequest<NeweggUpdateInventoryAndPriceResponse>(
+    {
+      clientName: neweggSubClient(clientName, "updateItemInventoryAndPrice"),
+      requestName: "newegg.pricing.updateInventoryAndPrice",
+      url: `/contentmgmt/item/inventoryandprice`,
+      method: "PUT",
+      data,
+    },
+    "NWG_0016",
+    "Failed to update Newegg item inventory and price"
   );
   return res.data;
 };

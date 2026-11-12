@@ -5,10 +5,14 @@ import { neweggSubClient } from "../utils.js";
 import {
   NeweggBusinessInventoryResponse,
   NeweggDetailedItemInventory,
+  NeweggGetBatchInventoryData,
+  NeweggGetBatchInventoryResponse,
   NeweggGetInventoryData,
   NeweggGetInventoryResponse,
+  NeweggBusinessInventoryFeedItemData,
   NeweggInventoryFeedItemData,
   NeweggItemInventory,
+  NeweggSubmitBusinessInventoryFeedData,
   NeweggSubmitInventoryFeedData,
   NeweggUpdateItemInventoryData,
   NeweggUpdateItemInventoryResponse,
@@ -55,6 +59,54 @@ export const getBusinessItemInventory = async (
   return res.data;
 };
 
+/**
+ * Resolves up to 100 SKUs in one call, which is what makes a seller part number
+ * recoverable from a Newegg item number on a feed-error report.
+ *
+ * `/international/` is the consumer marketplace here, not a non-US one — the
+ * same inversion the single-item reads above already carry. See
+ * docs/newegg-api.md#international-names-the-platform-not-the-marketplace
+ */
+export const getBatchItemInventory = async (
+  clientName: string,
+  data: NeweggGetBatchInventoryData
+): Promise<NeweggGetBatchInventoryResponse> => {
+  const res = await tryHandleRequest<{
+    ResponseBody: NeweggGetBatchInventoryResponse;
+  }>(
+    {
+      clientName: neweggSubClient(clientName, "getBatchItemInventory"),
+      requestName: "newegg.inventory.getBatch",
+      url: `/contentmgmt/item/international/inventorylist`,
+      method: "POST",
+      data,
+    },
+    "NWG_0019",
+    "Failed to get Newegg batch item inventory"
+  );
+  return res.data.ResponseBody;
+};
+
+export const getBusinessBatchItemInventory = async (
+  clientName: string,
+  data: NeweggGetBatchInventoryData
+): Promise<NeweggGetBatchInventoryResponse> => {
+  const res = await tryHandleRequest<{
+    ResponseBody: NeweggGetBatchInventoryResponse;
+  }>(
+    {
+      clientName: neweggSubClient(clientName, "getBatchItemInventory"),
+      requestName: "newegg.inventory.getBusinessBatch",
+      url: `/contentmgmt/item/inventorylist`,
+      method: "POST",
+      data,
+    },
+    "NWG_0020",
+    "Failed to get Newegg business batch item inventory"
+  );
+  return res.data.ResponseBody;
+};
+
 export const submitInventoryFeed = async (
   clientName: string,
   inventory: NeweggInventoryFeedItemData[]
@@ -67,6 +119,30 @@ export const submitInventoryFeed = async (
     },
   };
   return await submitFeed(clientName, "INVENTORY_DATA", data);
+};
+
+/**
+ * The business marketplace runs on Newegg's domestic platform, which has no
+ * standalone inventory feed — quantity updates go through
+ * `INVENTORY_AND_PRICE_DATA` instead.
+ *
+ * Price is omitted so this stays inventory-only, and `Overwrite: "No"` leaves
+ * items absent from the feed untouched rather than zeroing them. See
+ * docs/newegg-api.md#the-business-marketplace-has-no-standalone-inventory-feed
+ */
+export const submitBusinessInventoryFeed = async (
+  clientName: string,
+  inventory: NeweggBusinessInventoryFeedItemData[]
+) => {
+  const data: NeweggSubmitBusinessInventoryFeedData = {
+    NeweggEnvelope: {
+      Header: { DocumentVersion: "1.0" },
+      MessageType: "Inventory",
+      Overwrite: "No",
+      Message: { Inventory: { Item: inventory } },
+    },
+  };
+  return await submitFeed(clientName, "INVENTORY_AND_PRICE_DATA", data);
 };
 
 export const updateItemInventory = async (

@@ -31,4 +31,5 @@ export * from "./requests/inventory/types.js";
 export * from "./requests/orders/types.js";
 export * from "./requests/pricing/types.js";
 export * from "./requests/returns/types.js";
+export * from "./requests/sellerManagement/types.js";
 export * from "./requests/types.js";

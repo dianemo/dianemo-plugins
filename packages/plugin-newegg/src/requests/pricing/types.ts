@@ -93,3 +93,30 @@ export interface NeweggUpdateItemPricingResponse {
     Price: NeweggItemPriceUpdate[];
   };
 }
+
+export interface NeweggUpdateInventoryAndPriceData {
+  Type: NeweggItemUpdateType;
+  Value: string;
+  Inventory?: number;
+  SellingPrice?: number;
+  MAP?: number;
+  CheckoutMAP?: NeweggNumericBoolean;
+  EnableFreeShipping?: NeweggShippingOption;
+  Active?: NeweggItemPriceActive;
+  FulfillmentOption?: number;
+  LimitQuantity?: number;
+}
+
+export interface NeweggUpdateInventoryAndPriceResponse {
+  /** 1 = success, 0 = failure. */
+  Result: number;
+  SellerID: string;
+  ItemNumber: string;
+  SellerPartNumber: string;
+  ShipByNewegg: string;
+  Active: string;
+  AvailableQuantity: number;
+  SellingPrice: number;
+  EnableFreeShipping: number;
+  Memo: string;
+}
