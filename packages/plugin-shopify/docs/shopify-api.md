@@ -6,6 +6,48 @@ published docs on **2026-08-25**; everything marked _inferred_ was not published
 and was derived from the cost rules, so it is the part to confirm against a real
 shop.
 
+## Nested page sizes are a cost decision, and the caller may know better
+
+Shopify prices a query by the connection sizes it **requests**, and the
+single-query cap is 1,000 points on a standard plan. A Shopify Plus store gets a
+10x allowance.
+
+That difference is why the list reads here default to small nested pages —
+`getMany` at 10 line items, `getByOrderId` at 5 fulfillments, `companies.getOne`
+at 25 contacts. Those defaults fit a standard plan. They are not a claim that
+larger reads fail: a Plus store can request the same nested detail `getOne`
+returns and stay inside its own cap.
+
+So each of those three takes an optional `pages` argument that raises them. The
+default stays conservative because a plugin cannot know the plan; the caller can.
+
+**The failure mode this guards against is silence.** Asking for 10 line items on
+an order with 30 does not error — it returns 10, and a caller that pages the
+list and acts on what came back has quietly lost the rest. If you are reading a
+list and then acting per-node, either raise `pages` or re-read each node with the
+single-record function.
+
+## A move can split instead of moving
+
+`fulfillmentOrderMove` does not always move the whole thing. When the
+destination location cannot stock every line, Shopify moves what it can and
+answers with **both** `movedFulfillmentOrder` and a
+`remainingFulfillmentOrder` holding the rest at the original location.
+
+A caller that reads only `movedFulfillmentOrder` has silently lost track of the
+remainder. `move` returns the whole payload for that reason rather than just the
+moved order.
+
+## `userErrors` arrives under HTTP 200
+
+Shopify reports domain rejections in a `userErrors` array on the mutation
+payload, not as a transport error, so nothing below the GraphQL layer sees them.
+
+`move` raises on a non-empty `userErrors`: a move that did not happen must not
+read as one that did. `bulkToggleActivation` does **not** — its errors are
+per-location and a partial application is a legitimate result, so the array is
+returned for the caller to inspect. That difference is deliberate.
+
 ## Rate limits and the leaky bucket
 
 The GraphQL Admin API meters a shop with a leaky bucket priced in points, not in

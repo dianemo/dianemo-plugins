@@ -9,11 +9,15 @@ export interface ShopifyOrder {
   closed: boolean;
   closedAt: string | null;
   confirmed: boolean;
+  /** The channel the order came through; absent for orders created by the shop. */
+  app: { name: string } | null;
   createdAt: string;
   currencyCode: string;
   customer: {
     id: string;
     displayName: string;
+    /** Customer-level tags, not the order's own `tags`. */
+    tags: string[];
   };
   discountApplications: MultiRecord<ShopifyDiscountApplications>;
   discountCodes: string[];
@@ -176,6 +180,12 @@ interface ShopifyOrderLineItem {
   id: string;
   sku: string | null;
   quantity: number;
+  originalUnitPriceSet: {
+    shopMoney: {
+      amount: string;
+      currencyCode: string;
+    };
+  };
   originalTotalSet: {
     shopMoney: {
       amount: string;

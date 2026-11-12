@@ -43,3 +43,23 @@ export interface ShopifySetQuantitiesResponse {
     userErrors: ShopifyResponseUserError[];
   };
 }
+
+export interface BulkToggleActivationVariables {
+  inventoryItemId: string;
+  inventoryItemUpdates: {
+    locationId: string;
+    activate: boolean;
+  }[];
+}
+
+export interface BulkToggleActivationData {
+  inventoryBulkToggleActivation: {
+    inventoryItem: { id: string };
+    inventoryLevels: {
+      id: string;
+      quantities: { name: string; quantity: number }[];
+      location: { id: string };
+    }[];
+    userErrors: { field: string[]; message: string; code?: string }[];
+  };
+}

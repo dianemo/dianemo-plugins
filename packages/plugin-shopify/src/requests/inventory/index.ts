@@ -11,6 +11,8 @@ import {
   connectionCost,
 } from "../utils/queryCost.js";
 import {
+  BulkToggleActivationData,
+  BulkToggleActivationVariables,
   GetManyInventoryItemsResponse,
   ShopifySetQuantitiesInput,
   ShopifySetQuantitiesResponse,
@@ -99,4 +101,47 @@ export const setQuantities = async (
   );
 
   return res;
+};
+
+/**
+ * Activates or deactivates one inventory item across locations in a single
+ * call. Shopify reports per-location failures in `userErrors` under HTTP 200,
+ * so a caller must read them — a partially applied toggle looks like success.
+ */
+export const bulkToggleActivation = async (
+  clientName: string,
+  variables: BulkToggleActivationVariables
+): Promise<BulkToggleActivationData> => {
+  const query = `mutation inventoryBulkToggleActivation($inventoryItemId: ID!, $inventoryItemUpdates: [InventoryBulkToggleActivationInput!]!) {
+      inventoryBulkToggleActivation(inventoryItemId: $inventoryItemId, inventoryItemUpdates: $inventoryItemUpdates) {
+        inventoryItem {
+          id
+        }
+        inventoryLevels {
+          id
+          quantities(names: ["available"]) {
+            name
+            quantity
+          }
+          location {
+            id
+          }
+        }
+        userErrors {
+          field
+          message
+          code
+        }
+      }
+    }`;
+  const res = await handleGraphQLRequest<BulkToggleActivationData>(
+    clientName,
+    "SHO_0061",
+    "Failed to toggle Shopify inventory activation",
+    10,
+    "shopify.inventory.bulkToggleActivation",
+    query,
+    variables
+  );
+  return res.data;
 };

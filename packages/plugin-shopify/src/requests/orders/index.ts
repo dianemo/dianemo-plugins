@@ -25,7 +25,7 @@ import {
   ShopifyTransactionsResponse,
 } from "./types.js";
 
-interface OrderFieldPages {
+export interface OrderFieldPages {
   discountApplications: number;
   events: number;
   lineItems: number;
@@ -33,18 +33,18 @@ interface OrderFieldPages {
 }
 
 /**
- * `billingAddress`, `customer`, `paymentTerms`, `shippingAddress`,
+ * `app`, `billingAddress`, `customer`, `paymentTerms`, `shippingAddress`,
  * `shippingLine` and its `discountedPriceSet.shopMoney`, and the four
  * `total*Set.shopMoney` pairs.
  */
-const ORDER_OBJECT_COST = 15;
+const ORDER_OBJECT_COST = 16;
 
 /**
- * One `lineItems` node: the line item, `originalTotalSet.shopMoney`,
- * `discountAllocations` with both of its money objects,
- * `taxLines.priceSet.shopMoney`, and `variant`.
+ * One `lineItems` node: the line item, `originalUnitPriceSet.shopMoney` and
+ * `originalTotalSet.shopMoney`, `discountAllocations` with both of its money
+ * objects, `taxLines.priceSet.shopMoney`, and `variant`.
  */
-const LINE_ITEM_COST = 11;
+const LINE_ITEM_COST = 13;
 
 /** Reading one order in full — see docs/shopify-api.md#order-node-cost. */
 const ORDER_DETAIL_PAGES: OrderFieldPages = {
@@ -77,6 +77,9 @@ const orderCost = (pages: OrderFieldPages) =>
   connectionCost(pages.metafields, OBJECT_COST);
 
 const orderFields = (pages: OrderFieldPages) => `{
+  app {
+    name
+  }
   id
   billingAddress {
     address1
@@ -102,6 +105,7 @@ const orderFields = (pages: OrderFieldPages) => `{
   customer {
     id
     displayName
+    tags
   }
   discountApplications(first: ${pages.discountApplications}) {
     edges {
@@ -133,6 +137,12 @@ const orderFields = (pages: OrderFieldPages) => `{
         id
         sku
         quantity
+        originalUnitPriceSet {
+          shopMoney {
+            amount
+            currencyCode
+          }
+        }
         originalTotalSet {
           shopMoney {
             amount
@@ -253,10 +263,21 @@ const recordType: ShopifyRecordTypes = "ORDER";
  * in full. `first: 7` is refused locally as a budget error naming the client
  * rather than coming back `MAX_COST_EXCEEDED` a round trip later.
  */
+/**
+ * A page of orders, at nested sizes chosen to stay inside the 1,000-point
+ * single-query cap on a standard plan.
+ *
+ * `pages` raises them. A Shopify Plus store has a 10x cost allowance, so it can
+ * ask for the same nested detail `getOne` returns and still fit — but a plugin
+ * cannot assume the plan, so the larger read is opt-in rather than the default.
+ * See docs/shopify-api.md#order-node-cost.
+ */
 export const getMany = async (
   clientName: string,
-  options?: GetManyBasicOptions
+  options?: GetManyBasicOptions,
+  pages?: Partial<OrderFieldPages>
 ) => {
+  const listPages: OrderFieldPages = { ...ORDER_LIST_PAGES, ...pages };
   const defaultOptions = { first: 5 };
   const mergedOptions = { ...defaultOptions, ...options };
   const args = buildListArguments(
@@ -266,7 +287,7 @@ export const getMany = async (
   const query = `query orders${args.declarations} {
     orders${args.arguments} {
       edges {
-        node ${orderFields(ORDER_LIST_PAGES)}
+        node ${orderFields(listPages)}
       }
       pageInfo {
         hasPreviousPage
@@ -281,7 +302,7 @@ export const getMany = async (
     clientName,
     "SHO_0034",
     "Failed to fetch Shopify orders",
-    connectionCost(listPageSize(mergedOptions), orderCost(ORDER_LIST_PAGES)),
+    connectionCost(listPageSize(mergedOptions), orderCost(listPages)),
     "shopify.orders.list",
     query,
     args.variables
