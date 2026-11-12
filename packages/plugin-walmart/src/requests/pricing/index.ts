@@ -1,4 +1,5 @@
 import { tryHandleRequest } from "@dianemo/plugin-kit";
+import { WalmartMarket } from "../items/types.js";
 import { submitFeed } from "../feeds/index.js";
 import {
   UpdatePriceData,
@@ -13,9 +14,10 @@ import {
  */
 export const submitPriceFeed = async (
   clientName: string,
-  data: WalmartPriceFeed
+  data: WalmartPriceFeed,
+  market?: WalmartMarket
 ) => {
-  return submitFeed(clientName, "PRICE_AND_PROMOTION", data);
+  return submitFeed(clientName, "PRICE_AND_PROMOTION", data, market);
 };
 
 export const updatePrice = async (
