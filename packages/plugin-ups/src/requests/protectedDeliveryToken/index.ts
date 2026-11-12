@@ -75,17 +75,14 @@ export const getProtectedDeliveryPins = async (
 
 /**
  * The EPRA release code and follow-up actions for a package. The spec puts the
- * tracking number and an `Authorization` header in the request headers of a GET,
- * which is sent as written — see docs/ups-api.md#protected-delivery-token.
+ * tracking number and an `Authorization` header in the request headers of a GET.
+ * The `Authorization` is the client's own bearer token, which core sets after
+ * every request-level header, so there is nothing for a caller to pass — see
+ * docs/ups-api.md#protected-delivery-token.
  */
 export const getProtectedDeliveryEpraCode = async (
   clientName: string,
-  {
-    trackingNumber,
-    authorization,
-    action,
-    epra,
-  }: UpsProtectedDeliveryEpraParams
+  { trackingNumber, action, epra }: UpsProtectedDeliveryEpraParams
 ): Promise<UpsProtectedDeliveryEpraResponse> => {
   const query = action ? `?action=${encodeURIComponent(action)}` : "";
   const res = await tryHandleRequest<UpsProtectedDeliveryEpraResponse>(
@@ -96,7 +93,6 @@ export const getProtectedDeliveryEpraCode = async (
       url: `${BASE}/epra${query}`,
       headers: {
         trackingNumber,
-        Authorization: authorization,
         ...(epra ? { epra } : {}),
       },
     },

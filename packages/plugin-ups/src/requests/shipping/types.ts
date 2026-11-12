@@ -119,7 +119,7 @@ export interface UpsShippingLabelRecoveryRequest {
    * array lists it, along with `ReferenceValues`: each description makes them
    * conditional on the other identifiers — docs/ups-api.md#shipping-spec-quirks
    */
-  TrackingNumbers?: string[];
+  TrackingNumbers?: string[] | { TrackingNumber: string | string[] };
   MailInnovationsTrackingNumber?: string;
   ReferenceValues?: UpsShippingLabelRecoveryRequestReferenceValues;
   Locale?: string;
@@ -129,11 +129,16 @@ export interface UpsShippingLabelRecoveryRequest {
 export interface UpsShippingLabelRecoveryResponse {
   Response: UpsShippingLabelRecoveryResponseResponse;
   ShipmentIdentificationNumber?: string;
-  LabelResults: UpsShippingLabelRecoveryResponseLabelResults[];
+  /** A single object, not an array, in UPS's v1 Java sample, which is the version this is pinned to; the spec has no "always an array" note. */
+  LabelResults:
+    | UpsShippingLabelRecoveryResponseLabelResults
+    | UpsShippingLabelRecoveryResponseLabelResults[];
   CODTurnInPage?: UpsShippingLabelRecoveryResponseCODTurnInPage;
   Form?: UpsShippingLabelRecoveryResponseForm;
   HighValueReport?: UpsShippingLabelRecoveryResponseHighValueReport;
-  TrackingCandidate?: UpsShippingLabelRecoveryResponseTrackingCandidate[];
+  TrackingCandidate?:
+    | UpsShippingLabelRecoveryResponseTrackingCandidate
+    | UpsShippingLabelRecoveryResponseTrackingCandidate[];
 }
 
 export interface UpsShippingShipmentRequestRequest {
@@ -178,7 +183,7 @@ export interface UpsShippingShipmentRequestShipment {
   PackageIDBarcodeIndicator?: string;
   /** Valid values: 1 = Balloon 2 = Oversize 3 = Not Applicable */
   IrregularIndicator?: string;
-  ShipmentIndicationType?: UpsShippingCode[];
+  ShipmentIndicationType?: UpsShippingCode | UpsShippingCode[];
   MIDualReturnShipmentKey?: string;
   MIDualReturnShipmentIndicator?: string;
   RatingMethodRequestedIndicator?: string;
@@ -192,7 +197,7 @@ export interface UpsShippingShipmentRequestShipment {
   MasterCartonIndicator?: string;
   /** Format: YYYYMMDD */
   ShipmentDate?: string;
-  Package: UpsShippingShipmentPackage[];
+  Package: UpsShippingShipmentPackage | UpsShippingShipmentPackage[];
   QuoteID?: string;
   TradeDirect?: UpsShippingShipmentTradeDirect;
   HealthcareIdentifier?: string;
@@ -201,7 +206,8 @@ export interface UpsShippingShipmentRequestShipment {
 export interface UpsShippingShipmentRequestLabelSpecification {
   LabelImageFormat: UpsShippingCode;
   HTTPUserAgent?: string;
-  LabelStockSize: UpsShippingLabelSpecificationLabelStockSize;
+  /** Optional: UPS's own spec examples and Java samples omit it. */
+  LabelStockSize?: UpsShippingLabelSpecificationLabelStockSize;
   Instruction?: UpsShippingLabelSpecificationInstruction[];
   CharacterSet?: string;
 }
@@ -284,10 +290,13 @@ export interface UpsShippingLabelRecoveryRequestTranslate {
 export interface UpsShippingLabelRecoveryRequestLabelDelivery {
   LabelLinkIndicator?: string;
   ResendEMailIndicator?: string;
+  /** The spec's own request example spells it this way; its schema says `ResendEMailIndicator`. */
+  ResendEmailIndicator?: string;
 }
 
 export interface UpsShippingLabelRecoveryRequestReferenceValues {
-  ReferenceNumber: UpsShippingReferenceValuesReferenceNumber;
+  /** Optional: the spec's Roadie request example sends only `ShipperNumber`. */
+  ReferenceNumber?: UpsShippingReferenceValuesReferenceNumber;
   ShipperNumber: string;
 }
 
@@ -300,7 +309,7 @@ export interface UpsShippingLabelRecoveryRequestUPSPremiumCareForm {
 
 export interface UpsShippingLabelRecoveryResponseResponse {
   ResponseStatus: UpsShippingAlert;
-  Alert?: UpsShippingAlert[];
+  Alert?: UpsShippingAlert | UpsShippingAlert[];
   TransactionReference?: UpsShippingTransactionReference;
 }
 
@@ -379,7 +388,9 @@ export interface UpsShippingShipmentShipFrom {
 }
 
 export interface UpsShippingShipmentPaymentInformation {
-  ShipmentCharge: UpsShippingPaymentInformationShipmentCharge[];
+  ShipmentCharge:
+    | UpsShippingPaymentInformationShipmentCharge
+    | UpsShippingPaymentInformationShipmentCharge[];
   SplitDutyVATIndicator?: string;
 }
 
@@ -453,7 +464,9 @@ export interface UpsShippingShipmentShipmentServiceOptions {
   AccessPointCOD?: UpsShippingMoney;
   DeliverToAddresseeOnlyIndicator?: string;
   DirectDeliveryOnlyIndicator?: string;
-  Notification?: UpsShippingShipmentServiceOptionsNotification[];
+  Notification?:
+    | UpsShippingShipmentServiceOptionsNotification
+    | UpsShippingShipmentServiceOptionsNotification[];
   LabelDelivery?: UpsShippingShipmentServiceOptionsLabelDelivery;
   InternationalForms?: UpsShippingShipmentServiceOptionsInternationalForms;
   DeliveryConfirmation?: UpsShippingShipmentServiceOptionsDeliveryConfirmation;
@@ -649,7 +662,7 @@ export interface UpsShippingTrackingCandidatePickupDateRange {
 }
 
 export interface UpsShippingShipperAddress {
-  AddressLine: string[];
+  AddressLine: string | string[];
   City: string;
   StateProvinceCode?: string;
   PostalCode?: string;
@@ -657,7 +670,7 @@ export interface UpsShippingShipperAddress {
 }
 
 export interface UpsShippingShipToAddress {
-  AddressLine: string[];
+  AddressLine: string | string[];
   City: string;
   StateProvinceCode?: string;
   PostalCode?: string;
@@ -681,7 +694,7 @@ export interface UpsShippingShipFromTaxIDType {
 }
 
 export interface UpsShippingShipFromAddress {
-  AddressLine: string[];
+  AddressLine: string | string[];
   City: string;
   StateProvinceCode?: string;
   PostalCode?: string;
@@ -755,7 +768,9 @@ export interface UpsShippingShipmentServiceOptionsInternationalForms {
   FormGroupIdName?: string;
   EEIFilingOption?: UpsShippingInternationalFormsEEIFilingOption;
   Contacts?: UpsShippingInternationalFormsContacts;
-  Product: UpsShippingInternationalFormsProduct[];
+  Product:
+    | UpsShippingInternationalFormsProduct
+    | UpsShippingInternationalFormsProduct[];
   InvoiceNumber?: string;
   InvoiceDate?: string;
   PurchaseOrderNumber?: string;
@@ -856,7 +871,9 @@ export interface UpsShippingPackagePackageServiceOptions {
   AccessPointCOD?: UpsShippingMoney;
   ShipperReleaseIndicator?: string;
   Notification?: UpsShippingPackageServiceOptionsNotification;
-  HazMat?: UpsShippingPackageServiceOptionsHazMat[];
+  HazMat?:
+    | UpsShippingPackageServiceOptionsHazMat
+    | UpsShippingPackageServiceOptionsHazMat[];
   HazMatTypeCode?: string;
   DryIce?: UpsShippingPackageServiceOptionsDryIce;
   UPSPremiumCareIndicator?: string;
@@ -893,7 +910,8 @@ export interface UpsShippingTradeDirectChild {
   USI: string;
   HazMatIndicator?: string;
   Type: "LTL" | "SMALLPACKAGE" | "MI";
-  Product: UpsShippingChildProduct;
+  /** The schema is one object; UPS's Trade Direct examples send an array. */
+  Product: UpsShippingChildProduct | UpsShippingChildProduct[];
   LtlPackage: UpsShippingChildLTLPackage;
   LtlCharges?: UpsShippingChildLTLCharges;
 }
@@ -1044,7 +1062,7 @@ export interface UpsShippingFreightDensityInfoHandlingUnits {
 }
 
 export interface UpsShippingNotificationEMail {
-  EMailAddress: string[];
+  EMailAddress: string | string[];
   UndeliverableEMailAddress?: string;
   FromEMailAddress?: string;
   FromName?: string;
@@ -1092,7 +1110,8 @@ export interface UpsShippingInternationalFormsCN22Form {
   CN22Type: string;
   CN22OtherDescription?: string;
   FoldHereText?: string;
-  CN22Content: UpsShippingCN22FormCN22Content[];
+  CN22Content:
+    UpsShippingCN22FormCN22Content | UpsShippingCN22FormCN22Content[];
 }
 
 export interface UpsShippingInternationalFormsEEIFilingOption {
@@ -1576,8 +1595,8 @@ export interface UpsShippingProductProductWeight {
 
 export interface UpsShippingProductScheduleB {
   Number: string;
-  Quantity?: string[];
-  UnitOfMeasurement: UpsShippingCode[];
+  Quantity?: string | string[];
+  UnitOfMeasurement: UpsShippingCode | UpsShippingCode[];
 }
 
 export interface UpsShippingInternationalFormsProductIdentifier {
@@ -1590,7 +1609,9 @@ export interface UpsShippingProductExcludeFromForm {
 }
 
 export interface UpsShippingProductPackingListInfo {
-  PackageAssociated: UpsShippingPackingListInfoPackageAssociated[];
+  PackageAssociated:
+    | UpsShippingPackingListInfoPackageAssociated
+    | UpsShippingPackingListInfoPackageAssociated[];
 }
 
 export interface UpsShippingProductEEIInformation {
@@ -1694,7 +1715,7 @@ export interface UpsShippingCN22ContentCN22DDSReferenceNumber {
 }
 
 export interface UpsShippingForwardAgentAddress {
-  AddressLine: string[];
+  AddressLine: string | string[];
   City: string;
   StateProvinceCode?: string;
   Town?: string;
@@ -1703,7 +1724,7 @@ export interface UpsShippingForwardAgentAddress {
 }
 
 export interface UpsShippingUltimateConsigneeAddress {
-  AddressLine: string[];
+  AddressLine: string | string[];
   City: string;
   StateProvinceCode?: string;
   Town?: string;
@@ -1727,7 +1748,7 @@ export interface UpsShippingIntermediateConsigneeAddress {
 }
 
 export interface UpsShippingProducerAddress {
-  AddressLine: string[];
+  AddressLine: string | string[];
   City: string;
   StateProvinceCode?: string;
   Town?: string;
@@ -1736,7 +1757,7 @@ export interface UpsShippingProducerAddress {
 }
 
 export interface UpsShippingSoldToAddress {
-  AddressLine: string[];
+  AddressLine: string | string[];
   City: string;
   StateProvinceCode?: string;
   Town?: string;
@@ -1789,6 +1810,8 @@ export interface UpsShippingLTLPackageWeightType {
 
 export interface UpsShippingTransactionReference {
   CustomerContext?: string;
+  /** In UPS's v1 samples and spec examples, though not in the spec's schema. */
+  TransactionIdentifier?: string;
 }
 
 export interface UpsShippingCode {

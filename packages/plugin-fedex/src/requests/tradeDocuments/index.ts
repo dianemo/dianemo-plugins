@@ -58,7 +58,9 @@ export const uploadImage = async (
       method: "POST",
       url,
       data: buildMultipartForm({
-        json: { document: data.document, rules: data.rules },
+        // One `document` part holding both, not three siblings:
+        // docs/fedex-api.md#trade-documents-upload-multipart-body.
+        json: { document: { document: data.document, rules: data.rules } },
         files: [
           {
             field: "attachment",

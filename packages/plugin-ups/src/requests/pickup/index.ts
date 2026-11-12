@@ -73,7 +73,7 @@ export const cancelPickup = async (
       url: `/api/shipments/${PICKUP_VERSION}/pickup/02`,
       headers: { Prn: prn },
     },
-    "UPS_0043",
+    "UPS_0011",
     "Failed to cancel UPS pickup"
   );
   return res.data;
@@ -82,8 +82,8 @@ export const cancelPickup = async (
 /**
  * Cancel by account number (`CancelBy` = `01`): the spec sends no `Prn` header
  * and no account number on this path, so which account is cancelled is not
- * visible from the request — see docs/ups-api.md#pickup-operations. Shares
- * `cancelPickup`'s code because it is the same failure, one endpoint.
+ * visible from the request — see docs/ups-api.md#pickup-operations. Has its
+ * own code: `UPS_0011` stays on `cancelPickup`, which predates this function.
  */
 export const cancelPickupByAccountNumber = async (
   clientName: string
@@ -95,7 +95,7 @@ export const cancelPickupByAccountNumber = async (
       method: "DELETE",
       url: `/api/shipments/${PICKUP_VERSION}/pickup/01`,
     },
-    "UPS_0011",
+    "UPS_0043",
     "Failed to cancel UPS pickup"
   );
   return res.data;

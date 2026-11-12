@@ -143,6 +143,7 @@ describe("usps containers", () => {
       method: "POST",
       url: "/containers/v3/containers",
       data,
+      headers: { Accept: "multipart/form-data" },
       responseType: "arraybuffer",
     });
     expect(res.metadata).toEqual(METADATA);
@@ -195,7 +196,8 @@ describe("usps containers", () => {
     expect(fromArrayBuffer.metadata).toEqual(METADATA);
     const metadataOnly = parseContainerLabelResponse(
       multipart(undefined),
-      undefined
+      undefined,
+      false
     );
     expect(metadataOnly).toEqual({ metadata: METADATA });
     const json = parseContainerLabelResponse(
@@ -214,6 +216,27 @@ describe("usps containers", () => {
         expect.objectContaining({ code: "USP_0094" })
       );
     }
+  });
+
+  it("parseContainerLabelResponse throws USP_0159 for multipart with no image part", () => {
+    expect(() =>
+      parseContainerLabelResponse(multipart(undefined), undefined)
+    ).toThrow(expect.objectContaining({ code: "USP_0159" }));
+  });
+
+  it("parseContainerLabelResponse finds an image part with no name, and metadata by JSON type", () => {
+    const body = Buffer.concat([
+      Buffer.from(
+        `--${BOUNDARY}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify(METADATA)}\r\n` +
+          `--${BOUNDARY}\r\nContent-Disposition: attachment; filename="label-image.jpg"\r\n\r\n`
+      ),
+      BINARY_IMAGE,
+      Buffer.from(`\r\n--${BOUNDARY}--\r\n`),
+    ]);
+    const res = parseContainerLabelResponse(body, undefined);
+    expect(res.metadata).toEqual(METADATA);
+    expect(res.labelImage?.filename).toBe("label-image.jpg");
+    expect(res.labelImage?.bytes.equals(BINARY_IMAGE)).toBe(true);
   });
 
   it("closeUspsContainerManifest posts the container ids", async () => {

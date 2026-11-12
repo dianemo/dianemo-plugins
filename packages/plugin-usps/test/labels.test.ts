@@ -1,3 +1,4 @@
+import { readIndiciaBody } from "../src/requests/labels/utils.js";
 import RequestHandler, { memoryBackend } from "@dianemo/core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { resetBinding } from "@dianemo/plugin-kit/testing";
@@ -293,6 +294,30 @@ describe("usps labels", () => {
     // A raw binary part and a base64 text part both end up as base64 strings.
     expect(res.receiptImage).toBe(pdf.toString("base64"));
     expect(res.indiciaImage).toBe(pdf.toString("base64"));
+  });
+
+  it("readIndiciaBody accepts a multipart body with no image only for IMI_DATA_ONLY", () => {
+    const body = Buffer.from(
+      `--b\r\nContent-Type: application/json\r\nContent-Disposition: form-data; name="indiciaMetadata"\r\n\r\n` +
+        `{"SKU":"S","indiciaIMI":"AAAA"}\r\n--b--\r\n`
+    );
+    const type = "multipart/form-data; boundary=b";
+    expect(readIndiciaBody(body, type, false)).toEqual({
+      indiciaMetadata: { SKU: "S", indiciaIMI: "AAAA" },
+    });
+    // USPS returned the IMI itself, so the missing image is not a failure.
+    expect(readIndiciaBody(body, type)).toEqual({
+      indiciaMetadata: { SKU: "S", indiciaIMI: "AAAA" },
+    });
+    const noImi = Buffer.from(
+      body.toString().replace(',"indiciaIMI":"AAAA"', "")
+    );
+    expect(readIndiciaBody(noImi, type, false)).toEqual({
+      indiciaMetadata: { SKU: "S" },
+    });
+    expect(() => readIndiciaBody(noImi, type)).toThrow(
+      expect.objectContaining({ code: "USP_0160" })
+    );
   });
 
   it("createLabelIndicia throws USP_0095 for a body it cannot read", async () => {

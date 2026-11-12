@@ -52,6 +52,8 @@ export interface FedExDutiesTaxesCostDetail {
 
 export interface FedExDutiesTaxesSummary {
   totalDuty?: number;
+  /** The 200 example `SampleOutput` spells it this way; the schema says `totalDuty`. */
+  totalDuties?: number;
   totalFees?: number;
   totalShippingCosts?: number;
   totalTaxes?: number;

@@ -9,6 +9,7 @@ import type {
   UspsPickupDetails,
   UspsPickupGetOptions,
   UspsPickupGetResult,
+  UspsPickupNotModified,
   UspsPickupUpdateOptions,
   UspsPickupUpdateResult,
 } from "./types.js";
@@ -49,17 +50,34 @@ export const schedulePickup = async (
   return res.data;
 };
 
+const isSuccessOrNotModified = (status: number) =>
+  (status >= 200 && status < 300) || status === 304;
+
 /**
  * `pickup` is one object, as v2.0.0 returned and as USPS's example shows. The
  * spec's schema says array, so an array body is unwrapped to its only element;
  * more than one is not something a confirmation number can mean, and is
  * rejected rather than silently trimmed. See docs/usps-api.md#pickups.
+ *
+ * With `ifNoneMatch` a 304 resolves to `UspsPickupNotModified`. Axios rejects a
+ * 304 by default, so the per-request `validateStatus` is set only in that case:
+ * passing it as `undefined` would make axios accept every status.
  */
-export const getPickup = async (
+export async function getPickup(
+  clientName: string,
+  confirmationNumber: string,
+  options?: { ifNoneMatch?: undefined }
+): Promise<UspsPickupGetResult>;
+export async function getPickup(
+  clientName: string,
+  confirmationNumber: string,
+  options: UspsPickupGetOptions
+): Promise<UspsPickupGetResult | UspsPickupNotModified>;
+export async function getPickup(
   clientName: string,
   confirmationNumber: string,
   options: UspsPickupGetOptions = {}
-): Promise<UspsPickupGetResult> => {
+): Promise<UspsPickupGetResult | UspsPickupNotModified> {
   const res = await tryHandleRequest<UspsPickupDetails | UspsPickupDetails[]>(
     {
       clientName: uspsSubClient(clientName, "default"),
@@ -69,15 +87,21 @@ export const getPickup = async (
       headers: options.ifNoneMatch
         ? { "If-None-Match": options.ifNoneMatch }
         : undefined,
+      ...(options.ifNoneMatch
+        ? { validateStatus: isSuccessOrNotModified }
+        : {}),
     },
     "USP_0011",
     "Failed to get USPS pickup details"
   );
+  const etag = (res.headers?.["etag"] as string | undefined) ?? "";
+  if (res.status === 304)
+    return { notModified: true, etag: etag || (options.ifNoneMatch ?? "") };
   return {
     pickup: singlePickup(res.data, confirmationNumber),
-    etag: (res.headers?.["etag"] as string) ?? "",
+    etag,
   };
-};
+}
 
 export const cancelPickup = async (
   clientName: string,

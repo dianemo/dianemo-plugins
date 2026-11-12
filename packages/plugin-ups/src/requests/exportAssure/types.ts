@@ -140,12 +140,13 @@ export interface UpsExportAssureImportExportItemLevelResponse {
 export interface UpsExportAssurePowerOfAttorneyResponse {
   importerPoaRequiredFlag: boolean;
   importerEvaluationCriteria?: UpsExportAssureEvaluationCriteria;
-  importerPoaOnFileIndicator?: "Yes" | "No" | null;
+  /** `boolean` only in the spec's `cieResponseExample`; the schema says `Yes`/`No`. */
+  importerPoaOnFileIndicator?: "Yes" | "No" | boolean | null;
   importerCommodityId?: UpsExportAssureCommodityId;
   importerCommodityDescription?: string;
   exporterPoaRequiredFlag: boolean;
   exporterEvaluationCriteria?: UpsExportAssureEvaluationCriteria;
-  exporterPoaOnFileIndicator?: "Yes" | "No" | null;
+  exporterPoaOnFileIndicator?: "Yes" | "No" | boolean | null;
   exporterCommodityId?: UpsExportAssureCommodityId;
   exporterCommodityDescription?: string;
   exporterOnlineFormFlag: boolean;

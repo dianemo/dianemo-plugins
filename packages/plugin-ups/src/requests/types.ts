@@ -1,7 +1,10 @@
 /**
- * UPS field that uses an empty string for true and lack of value for false
+ * UPS field that uses an empty string for true and lack of value for false.
+ * The spec's own wording is "True if tag exists... Any value inside is ignored",
+ * so the empty string it describes is admitted alongside the older spellings —
+ * see docs/ups-api.md#audit-of-the-rating-types.
  */
-export type Indicator = "X" | "Y" | "true";
+export type Indicator = "" | "X" | "Y" | "true";
 
 export type UPSVersion =
   "v1" | "v1601" | "v1607" | "v1701" | "v1707" | "v2108" | "v2205" | "v2409";

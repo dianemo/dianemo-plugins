@@ -13,7 +13,8 @@ export type FedExRegulatoryProductIdType =
 export interface FedExRegulatoryContact {
   personName?: string;
   emailAddress?: string;
-  phoneExtension?: number;
+  /** `string | number`: the spec's examples send `"000"`, and a number loses leading zeros. */
+  phoneExtension?: string | number;
   /** Includes the country code. */
   phoneNumber?: string;
   companyName?: string;
@@ -48,8 +49,8 @@ export interface FedExRegulatoryProductDetails {
   /** True selects FCP (CPC); false selects FGC (GCC). */
   childrensProduct?: boolean;
   skuProductCode?: string;
-  /** An integer in the spec, so a 14-digit GTIN can exceed safe-integer range. */
-  gtinUpcCode?: number;
+  /** An integer in the schema, but the examples send `"00012345678905"`; a number drops the leading zeros. */
+  gtinUpcCode?: string | number;
   /** SRV is a 14-digit GTIN; AI is a 12-digit UPC. */
   gtinUpcQualifierCode?: "SRV" | "AI";
   serialNumber?: string;
@@ -76,8 +77,8 @@ export interface FedExRegulatoryManufacturerDetails {
 
 export interface FedExRegulatoryLotDetails {
   lotNumber?: string;
-  /** 1 is manufacturer, 2 is seller. */
-  lotNumberQualifier?: 1 | 2;
+  /** 1 is manufacturer, 2 is seller. The schema says integer; `cpscExample3` sends `"1"`. */
+  lotNumberQualifier?: 1 | 2 | "1" | "2";
   /** `YYYY-MM-DD`. */
   productionStartDate?: string;
   /** `YYYY-MM-DD`. */
@@ -93,6 +94,8 @@ export interface FedExRegulatoryTestingDetail {
   testReportId?: string;
   testReportUrl?: string;
   testReportAccessKey?: string;
+  /** In `cpscExample3` only; the schema does not define it. */
+  isNoLabEntry?: boolean;
   componentPartDescription?: string;
   contact?: FedExRegulatoryContact;
   address?: FedExRegulatoryAddress;
@@ -134,8 +137,9 @@ export interface FedExRegulatoryProfileEntry {
 /** The request body is a bare JSON array, not an object. */
 export type FedExRegulatoryProfileRequest = FedExRegulatoryProfileEntry[];
 
-/** The spec's 200 envelope carries no `transactionId`, unlike most FedEx APIs. */
 export interface FedExRegulatoryProfileResponse {
+  transactionId?: string;
+  customerTransactionId?: string;
   output?: {
     message?: string;
   };

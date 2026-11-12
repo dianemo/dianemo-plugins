@@ -25,13 +25,19 @@ export interface FedExConsolidationAddressAncillaryDetail {
 }
 
 export interface FedExConsolidationAddressV2 {
-  /** Combination of number, street name, etc. At least one line is required for a valid physical address. Empty lines should not be included. Max Length is 35. */
-  streetLines: string[];
-  city: string;
+  /**
+   * Combination of number, street name, etc. Max Length is 35. The schema requires this
+   * and `city`, but the payor address in the spec's shipment samples sends only
+   * `countryCode`: docs/fedex-api.md#consolidation-api.
+   */
+  streetLines?: string[];
+  city?: string;
   stateOrProvinceCode?: string;
   postalCode?: string;
   countryCode: string;
   residential?: boolean;
+  /** Not in the schema; `printedLabelOrigin.address` in the sync IDF sample sends `"POTENTIAL"`. */
+  addressClassificationConfidence?: string;
 }
 
 export interface FedExConsolidationAdrLicenseDetail {
@@ -146,6 +152,10 @@ export interface FedExConsolidationContact {
 }
 
 export interface FedExConsolidationCommodity {
+  /** Not in the schema; the sync IPD sample sends it. */
+  partNumber?: string;
+  /** Not in the schema; the sync IGD sample sends it. */
+  harmonizedCode?: string;
   name?: string;
   numberOfPieces: number;
   description: string;
@@ -286,16 +296,22 @@ export interface FedExConsolidationConsolidatedCommercialInvoiceDetail {
   format?: FedExConsolidationFormats;
 }
 
-export interface FedExConsolidationConsolidationKey {
-  date: string;
-  index: string;
-  type:
-    | "INTERNATIONAL_DISTRIBUTION_FREIGHT"
-    | "INTERNATIONAL_ECONOMY_DISTRIBUTION"
-    | "INTERNATIONAL_GROUND_DISTRIBUTION"
-    | "TRANSBORDER_DISTRIBUTION"
-    | "INTERNATIONAL_PRIORITY_DISTRIBUTION";
-}
+export type FedExConsolidationType =
+  | "INTERNATIONAL_DISTRIBUTION_FREIGHT"
+  | "INTERNATIONAL_ECONOMY_DISTRIBUTION"
+  | "INTERNATIONAL_GROUND_DISTRIBUTION"
+  | "TRANSBORDER_DISTRIBUTION"
+  | "INTERNATIONAL_PRIORITY_DISTRIBUTION";
+
+/**
+ * The schema's spelling is `date` and `type`; the retrieve and delete samples send
+ * `shipDatestamp` and `consolidationType` instead, so either pair is accepted:
+ * docs/fedex-api.md#consolidation-api.
+ */
+export type FedExConsolidationConsolidationKey = { index: string } & (
+  | { date: string; type: FedExConsolidationType }
+  | { shipDatestamp: string; consolidationType: FedExConsolidationType }
+);
 
 export interface FedExConsolidationConsolidationProcessingOptionsRequested {
   options?: "REQUIRE_PRE_EPIC_BARCODE"[];
@@ -501,26 +517,32 @@ export interface FedExConsolidationLabelSpecification {
     "BOTTOM_EDGE_OF_TEXT_FIRST" | "TOP_EDGE_OF_TEXT_FIRST";
 }
 
+/** One value, or an array: the spec's samples send `["BYPASS_REGULATORY_VALIDATION"]`, its schema a single string. */
+export type FedExConsolidationProcessingOptionValue =
+  | "ALLOW_PREVIOUS_SHIP_DATE"
+  | "BYPASS_REGULATORY_VALIDATION"
+  | "CONVENIENCE_MULTIPLE_PACKAGES"
+  | "CUSTOM_TRANSIT_TIME"
+  | "FUTURE_DAY_SHIPMENT"
+  | "IATA_CLASS_AND_AIRCRAFT_ONLY"
+  | "MANUAL_AIRBILL"
+  | "NO_COMMITMENT_DATE_REQUESTED"
+  | "PACKAGE_LEVEL_COMMODITIES"
+  | "PRE_EIG_PROCESSING"
+  | "PRE_ETD_ENHANCEMENTS"
+  | "PRE_FXF2020_HANDLING_UNIT_DETAILS"
+  | "PRE_GPR"
+  | "PRE_GRAPE2_SHIPMENT"
+  | "PRE_MULTIPLIER_PROCESSING"
+  | "REQUEST_LEGACY_GROUND_ECONOMY_LABEL"
+  | "REQUEST_LEGACY_SMARTPOST_LABEL"
+  | "REQUIRE_PRE_EPIC_BARCODE"
+  | "REQUIRE_PRE_EPIC_BARCODEx";
+
 export interface FedExConsolidationProcessingOptionsRequested {
   options?:
-    | "ALLOW_PREVIOUS_SHIP_DATE"
-    | "BYPASS_REGULATORY_VALIDATION"
-    | "CONVENIENCE_MULTIPLE_PACKAGES"
-    | "CUSTOM_TRANSIT_TIME"
-    | "FUTURE_DAY_SHIPMENT"
-    | "IATA_CLASS_AND_AIRCRAFT_ONLY"
-    | "MANUAL_AIRBILL"
-    | "NO_COMMITMENT_DATE_REQUESTED"
-    | "PACKAGE_LEVEL_COMMODITIES"
-    | "PRE_EIG_PROCESSING"
-    | "PRE_ETD_ENHANCEMENTS"
-    | "PRE_FXF2020_HANDLING_UNIT_DETAILS"
-    | "PRE_GPR"
-    | "PRE_GRAPE2_SHIPMENT"
-    | "PRE_MULTIPLIER_PROCESSING"
-    | "REQUEST_LEGACY_GROUND_ECONOMY_LABEL"
-    | "REQUEST_LEGACY_SMARTPOST_LABEL"
-    | "REQUIRE_PRE_EPIC_BARCODE";
+    | FedExConsolidationProcessingOptionValue
+    | FedExConsolidationProcessingOptionValue[];
 }
 
 export interface FedExConsolidationRequestedPackageLineItems {
@@ -1243,7 +1265,8 @@ export interface FedExConsolidationInternationalDistributionDetail {
   totalInsuredValue?: FedExConsolidationMoneyV2;
   unitSystem?: "ENGLISH" | "METRIC";
   declarationCurrencies: FedExConsolidationMoney[];
-  clearanceFacilityLocationId: string;
+  /** Required by the schema; the sync IDF sample omits it. */
+  clearanceFacilityLocationId?: string;
 }
 
 export interface FedExConsolidationLabel {
@@ -1365,7 +1388,12 @@ export interface FedExConsolidationLabelSpecificationV2 {
     "BOTTOM_EDGE_OF_TEXT_FIRST" | "TOP_EDGE_OF_TEXT_FIRST";
   labelRotation?: "LEFT" | "RIGHT" | "UPSIDE_DOWN" | "NONE";
   labelOrder?: "SHIPPING_LABEL_FIRST" | "SHIPPING_LABEL_LAST";
-  printedLabelOrigin: FedExConsolidationContactAndAddress;
+  /** Required by the schema; several of the spec's own samples omit it. */
+  printedLabelOrigin?: FedExConsolidationContactAndAddress;
+  /** Not in the schema; the sync IDF sample sends `"PDF"`. */
+  printerType?: string;
+  /** Not in the schema; the sync IDF sample sends `"LETTER"`. */
+  paperType?: string;
   customerSpecifiedDetail?: FedExConsolidationCustomerSpecifiedLabelDetail;
   resolution?: number;
 }
@@ -1416,7 +1444,8 @@ export interface FedExConsolidationLabelSpecificationV3 {
     "BOTTOM_EDGE_OF_TEXT_FIRST" | "TOP_EDGE_OF_TEXT_FIRST";
   labelRotation?: "LEFT" | "RIGHT" | "UPSIDE_DOWN" | "NONE";
   labelOrder?: "SHIPPING_LABEL_FIRST" | "SHIPPING_LABEL_LAST";
-  printedLabelOrigin: FedExConsolidationContactAndAddressV2;
+  /** Required by the schema; the spec's create-consolidation samples omit it. */
+  printedLabelOrigin?: FedExConsolidationContactAndAddressV2;
   customerSpecifiedDetail?: FedExConsolidationCustomerSpecifiedLabelDetail;
 }
 
@@ -1583,6 +1612,8 @@ export interface FedExConsolidationPartyAddressV2 {
   stateOrProvinceCode?: string;
   postalCode: string;
   countryCode: string;
+  /** Not in the schema; every shipper and importer address in the spec's samples sends it. */
+  residential?: boolean;
 }
 
 export interface FedExConsolidationSoldTo {
@@ -1659,6 +1690,8 @@ export interface FedExConsolidationPayment1 {
   payor?: FedExConsolidationPayor1;
   /** Specify the payment Type. Note: This is required for Express, Ground and SmartPost shipments. The payment type COLLECT is applicable only for Ground shipments. */
   paymentType?: "SENDER" | "THIRD_PARTY";
+  /** Not in the schema; the async IED sample sends `{ accountNumber }`. */
+  billingDetails?: { accountNumber?: string };
 }
 
 export interface FedExConsolidationPayment {
@@ -1817,10 +1850,13 @@ export interface FedExConsolidationRequestedConsolidation {
   soldTo?: FedExConsolidationSoldToPartyV2;
   bookingNumber?: string;
   distributionLocation?: FedExConsolidationDistributionLocationsV2;
+  /** Not in the schema; the sync IGD create sample sends an array under this plural name. */
+  distributionLocations?: FedExConsolidationDistributionLocationsV2[];
   consolidationDataSources?: FedExConsolidationConsolidationDataSources;
   customerReferences?: FedExConsolidationCustomerReferencesV2;
   labelSpecification?: FedExConsolidationLabelSpecificationV3;
-  internationalDistributionDetail: FedExConsolidationInternationalDistributionDetail;
+  /** Required by the schema; the spec's TD create and modify samples omit it. */
+  internationalDistributionDetail?: FedExConsolidationInternationalDistributionDetail;
   transborderDistributionDetail?: FedExConsolidationTransborderDistributionDetail;
   customsClearanceDetail: FedExConsolidationCustomsClearanceDetailV2;
   consolidationDocumentSpecification?: FedExConsolidationConsolidationDocumentSpecV2;
@@ -1833,7 +1869,8 @@ export interface FedExConsolidationRequestedConsolidation {
 
 export interface FedExConsolidationRequestedConsolidationShipment {
   specialServicesRequested?: FedExConsolidationSpecialServicesRequestedV2;
-  shipDatestamp: string;
+  /** Required by the schema; every create-shipment sample in the spec omits it. */
+  shipDatestamp?: string;
   dropOffType?:
     | "BUSINESS_SERVICE_CENTER"
     | "DROP_BOX"
@@ -1844,12 +1881,12 @@ export interface FedExConsolidationRequestedConsolidationShipment {
     | "CONTACT_FEDEX_TO_SCHEDULE"
     | "DROPOFF_AT_FEDEX_LOCATION"
     | "USE_SCHEDULED_PICKUP";
-  serviceType:
-    | "INTERNATIONAL_DISTRIBUTION_FREIGHT"
-    | "INTERNATIONAL_ECONOMY_DISTRIBUTION"
-    | "INTERNATIONAL_GROUND_DISTRIBUTION"
-    | "INTERNATIONAL_PRIORITY_DISTRIBUTION"
-    | "TRANSBORDER_DISTRIBUTION";
+  /** The schema enumerates the five consolidation types; the sync IGD and TD samples send `"FEDEX_GROUND"`. */
+  serviceType: FedExConsolidationType | "FEDEX_GROUND" | (string & {});
+  /** Spelled `dropoffType` in the spec's sync IPD, IED and IDF samples; `dropOffType` in the schema. */
+  dropoffType?: FedExConsolidationRequestedConsolidationShipment["dropOffType"];
+  /** The schema puts `shipAction` at the top level; the sync IDF sample sends it here. */
+  shipAction?: "CONFIRM" | "TRANSFER";
   packagingType: string;
   totalWeight?: FedExConsolidationWeight;
   shipper: FedExConsolidationShipperParty;
@@ -1861,30 +1898,15 @@ export interface FedExConsolidationRequestedConsolidationShipment {
   customsClearanceDetail?: FedExConsolidationCustomsClearanceDetail;
   labelSpecification: FedExConsolidationLabelSpecificationV2;
   rateRequestTypes?: "LIST" | "NONE" | "PREFERRED";
-  packageCount: number;
+  /** Required by the schema; every create-shipment sample in the spec omits it. */
+  packageCount?: number;
   requestedPackageLineItems: FedExConsolidationRequestedPackageLineItem[];
 }
 
 export interface FedExConsolidationProcessingOption {
   options?:
-    | "ALLOW_PREVIOUS_SHIP_DATE"
-    | "BYPASS_REGULATORY_VALIDATION"
-    | "CONVENIENCE_MULTIPLE_PACKAGES"
-    | "CUSTOM_TRANSIT_TIME"
-    | "FUTURE_DAY_SHIPMENT"
-    | "IATA_CLASS_AND_AIRCRAFT_ONLY"
-    | "MANUAL_AIRBILL"
-    | "NO_COMMITMENT_DATE_REQUESTED"
-    | "PACKAGE_LEVEL_COMMODITIES"
-    | "PRE_EIG_PROCESSING"
-    | "PRE_ETD_ENHANCEMENTS"
-    | "PRE_FXF2020_HANDLING_UNIT_DETAILS"
-    | "PRE_GPR"
-    | "PRE_GRAPE2_SHIPMENT"
-    | "PRE_MULTIPLIER_PROCESSING"
-    | "REQUEST_LEGACY_GROUND_ECONOMY_LABEL"
-    | "REQUEST_LEGACY_SMARTPOST_LABEL"
-    | "REQUIRE_PRE_EPIC_BARCODEx";
+    | FedExConsolidationProcessingOptionValue
+    | FedExConsolidationProcessingOptionValue[];
 }
 
 export interface FedExConsolidationSpecialServicesRequestedV2 {
@@ -2624,7 +2646,8 @@ export interface FedExConsolidationTransborderDistributionDetail {
 }
 
 export interface FedExConsolidationSpecialServicesRequestedV4 {
-  specialServiceTypes?: "FEDEX_LTL";
+  /** A single value in the schema, an array in the spec's TD sample (`["FEDEX_LTL"]`). */
+  specialServiceTypes?: "FEDEX_LTL" | "FEDEX_LTL"[];
   transborderDistributionLtlDetail?: FedExConsolidationTransborderDistributionLtlDetail;
 }
 
@@ -2672,7 +2695,8 @@ export interface FedExConsolidationPayorV3 {
 }
 
 export interface FedExConsolidationResponsibleParty {
-  accountNumber?: string;
+  /** A string in the schema; the TD sample sends `{ value }` like the other account numbers. */
+  accountNumber?: string | { value: string };
   tins?: FedExConsolidationTins[];
   contact?: FedExConsolidationContactV6;
   address?: FedExConsolidationAddressV4;

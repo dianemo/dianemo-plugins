@@ -33,15 +33,21 @@ const rateLimit: DeclaredRateLimit[] = [
 ];
 
 /**
- * Forwarding is the one UPS API served from a different host: its spec lists
- * `www.onlinetools.ups.com` and `www.onlinetoolsuat.ups.com` rather than the
- * `onlinetools`/`wwwcie` pair — see docs/ups-api.md#the-forwarding-host. Pairing
- * `wwwcie` with `onlinetoolsuat` is an inference: the spec names the two hosts
- * but never says which belongs to which environment. A base URL that is neither
- * known host (a proxy, say) is returned untouched rather than guessed at.
+ * Forwarding is the one UPS API served from a different host: `Forwarding.yaml`
+ * lists `www.onlinetools.ups.com` ("Production") and `www.onlinetoolsuat.ups.com`
+ * ("Customer Integration Environment") rather than the `onlinetools`/`wwwcie`
+ * pair — see docs/ups-api.md#the-forwarding-host. The spec states which host is
+ * which environment; whether a token minted on `wwwcie` is accepted by the UAT
+ * host is not stated. A base URL that is neither known host (a proxy, say) or
+ * that does not parse is returned untouched rather than guessed at.
  */
 export function forwardingBaseUrl(baseUrl: string): string {
-  const { hostname } = new URL(baseUrl);
+  let hostname: string;
+  try {
+    ({ hostname } = new URL(baseUrl));
+  } catch {
+    return baseUrl;
+  }
   if (hostname === "onlinetools.ups.com")
     return "https://www.onlinetools.ups.com";
   if (hostname === "wwwcie.ups.com")

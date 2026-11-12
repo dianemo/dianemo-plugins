@@ -113,7 +113,7 @@ describe("fedex trade documents: request shape", () => {
     expect(config.headers?.["Content-Type"]).toBeUndefined();
   });
 
-  it("uploadImage sends document, rules and attachment as sibling parts", async () => {
+  it("uploadImage sends one document part holding document and rules, plus attachment", async () => {
     const { spy, requests } = spied();
     await requests.uploadImage(CLIENT, {
       document: {
@@ -131,13 +131,15 @@ describe("fedex trade documents: request shape", () => {
     expect(config.method).toBe("POST");
     expect(config.url).toBe("/documents/v1/lhsimages/upload");
     const form = config.data as FormData;
-    expect([...form.keys()].sort()).toEqual([
-      "attachment",
-      "document",
-      "rules",
-    ]);
-    expect(JSON.parse(form.get("rules") as string)).toEqual({
-      workflowName: "LetterheadSignature",
+    expect([...form.keys()].sort()).toEqual(["attachment", "document"]);
+    expect(JSON.parse(form.get("document") as string)).toEqual({
+      document: {
+        referenceId: "1234",
+        name: "LH2.PNG",
+        contentType: "image/png",
+        meta: { imageType: "LETTERHEAD", imageIndex: "IMAGE_2" },
+      },
+      rules: { workflowName: "LetterheadSignature" },
     });
     expect((form.get("attachment") as File).name).toBe("LH2.PNG");
   });
@@ -315,6 +317,47 @@ describe("fedex trade documents: over the wire", () => {
       expect(upload?.body).toContain('name="document"');
       expect(upload?.body).toContain(
         'name="attachment"; filename="invoice.pdf"'
+      );
+      await handler.stop();
+    } finally {
+      server.close();
+    }
+  });
+
+  it("uploadImage puts exactly two parts on the wire, the second nesting document and rules", async () => {
+    const { server, seen } = await listen();
+    const baseUrl = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+    try {
+      const handler = newHandler();
+      handler.use(fedex);
+      await handler.addTemplateClient(
+        "fedex" as never,
+        {
+          instanceId: "production",
+          clientId: "id",
+          clientSecret: "secret",
+          baseUrl,
+        } as never
+      );
+      await tradeDocuments.uploadImage(CLIENT, {
+        document: {
+          referenceId: "1234",
+          name: "LH2.PNG",
+          contentType: "image/png",
+          meta: { imageType: "SIGNATURE", imageIndex: "IMAGE_1" },
+        },
+        rules: { workflowName: "LetterheadSignature" },
+        attachment: bytes,
+      });
+      const upload = seen.find(
+        (r) => r.url === "/documents/v1/lhsimages/upload"
+      );
+      const names = [
+        ...(upload?.body ?? "").matchAll(/form-data; name="([^"]+)"/g),
+      ].map((m) => m[1]);
+      expect(names).toEqual(["document", "attachment"]);
+      expect(upload?.body).toContain(
+        '"rules":{"workflowName":"LetterheadSignature"}'
       );
       await handler.stop();
     } finally {

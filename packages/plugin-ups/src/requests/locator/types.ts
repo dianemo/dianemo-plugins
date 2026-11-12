@@ -94,7 +94,8 @@ export interface UpsLocatorRequestLocationSearchCriteria {
 
 export interface UpsLocatorLocationSearchCriteriaSearchOption {
   OptionType: UpsLocatorSearchOptionOptionType;
-  OptionCode: UpsLocatorSearchOptionOptionCode[];
+  OptionCode:
+    UpsLocatorSearchOptionOptionCode | UpsLocatorSearchOptionOptionCode[];
   Relation?: UpsLocatorSearchOptionRelation;
 }
 
@@ -115,7 +116,8 @@ export interface UpsLocatorSearchOptionRelation {
 export interface UpsLocatorLocationSearchCriteriaServiceSearch {
   /** Scheduled Local Drop-off Time. Format: HHMM */
   Time?: string;
-  ServiceCode?: UpsLocatorServiceSearchServiceCode[];
+  ServiceCode?:
+    UpsLocatorServiceSearchServiceCode | UpsLocatorServiceSearchServiceCode[];
   ServiceOptionCode?: UpsLocatorServiceSearchServiceOptionCode[];
 }
 

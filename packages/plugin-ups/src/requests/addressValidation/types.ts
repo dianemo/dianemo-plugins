@@ -38,7 +38,9 @@ export interface UPSValidationResponse {
 export interface UpsAddressClassification {
   /** 0=Unclassified; 1=Commercial; 2=Residential */
   Code: "0" | "1" | "2";
-  Description: "Commercial" | "Residential" | "Unknown" | "UnClassified";
+  /** The spec gives no closed list of descriptions. */
+  Description:
+    "Commercial" | "Residential" | "Unknown" | "UnClassified" | (string & {});
 }
 
 export interface AddressCandidate {
@@ -78,7 +80,7 @@ export interface UpsAddressValidationAddressKeyFormat {
   /** Ignored for a regional request. */
   AttentionName?: string;
   /** At most 3 lines; US and PR only for secondary information. */
-  AddressLine?: string[];
+  AddressLine?: string | string[];
   /**
    * US and PR only. When present UPS ignores the two political divisions and
    * both postal code fields.

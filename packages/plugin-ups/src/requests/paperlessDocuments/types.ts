@@ -44,7 +44,8 @@ export interface UpsPaperlessPushToImageRepositoryResponseWrapper {
 
 export interface UpsPaperlessPushToImageRepositoryRequest {
   Request: UpsPaperlessPushToImageRepositoryRequestRequest;
-  ShipperNumber: string;
+  /** Optional in the body: the spec's example omits it and it is also sent as a header. */
+  ShipperNumber?: string;
   FormsHistoryDocumentID: UpsPaperlessPushToImageRepositoryRequestFormsHistoryDocumentID;
   FormsGroupID?: string;
   ShipmentIdentifier: string;
@@ -53,7 +54,7 @@ export interface UpsPaperlessPushToImageRepositoryRequest {
   /** Valid values are: 1 = small package, 2 = freight. */
   ShipmentType: string;
   PRQConfirmationNumber?: string;
-  TrackingNumber?: string[];
+  TrackingNumber?: string | string[];
 }
 
 export interface UpsPaperlessPushToImageRepositoryRequestRequest {
@@ -69,7 +70,7 @@ export interface UpsPaperlessRequestTransactionReference {
 }
 
 export interface UpsPaperlessPushToImageRepositoryRequestFormsHistoryDocumentID {
-  DocumentID: string[];
+  DocumentID: string | string[];
 }
 
 export interface UpsPaperlessPushToImageRepositoryResponse {
@@ -94,8 +95,11 @@ export interface UpsPaperlessUploadResponseWrapper {
 
 export interface UpsPaperlessUploadRequest {
   Request: UpsPaperlessUploadRequestRequest;
-  ShipperNumber: string;
-  UserCreatedForm: UpsPaperlessUploadRequestUserCreatedForm[];
+  /** Optional in the body: the spec's examples omit it and it is also sent as a header. */
+  ShipperNumber?: string;
+  UserCreatedForm:
+    | UpsPaperlessUploadRequestUserCreatedForm
+    | UpsPaperlessUploadRequestUserCreatedForm[];
 }
 
 export interface UpsPaperlessUploadRequestRequest {

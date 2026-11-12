@@ -225,4 +225,20 @@ describe("payment-token interceptor", () => {
     expect(out.headers).toEqual({ a: "b" });
     expect(spy).not.toHaveBeenCalled();
   });
+
+  it("fails loudly, and caches nothing, when USPS answers without a token", async () => {
+    const { intercept, spy } = await build();
+    const meta = { uspsAccountNumber: "1000000000" };
+    spy.mockResolvedValueOnce({ data: { roles: [] } } as never);
+    await expect(
+      intercept(labelsConfig("usps.labels.create", meta))
+    ).rejects.toThrow(
+      "usps:_:main, account 1000000000, carried no paymentAuthorizationToken"
+    );
+    // Nothing was cached, so the next call mints again rather than sending
+    // `undefined` as the header.
+    const next = await intercept(labelsConfig("usps.labels.create", meta));
+    expect(next.headers?.["X-Payment-Authorization-Token"]).toBe(TOKEN);
+    expect(spy).toHaveBeenCalledTimes(2);
+  });
 });

@@ -117,4 +117,27 @@ describe("plugin-ups pickup family", () => {
     expect(config.url).toBe("/api/pickup/v2409/servicecenterlocations");
     expect(config.data).toBe(body);
   });
+
+  // cancelPickup kept the code it had before cancelByAccountNumber existed;
+  // swapping them would silently re-label every existing caller's failures.
+  it.each([
+    [
+      "cancelPickup",
+      "UPS_0011",
+      (r: typeof pickup) => r.cancelPickup(CLIENT, "P1"),
+    ],
+    [
+      "cancelPickupByAccountNumber",
+      "UPS_0043",
+      (r: typeof pickup) => r.cancelPickupByAccountNumber(CLIENT),
+    ],
+  ])("%s reports %s on failure", async (_name, code, call) => {
+    const handler = new RequestHandler({
+      key: TEST_KEY,
+      backend: memoryBackend(),
+    });
+    vi.spyOn(handler, "handleRequest").mockRejectedValue(new Error("boom"));
+    const { ups } = handler.use(plugin);
+    await expect(call(ups)).rejects.toMatchObject({ code });
+  });
 });

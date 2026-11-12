@@ -29,7 +29,11 @@ export const submitExportAssure = async (
       requestName: "ups.exportAssure.submitExportAssure",
       method: "POST",
       url: `/api/brokerage/${BROKERAGE_VERSION}/importexport/exportassure`,
-      headers: accountNumber ? { accountNumber } : undefined,
+      // `Accept` is marked required by the spec
+      headers: {
+        Accept: "application/json",
+        ...(accountNumber && { accountNumber }),
+      },
       data,
     },
     "UPS_0067",

@@ -34,12 +34,16 @@ describe("ups exportAssure", () => {
     expect(config.method).toBe("POST");
     expect(config.url).toBe("/api/brokerage/v1/importexport/exportassure");
     expect(config.data).toBe(body);
-    expect(config.headers).toBeUndefined();
+    // The spec marks Accept required
+    expect(config.headers).toEqual({ Accept: "application/json" });
   });
 
   it("sends the lower-camel accountNumber header only when given", async () => {
     const spy = setup();
     await submitExportAssure(CLIENT, body, { accountNumber: "985123" });
-    expect(spy.mock.calls[0][0].headers).toEqual({ accountNumber: "985123" });
+    expect(spy.mock.calls[0][0].headers).toEqual({
+      Accept: "application/json",
+      accountNumber: "985123",
+    });
   });
 });

@@ -6,15 +6,11 @@ export interface FedExHarmonizedCodeUnitPrice {
 }
 
 /** The spec caps this object at 10 properties (`maxProperties`). */
-export interface FedExHarmonizedCodeClassify {
+export interface FedExHarmonizedCodeClassifyBase {
   /** Max length 256. */
   commodityName?: string;
   /** Max length 512. */
   commodityDescription: string;
-  /** 2-letter codes. The spec's field descriptions say either this or `originCountryCode` is mandatory, but its `required` array lists both. */
-  destinationCountryCodes: string[];
-  /** 2-letter code. See `destinationCountryCodes` for the contradiction. */
-  originCountryCode: string;
   /** 2-letter code. */
   countryOfManufacture?: string;
   /** Max length 100. */
@@ -23,6 +19,28 @@ export interface FedExHarmonizedCodeClassify {
   material?: string;
   unitPrice?: FedExHarmonizedCodeUnitPrice;
 }
+
+/**
+ * At least one of the two country fields, as the field descriptions and
+ * `MinimumSchemaExample1`/`2` say; the `required` array lists both:
+ * docs/fedex-api.md#spec-contradictions-schema-chosen.
+ */
+export interface FedExHarmonizedCodeDestinationCountries {
+  /** 2-letter codes. */
+  destinationCountryCodes: string[];
+  /** 2-letter code. */
+  originCountryCode?: string;
+}
+
+export interface FedExHarmonizedCodeOriginCountry {
+  /** 2-letter codes. */
+  destinationCountryCodes?: string[];
+  /** 2-letter code. */
+  originCountryCode: string;
+}
+
+export type FedExHarmonizedCodeClassify = FedExHarmonizedCodeClassifyBase &
+  (FedExHarmonizedCodeDestinationCountries | FedExHarmonizedCodeOriginCountry);
 
 export interface FedExHarmonizedCodeSearchRequest {
   hsClassify?: FedExHarmonizedCodeClassify[];

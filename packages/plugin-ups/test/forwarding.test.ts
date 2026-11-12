@@ -335,6 +335,7 @@ describe("ups forwarding: request shape", () => {
 
   it("getForwardingDocuments asks for bytes", async () => {
     const spy = spied();
+    spy.mockResolvedValueOnce({ data: Buffer.from("%PDF-1.4") } as never);
     await forwarding.getForwardingDocuments(CLIENT, {
       ...h,
       shipmentNumber: "S1",
@@ -348,6 +349,7 @@ describe("ups forwarding: request shape", () => {
     expect(config.method).toBe("GET");
     expect(config.url).toBe(`${BASE}/documents`);
     expect(config.responseType).toBe("arraybuffer");
+    expect(typeof config.transformResponse).toBe("function");
     expect(config.params).toEqual({
       shipment_number: "S1",
       shipment_account_number: "123456789",

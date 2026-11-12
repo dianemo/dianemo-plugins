@@ -1,6 +1,6 @@
+import { bytesOnSuccess, uspsSubClient } from "../utils.js";
 import { parseContainerLabelResponse } from "./utils.js";
 import { tryHandleRequest } from "@dianemo/plugin-kit";
-import { uspsSubClient } from "../utils.js";
 import type {
   UspsContainerAddPackagesRequest,
   UspsContainerCreateRequest,
@@ -65,10 +65,10 @@ export const removeUspsContainerPackage = async (
 };
 
 /**
- * The only documented response is `multipart/form-data` (JSON `containerMetadata`
- * plus a `labelImage` part), so it is requested as bytes: text would corrupt a
- * binary image. A failure status therefore reaches the caller with a `Buffer`
- * body in `originalError` — see docs/usps-api.md#containers.
+ * The only documented 201 content type is `multipart/form-data` (JSON
+ * `containerMetadata` plus a `labelImage` part), so it is asked for by name and
+ * read as bytes: text would corrupt a binary image. `bytesOnSuccess` keeps a
+ * failure's body readable — see docs/usps-api.md#binary-responses-and-error-bodies.
  */
 export const createUspsContainerLabel = async (
   clientName: string,
@@ -81,13 +81,19 @@ export const createUspsContainerLabel = async (
       method: "POST",
       url: BASE,
       data,
+      headers: { Accept: "multipart/form-data" },
       responseType: "arraybuffer",
+      transformResponse: bytesOnSuccess,
     },
     "USP_0083",
     "Failed to create USPS container label"
   );
   const contentType = res.headers?.["content-type"] as string | undefined;
-  return parseContainerLabelResponse(res.data, contentType);
+  return parseContainerLabelResponse(
+    res.data,
+    contentType,
+    data.imageInfo?.imageType !== "NONE"
+  );
 };
 
 export const closeUspsContainerManifest = async (

@@ -49,7 +49,7 @@ Audit of the `client.ts` auth block against it: **no change needed.**
 
 | Item            | Spec                                                                                          | `client.ts`                                                                                 |
 | --------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| URL             | `POST /oauth/token` on `apis.fedex.com` / `apis-sandbox.fedex.com`                            | `${creds.baseUrl}/oauth/token`                                                              |
+| URL             | `POST /oauth/token` on `apis.fedex.com` / `apis-sandbox.fedex.com`                            | `<baseUrl without trailing slashes>/oauth/token`                                            |
 | Body encoding   | `application/x-www-form-urlencoded`                                                           | `dataLocation: "urlEncodedForm"`                                                            |
 | Required fields | `grant_type`, `client_id`, `client_secret`                                                    | all three, via `{{clientId}}` / `{{clientSecret}}`                                          |
 | Response        | `access_token`, `token_type` ("bearer"), `expires_in` (integer seconds), `scope` (e.g. `CXS`) | core reads `access_token` and `expires_in`                                                  |
@@ -58,6 +58,8 @@ Audit of the `client.ts` auth block against it: **no change needed.**
 
 The spec's `Content-Type` header parameter is `required: true`; axios sets it for a urlencoded body.
 The spec states no rate limit for `/oauth/token`; the plugin does not meter token calls separately.
+
+**Trailing slash on `baseUrl`.** The token URL was built as `${baseUrl}/oauth/token`, which is `//oauth/token` for a base URL ending in `/`. Trailing slashes are now stripped once and the result used for the token URL only; the client's `baseURL` default and `documentsBaseUrl` are unchanged (axios joins a slash-terminated `baseURL` correctly for the request functions). A test sends a real token request through a `RequestHandler` to a local server and asserts the path. Why it matters is inference: a proxy or mock may route `//oauth/token` differently from FedEx's own host, which was not tried.
 
 ### Grants the spec describes that the plugin does not support (open question)
 
@@ -106,7 +108,7 @@ All three multipart operations (`etds/upload`, `lhsimages/upload`, `etds/multiup
 
 Inferences (the spec gives field names and examples only, never a part content-type):
 
-- JSON parts (`document`, `rules`, `documentInformation`) are sent as plain text fields holding the JSON string, not `application/json` blobs. The spec's examples render them as `document: {"workflowName": ...}`.
+- JSON parts (`document`, and `documentInformation` for the multi upload) are sent as plain text fields holding the JSON string, not `application/json` blobs. The spec's examples render them as `document: {"workflowName": ...}`. For `uploadImage` the one `document` part holds `{ document, rules }` (see the contradictions below).
 - The file part is named `attachment` (single ETD and image) or `fileAttachments` (repeated, max 5). Its filename comes from `document.name` or, for multi, `metaData[i].fileName` by position; the spec does not say how files are matched to `metaData` entries. Position is an assumption.
 - The part's own content-type is set from `contentType` when given.
 
@@ -114,7 +116,7 @@ Inferences (the spec gives field names and examples only, never a part content-t
 
 Where they contradict, the schema's properties were followed.
 
-- **`lhsimages/upload` (multipart):** the schema has `document`, `rules`, `attachment` as siblings; the only example nests them as `document: {"document": {...}, "rules": {...}}`. Followed the schema (siblings).
+- **`lhsimages/upload` (multipart):** the schema `FullSchema-ImageUploadServiceInputVO` lists `document`, `rules` and `attachment` as siblings, but the spec's only example for the operation (`requestBody.content['multipart/form-data'].examples['Full-Schema']`) has two parts: `document: {"document": {...}, "rules": {...}}` and `attachment`. FedEx's docs page (developer.fedex.com/api/en-us/catalog/upload-documents/v1/docs.html, fetched 2026-11-12 by an audit agent) says the endpoint "takes two parts in the request body". Two sources against one, so the function sends ONE `document` part whose JSON is `{ document, rules }`, plus `attachment`; the caller-facing input type is unchanged. This rests on the spec example and the docs page, **not on a call to FedEx**; if a real account rejects it, the three-sibling layout is the fallback. `lhsimages/encodedupload` was checked against its own example (`FullSchema-ImageUploadServiceBase64Request`): it is a single JSON body `{ document: { referenceId, contentType, meta } }` with no `rules`, which is what the type already models.
 - **`lhsimages/encodedupload`:** `Document_1.required` lists `rules` and `workflowName`, neither of which is a defined property, and the example omits both. Typed without them.
 - **Response `imageIndex` type:** `object` in the encoded-upload response schema, `string` in the multipart one (and a string enum in both requests). Typed `string | object` on the encoded response.
 - **Content types:** `contentType` is an enum of 17 MIME types for the single and multipart ETD requests but a free string for `encodedmultiupload`. Kept as the spec has it. The image `contentType` is a bare string in the multipart schema but the description limits it to `image/png` / `image/gif`; typed as that union.
@@ -145,6 +147,68 @@ All dispatch against `<clientName>:documents`; `requestName` is `fedex.tradeDocu
 | Auth block                                                             | No change.                                                                                                                                                                                                                         |
 
 Existing exported types and functions: untouched.
+
+## Response envelope
+
+`FedExResponse<T>` (shared, `src/requests/types.ts`) used to require `transactionId` and
+`output`, and `code`, `message` and `alertType` on each alert. None of the specs does: every
+response schema in them lacks a `required` array (vendor documentation, checked per family
+in the sections below). All of those fields are now optional, so a caller reading
+`res.output.x` gets a compile-time prompt to handle absence. This is a breaking change at the
+type level for any caller that read `res.output` without a guard; nothing in this package did.
+
+`output` is `Omit<{ alerts?: FedExAlert[] }, keyof T> & T`, so when a family's output type
+declares its own `alerts` (consolidation does, with `FedExConsolidationAlert`) that type owns
+it, rather than the two array types being intersected into `FedExAlert[] & FedExConsolidationAlert[]`.
+The two alert shapes are field-for-field identical, so before this change the intersection
+was harmless but unreadable in editor hovers; the compiler now reports
+`FedExConsolidationAlert[] | undefined` for a consolidation response.
+
+## Audit follow-up: findings recorded, no code change
+
+These came from a read-only audit of the families added on this branch. Each rests on the
+vendor's spec (schema, examples), not on a call.
+
+- **The spec's sample payloads do not type-check against its own schemas.** FedEx's request
+  examples quote numbers as strings (`"weight": {"value": "20"}`, `"amount": "100"`), send
+  postal codes and account numbers as numbers (`"accountNumber": {"value": 123456789}`), and
+  in places send an array for a single value. About 80 sample paths across the families fail
+  to compile against the schema-derived types. The plugin sends whatever the caller passes,
+  so there is no runtime effect; the types follow the schemas, except where the sections
+  above widened them to accept a sample (arrays in consolidation, strings for regulatory
+  codes). A caller copying a FedEx sample verbatim will meet type errors on the numeric
+  fields; the fix is on their side (convert), or a cast.
+- **`checkPickupAvailability` samples disagree with each other** on whether
+  `shipmentAttributes` is an object (as the schema and the type say) or an array. Typed as
+  an object. Open question: which the server accepts.
+- **Per-property examples show `null`** for several response fields (for example
+  `responsibleParty` in nine rate samples). The response types do not allow `null`, since the
+  schemas do not say a field is nullable; a real response may carry them.
+- **Only 2 of 52 operations carry a real response example**, so almost every response type
+  rests on the schema alone. Nothing here was checked against a real response body.
+- **Every operation returns `application/json`**, documents included: label and document
+  bytes arrive as base64 strings inside the JSON, so no request function handles a binary
+  response and none sets a `responseType`.
+- **`FedExSubPackagingType` is a TypeScript enum**, not a string union, so a literal copied
+  from a FedEx sample (`"OTHER"`, `"PALLET"`) does not assign to it without importing the
+  enum. Left as is: converting an exported enum to a union would break callers that import
+  its members.
+- **The tests mock at `handleRequest`**, so they see the config a function hands to core and
+  nothing core or axios does afterwards (URL joining, headers, multipart encoding, token
+  refresh). Two defects of that kind were found by audit and are now covered by tests that
+  run through a real `RequestHandler` against a local HTTP server: the multipart layout of
+  `uploadImage` and the token URL's double slash. The existing ETD upload test already did this.
+
+## Request fields the spec types as plain strings
+
+Widened to the known values plus any string (`"A" | "B" | (string & {})`, which keeps
+editor autocomplete): `uploadImage`'s `document.contentType` (the base64 variant has a real
+enum and stays narrow), tracking-documents `documentType` and `documentFormat`, pickup
+`pickupType` (create and availability) and the availability `shipmentAttributes.packagingType`.
+In each case the spec's schema is `type: string` and the named values come from its prose or
+examples, so a narrow union would reject a value the server may accept. `serviceType` and
+`packagingType` on ship and rate stay narrow, deliberately (see "`serviceType` and
+`packagingType` are narrower than the spec").
 
 ## Ship API
 
@@ -181,8 +245,8 @@ The types follow the schema wherever the schema, an example and a description di
   treated as required, as OpenAPI mandates for path parameters. The spec does not say what
   it identifies, and the body carries its own `trackingNumber`.
 - **Envelope required-ness.** `transactionId`, `customerTransactionId` and `output` are all
-  optional in the spec. The shared `FedExResponse<T>` makes `transactionId` and `output`
-  required, which overstates the spec.
+  optional in the spec, and so now are they in the shared `FedExResponse<T>`
+  (see "Response envelope").
 - **Validate output.** The spec's output schema has only `alerts`.
 - **Validate 404 body.** `{error, error_detail}` rather than the `errors[]` envelope the
   other endpoints document. The plugin does not parse error bodies.
@@ -268,20 +332,21 @@ Family: `src/requests/openShip/`, `requestName` `fedex.openShip.<function>`, err
 
 ### Spec contradictions (schema picked, contradiction recorded)
 
-| Where                                                                                                                                                   | Contradiction                                                                                                   | What the type does                                                                                                                                                             |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `FullSchema-RetrieveOpenShipment`                                                                                                                       | `required` lists `trackingId`, but `properties` does not define it                                              | `trackingId?: FedExOpenShipTrackingId \| string`, optional. The sibling packages operations use the object form; the type is deliberately unsure. Needs a real call to settle. |
-| `Weight` (used by `CompletedShipmentDryIceDetail.totalWeight` and every `billingWeight` / `totalBillingWeight` / `totalDimWeight` in the rating blocks) | `units` enum is `["KG"]`; the same spec's `Weight_1` / `Weight_With_Link` allow `KG` and `LB`                   | Typed as the schema says: `FedExOpenShipWeightKg { units: "KG" }`. Inference: this looks like a truncated enum, and a US shipment may well return `LB`. Open question.         |
-| `AccountNumber`                                                                                                                                         | `accountNumber` is required on every request, but its only property `value` is not required                     | `accountNumber: { value?: string }`. The examples always send `value`.                                                                                                         |
-| `AlcoholDetail.alcoholRecipientType`                                                                                                                    | enum is `LICENSEE`, `CONSUMERstomer` (looks like a mangled `CONSUMER`)                                          | Typed as written. Do not send `CONSUMER` on the strength of this spec alone.                                                                                                   |
-| `Surcharge.amount`                                                                                                                                      | has a description and example but no `type`                                                                     | `string \| number`.                                                                                                                                                            |
-| `MinimumSamplePayload-addPackagesInOpenShipment`                                                                                                        | example sends `weight.value: "20"` and `declaredValue.amount: "100"` as strings; the schema types them `number` | Schema wins: `number`.                                                                                                                                                         |
-| `oneOf` on confirm and add-packages request bodies                                                                                                      | second branch is `MinimumSamplePayload-*`, which is an `example` with no `type` or `properties`                 | Not a real alternative shape: it is a subset of the full schema. Typed as the full schema only.                                                                                |
-| Operation summary                                                                                                                                       | `"Create Open Shipmentt"` (double t)                                                                            | Cosmetic; no effect.                                                                                                                                                           |
+| Where                                                                                                                                                   | Contradiction                                                                                                                                | What the type does                                                                                                                                                             |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `FullSchema-RetrieveOpenShipment`                                                                                                                       | `required` lists `trackingId`, but `properties` does not define it                                                                           | `trackingId?: FedExOpenShipTrackingId \| string`, optional. The sibling packages operations use the object form; the type is deliberately unsure. Needs a real call to settle. |
+| `Weight` (used by `CompletedShipmentDryIceDetail.totalWeight` and every `billingWeight` / `totalBillingWeight` / `totalDimWeight` in the rating blocks) | `units` enum is `["KG"]`; the same spec's `Weight_1` / `Weight_With_Link` allow `KG` and `LB`                                                | Typed as the schema says: `FedExOpenShipWeightKg { units: "KG" }`. Inference: this looks like a truncated enum, and a US shipment may well return `LB`. Open question.         |
+| `AccountNumber`                                                                                                                                         | `accountNumber` is required on every request, but its only property `value` is not required                                                  | `accountNumber: { value?: string }`. The examples always send `value`.                                                                                                         |
+| `AlcoholDetail.alcoholRecipientType`                                                                                                                    | enum is `LICENSEE`, `CONSUMERstomer` (looks like a mangled `CONSUMER`)                                                                       | Typed as written. Do not send `CONSUMER` on the strength of this spec alone.                                                                                                   |
+| `Surcharge.amount`                                                                                                                                      | has a description and example but no `type`                                                                                                  | `string \| number`.                                                                                                                                                            |
+| `MinimumSamplePayload-addPackagesInOpenShipment`                                                                                                        | example sends `weight.value: "20"` and `declaredValue.amount: "100"` as strings; the schema types them `number`                              | Schema wins: `number`.                                                                                                                                                         |
+| `oneOf` on confirm and add-packages request bodies                                                                                                      | second branch is `MinimumSamplePayload-*`, which is an `example` with no `type` or `properties`                                              | Not a real alternative shape: it is a subset of the full schema. Typed as the full schema only.                                                                                |
+| Operation summary                                                                                                                                       | `"Create Open Shipmentt"` (double t)                                                                                                         | Cosmetic; no effect.                                                                                                                                                           |
+| `DeliveryOnInvoiceAcceptanceDetail.recipient.contact`                                                                                                   | the shared contact type requires only `phoneNumber`, but this path's `allOf` override requires `companyName`, `personName` and `phoneNumber` | Own type `FedExOpenShipDeliveryOnInvoiceRecipientContact` with all three required. The override lists exactly those three properties; the others are kept optional.            |
 
 ### Typing decisions
 
-- **Response envelope.** The shared `FedExResponse<T>` makes `transactionId` and `output` required; this spec marks nothing in any response as required. So the family has its own `FedExOpenShipResponse<T>` with all three fields optional, and every response field is optional. Required-ness on responses is therefore the spec's silence, not a guarantee that a field is ever absent.
+- **Response envelope.** This spec marks nothing in any response as required (and the shared `FedExResponse<T>` no longer does either, see "Response envelope"). The family has its own `FedExOpenShipResponse<T>` with all three fields optional, and every response field is optional. Required-ness on responses is therefore the spec's silence, not a guarantee that a field is ever absent.
 - **No reuse of shared types.** `FedExWeight`, `FedExDimensions`, `FedExAlert` differ in required-ness or enum members from this spec's equivalents, so none are reused.
 - **Structural de-duplication.** Spec schemas with identical shapes were collapsed to one exported type: `StringBarcode` kept separate from `BinaryBarcode`, but these pairs were merged (second name no longer exists): `HazardousCommodityQuantityDetail002` into `HazardousCommodityQuantityDetail`, `PieceResponse` / `PieceResponse_1`, `TransactionOpenShipmentOutputVO` / `_1`, `TransactionShipmentOutputVO` / `_1`, `Weight_With_Link` / `Weight_Without_Link`, `PartyContact` / `PartyContact_1` / `PartyContact_2` / `Contact_1` / `Contact_2`, `ContactAndAddress` / `ContactAndAddress_1`, `PartyAccountNumber` / `_1`, `ClearanceItemDetail_address` / `Address_1`.
 - **Renamed for readability.** Numeric suffixes in the spec (`Party_1`, `Payment_1`, `Weight_With_Link`, `ShipmentDryIceDetail_1`...) became role names (`FedExOpenShipParty`, `FedExOpenShipDutiesPayment`, `FedExOpenShipWeight`, `FedExOpenShipShipmentDryIceDetail`). The spec's response-side `Weight` is `FedExOpenShipWeightKg`, and its response-side `ShipmentDryIceDetail` is `FedExOpenShipCompletedShipmentDryIceDetail`.
@@ -328,11 +393,40 @@ nor the polling cadence, nor how long a result stays retrievable.
 
 ### Spec contradictions and how the types resolve them
 
-The schema wins over examples and descriptions.
+The schema wins over examples and descriptions, except where the spec's own sample payloads
+cannot be expressed in it. For consolidation every sample in the request-body `oneOf`s was
+compared, by script, against the schema (value kinds and field names), then each sample was
+compiled against the request type. That is vendor documentation (spec schema against spec
+examples); nothing here was sent to FedEx. The types now accept the samples' shapes in
+addition to the schema's:
 
 - **`consolidationKey` shape.** The schema is `{ date, index, type }`, all required. The
   spec's own minimum sample payloads for retrieve and delete show
-  `{ consolidationType, index, shipDatestamp }` instead. The types follow the schema.
+  `{ consolidationType, index, shipDatestamp }` instead. The type is `index` plus either pair.
+- **Arrays where the schema says a single enum.** The spec's samples send
+  `transborderDistributionDetail.specialServicesRequested.specialServiceTypes: ["FEDEX_LTL"]`
+  and, in the create-shipment samples, `processingOption.options: ["BYPASS_REGULATORY_VALIDATION"]`
+  / `["PACKAGE_LEVEL_COMMODITIES"]`. Those two (and the identically-shaped
+  `processingOptionsRequested.options`, widened for consistency though no sample exercises it)
+  are typed `T | T[]`. These were the only array/scalar disagreements the script found.
+  The processing-option enum also carries the spec's `REQUIRE_PRE_EPIC_BARCODEx` (an apparent
+  typo in the spec) next to `REQUIRE_PRE_EPIC_BARCODE`.
+- **Fields the samples send that the schema lacks**, added optional:
+  `labelSpecification.printerType` and `paperType`, `consolidationKey.consolidationType`
+  and `shipDatestamp`, `shipper.address.residential` and `importerOfRecord.address.residential`
+  (on `PartyAddressV2`), the duties payment's `billingDetails`,
+  `printedLabelOrigin.address.addressClassificationConfidence`, `requestedShipment.shipAction`
+  and `dropoffType` (the schema has `dropOffType`), commodity `partNumber` and `harmonizedCode`,
+  and `requestedConsolidation.distributionLocations` (an array; the schema's singular
+  `distributionLocation` stays).
+- **Fields the schema requires that samples omit**, made optional: the payor address's
+  `streetLines` and `city` (`AddressV2`), `labelSpecification.printedLabelOrigin`,
+  `requestedShipment.shipDatestamp` and `packageCount`, `internationalDistributionDetail` on a
+  create/modify consolidation (the TD samples), and `clearanceFacilityLocationId`.
+- **`serviceType` on `createConsolidationShipment`** is a five-value enum in the schema; the
+  sync IGD and TD samples send `FEDEX_GROUND`. Typed as the five values plus any string.
+- **LTL payor `accountNumber`** is a string in the schema; the TD sample sends `{ value }`.
+  Typed `string | { value: string }`.
 - **`accountNumber` on `createConsolidationShipment`.** Declared as
   `{ type: object, example: "XXXXX2842" }` with no properties. Every other operation uses
   `{ value: string }`, so it is typed that way (inference).
@@ -397,8 +491,11 @@ response; nobody has called these endpoints with a real account.
   schema's `type: array, format: base64` on the array itself is inconsistent with its `items`
   (`format: byte`); we follow `items` (string[]).
 - **`ReferenceInformation.shipDateEndDate`**: the schema's property and `required` entry are
-  `shipDateEndDate`, but the schema's own example uses `shipDateEnd`. We follow the schema.
-  Open question (needs a real account): which spelling the server accepts.
+  `shipDateEndDate`, but the spec's own example (`Full_Schema_Tracking_References.example`) and
+  every sibling tracking operation use `shipDateEnd`. The request type accepts either
+  spelling, exactly one required (a union with `never` on the other), and sends whichever the
+  caller gave. Both rest on the spec (schema vs example), not on a call. Open question (needs
+  a real account): which spelling the server accepts.
 - **Required dates vs. description (track by reference)**: schema requires `shipDateBegin` and
   `shipDateEndDate`, but the description says a call needs either `value` + `accountNumber`, or
   type + carrierCode + dates + destination postal/country. The types follow the schema (dates
@@ -536,8 +633,8 @@ client.
   Typed independently, as the spec has them.
 - **Response envelopes do not match the shared `FedExResponse<T>`.** In all three
   families `transactionId` and `output` are optional and `alerts` live inside `output` with
-  every Alert field optional, so each family types its own envelope instead of using
-  `FedExResponse<T>`, whose fields are required.
+  every Alert field optional. Each of those families still types its own envelope; the shared
+  `FedExResponse<T>` has matched them since the "Response envelope" change below.
 - **Error responses.** The specs document 400, 401, 403, 404, 500 (and 503 for most) with
   `ErrorResponseVO*` schemas. Not modelled; failures surface through `tryHandleRequest`.
   The Service Availability 404 on `/availability/v1/transittimes` has no body schema.
@@ -585,7 +682,7 @@ for its endpoint (negative result; the client-level 1,400/10 s calibration is un
 - **Regulatory request body is a bare JSON array** (`RegulatoryProfileRequest` is `type: array`).
   The function's `data` is that array.
 - **Envelopes differ from `FedExResponse`**:
-  - Regulatory 200 has only `output.message`, no `transactionId`.
+  - Regulatory 200: the schema `RegulatoryProfileResponse` has `transactionId`, `customerTransactionId` and `output.message`; no `errors`/`alerts`.
   - End-of-day 200 has `transactionId` but no `customerTransactionId`.
   - Global Trade 200 names its alert array `cxsalerts`, not `alerts`.
   - Duties/taxes and HS code 200s match `FedExResponse`.
@@ -605,8 +702,14 @@ for its endpoint (negative result; the client-level 1,400/10 s calibration is un
   `destinationAddress`). Both left optional.
 - Global Trade `commodities[].countryOfManufacture` description says "Required", but the schema's
   `required` is only `harmonizedCode`. Left optional. Same for `customsValue` on a commodity.
+- Duties/taxes `summary`: the schema property is `totalDuty`, but the 200 example `SampleOutput`
+  has `totalDuties`. Both are typed, optional. Source: spec schema vs spec example; which one the
+  server returns is unverified.
 - HS code: `originCountryCode` and `destinationCountryCodes` descriptions say "either is
-  mandatory"; the `required` array lists both. Both typed required (schema wins).
+  mandatory"; the `required` array lists both, but the spec's `MinimumSchemaExample1` sends only
+  `destinationCountryCodes` and `MinimumSchemaExample2` only `originCountryCode`. Typed as "at
+  least one of the two" (a union): the spec's own examples would not compile against the
+  schema's reading. Source: spec examples and field descriptions, not a call.
 - End-of-day close: both request bodies have an empty `required` array, but the minimum samples
   include `closeReqType`, `groundServiceCategory`, `accountNumber` and `closeDate` (close) or
   `reprintOption` (reprint). Every field is typed optional; a caller should follow the samples.
@@ -615,8 +718,13 @@ for its endpoint (negative result; the client-level 1,400/10 s calibration is un
 - End-of-day `closeReqType` is an enum shared by both bodies (`GCDR`, `RGCDR`); the description
   says `GCDR` for close and `RGCDR` for reprint. Not narrowed per function, because the schema
   does not.
-- Regulatory `gtinUpcCode` is `integer` in the schema; a 14-digit GTIN exceeds 2^53 only above
-  ~9e15, so 14 digits fit, but leading zeros are lost. Typed `number`.
+- Regulatory `gtinUpcCode` and `phoneExtension` are `integer` in the schema, but the spec's request
+  examples send quoted strings with leading zeros (`"00012345678905"`, `"000"`), which a number
+  destroys. Both are typed `string | number`. `lotNumberQualifier` is `integer` in the schema but
+  `cpscExample3` sends `"1"` (the others send `1`): typed `1 | 2 | "1" | "2"`. `isNoLabEntry`
+  appears in `cpscExample3`'s testing details and is not in the schema: added as optional boolean.
+  `RegulatoryProfileResponse` does define `transactionId` and `customerTransactionId` (an earlier
+  note here said it had none); both are now typed, optional. Source: spec schema and examples.
 
 ### Open questions (need a real account)
 
@@ -651,6 +759,10 @@ Every function was checked against its spec path. No method, URL or envelope was
 
 `GetRatesAndTransitTimesData` is `{ body: FedexBody }` and the function sends `data.body`. The spec has no `body` property: `body` is the name of the spec's request-body schema (`#/components/schemas/body`, a `oneOf`), and v1.0.0 carried that schema name into a wrapper object. On the wire it is a no-op. Not justified by the spec, but the public signature is kept (changing it would break every caller and is not wrong on the wire); the type now carries a comment saying so. A follow-up could accept `FedexBody` directly. Inference: the wrapper came from a spec-to-TypeScript conversion that named the property after the schema.
 
+### Rate request fields the spec's samples send
+
+All 22 example-bearing members (of 23) of the rate request `oneOf` were compiled against `FedexBody` (vendor documentation, spec examples against spec schema). Four disagreements were added to the types, all optional: `streetLines` on the shipper/recipient address (`FedexAddress`; the freight and intra-Europe samples), `rateRequestControlParameters.returnLocalizedDateTime` (the freight sample; the intra-Europe sample puts it at the top level of the body, where the schema has no such field, so it is not typed there), and `requestedPackageLineItems[].physicalPackaging` (intra-Europe). Not changed, by decision: the samples also send `serviceType: "FEDEX_PRIORITY"` and `subPackagingType: "OTHER"`, which the shared `FedExServiceType` and `FedExSubPackagingType` do not contain (the first is a deliberate, documented narrowing; the second is a TypeScript enum, see the open questions at the end of this file), and `null` for `customsClearanceDetail.dutiesPayment.payor.responsibleParty` in nine samples (documented only).
+
 ### Method used for the field-by-field audit
 
 Each spec schema and each exported TypeScript type was flattened to a list of
@@ -663,10 +775,10 @@ ones below.
 
 ### Where the types deliberately differ from the spec
 
-- **Response envelope.** Every response schema in all three specs has no `required` array, so `transactionId`, `customerTransactionId` and `output` are all optional. The shared `FedExResponse<T>` makes `transactionId` and `output` required and `alerts[]` members' `code`, `message`, `alertType` required. Left as is; the lead may want to relax the shared type. Everything below `output` follows the spec (optional).
+- **Response envelope.** Every response schema in all three specs has no `required` array, so `transactionId`, `customerTransactionId` and `output` are all optional. The shared `FedExResponse<T>` used to make `transactionId` and `output` required and `alerts[]` members' `code`, `message`, `alertType` required; it no longer does (see "Response envelope"). Everything below `output` follows the spec (optional).
 - **Free strings that keep a v1.0.0 union.** Kept because the old unions were already in the published types and replacing them with `string` would widen what a reader sees: `carrierCodes[]` (rate, shared `FedexCarrierCodes`), `requestedShipment.serviceType` and `rateReplyDetails[].serviceType` (shared `FedExServiceType`), `rateReplyDetails[].packagingType` (shared `FedExPackageType`), `subPackagingType` (shared `FedExSubPackagingType`), pickup `shipmentAttributes.packagingType`, create-pickup `pickupType` (`ON_CALL`, `PACKAGE_RETURN_PROGRAM`, `REGULAR_STOP`, which the spec lists only as examples in prose), pickup `options[].countryRelationship` (`DOMESTIC`, `INTERNATIONAL`, from the description), address `AddressType`, `AddressPrecision`, `resolutionMethodName` (values listed in prose). The spec types all of these as plain strings, so a value outside the union is possible.
 - **Currencies** are `string`, as the spec has no enum; v1.0.0 used the plugin-kit `CurrencyCodes` enum, which a caller could only satisfy by importing it.
-- **Inferences.** `brokers[].broker.contact` (rate request) is untyped in the spec; its description says "Name, Email, PhoneNumber", so it is typed as `FedexContact`. Pickup `defaultLatestTimeOptions` is untyped; the description gives `HH:MM:SS`, so it is typed `string`. Address `customerMessage[]` is untyped; the description lists message codes, so `string[]`. All three carry or deserve a "needs a real account" note below.
+- **Inferences.** `brokers[].broker.contact` (rate request) is required but defines no fields in the spec (`BrokerDetailBroker` takes `Party`, which has only `address` and `accountNumber`; its description says "Name, Email, PhoneNumber"), so it is typed with the all-optional `FedExRateContact2`. An earlier version used `FedexContact`, whose `personName`, `phoneNumber` and `companyName` are required; that invented a constraint. (`FedexContact` stays for the delivery-on-invoice recipient, whose `_contact` schema does require those three.) Pickup `defaultLatestTimeOptions` is untyped; the description gives `HH:MM:SS`, so it is typed `string`. Address `customerMessage[]` is untyped; the description lists message codes, so `string[]`. All three carry or deserve a "needs a real account" note below.
 - **Kept from v1.0.0 although absent from the spec**, because removing a response field breaks readers and the field is harmless if the API never returns it: `FedExResolvedAddress.postalCode` and `FedExPickupCreateOutput.message`. Each carries a comment. Source unknown; neither appears in the spec.
 
 ### Spec contradictions (schema picked, contradiction recorded)

@@ -34,16 +34,27 @@ const label: UspsInternationalLabelRequest = {
   toAddress: {
     streetAddress: "1 Rue",
     city: "Paris",
+    country: "France",
     countryISOAlpha2Code: "FR",
   },
-  fromAddress: { streetAddress: "1 Main", city: "Boston", state: "MA" },
+  fromAddress: {
+    streetAddress: "1 Main",
+    city: "Boston",
+    state: "MA",
+    ZIPCode: "02110",
+  },
   packageDescription: {
+    weight: 1,
+    length: 9,
+    width: 6,
+    height: 2,
     mailClass: "PRIORITY_MAIL_INTERNATIONAL",
     processingCategory: "MACHINABLE",
     destinationEntryFacilityType: "NONE",
     mailingDate: "2026-11-20",
   },
   customsForm: {
+    AESITN: "NO EEI 30.37(a)",
     customsContentType: "GIFT",
     contents: [
       { countryofOrigin: "US", itemDescription: "Hat", itemQuantity: 1 },

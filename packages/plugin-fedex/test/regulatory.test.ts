@@ -1,3 +1,4 @@
+import type { FedExRegulatoryProfileRequest } from "../src/requests/regulatory/types.js";
 import { getRegulatoryProfile } from "../src/requests/regulatory/index.js";
 import RequestHandler, { memoryBackend } from "@dianemo/core";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -45,5 +46,31 @@ describe("fedex regulatory", () => {
     expect(config.url).toBe("/regulatory/v1/profiles");
     expect(config.data).toBe(data);
     expect(Array.isArray(config.data)).toBe(true);
+  });
+
+  it("keeps leading zeros when a caller passes the spec's quoted strings", async () => {
+    const { spy } = setup();
+    const data: FedExRegulatoryProfileRequest = [
+      {
+        regulationCode: "CPSC",
+        productId: "SKU-1",
+        productIdType: "SKU",
+        countryOfImport: "US",
+        details: [
+          {
+            fullMessageSet: {
+              productDetails: { gtinUpcCode: "00012345678905" },
+              pointOfContact: { contact: { phoneExtension: "000" } },
+              lotDetails: { lotNumberQualifier: "1" },
+              citationDetails: [{ testingDetails: [{ isNoLabEntry: false }] }],
+            },
+          },
+        ],
+      },
+    ];
+    await getRegulatoryProfile("fedex:_:production", data);
+    const sent = JSON.stringify(spy.mock.calls[0][0].data);
+    expect(sent).toContain('"gtinUpcCode":"00012345678905"');
+    expect(sent).toContain('"phoneExtension":"000"');
   });
 });

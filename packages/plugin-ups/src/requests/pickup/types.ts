@@ -51,7 +51,8 @@ export interface UpsPickupPendingStatusResponse {
 }
 
 export interface UpsPickupRateRequestBody {
-  Request: UpsPickupRateRequestRequest;
+  /** Optional: the spec's own rate example omits it. */
+  Request?: UpsPickupRateRequestRequest;
   ShipperAccount?: UpsPickupRateRequestShipperAccount;
   PickupAddress: UpsPickupRateRequestPickupAddress;
   // Indicates if the pickup address is different than the address specified in the customer's profile. Valid values: Y = Alternate address N = Original pickup address (default)
@@ -81,7 +82,8 @@ export interface UpsPickupCancelResponseBody {
 }
 
 export interface UpsPickupCreationRequestBody {
-  Request: UpsPickupCreationRequestRequest;
+  /** Optional: the spec's Standard example omits it although its `required` list names it. */
+  Request?: UpsPickupCreationRequestRequest;
   // Indicates whether to rate the on-callpickup or not. Valid values: Y = Rate this pickup N = Do not rate this pickup (default)
   RatePickupIndicator: string;
   RateChartType?: string;
@@ -145,8 +147,11 @@ export interface UpsPickupGetPoliticalDivision1ListResponseBody {
 }
 
 export interface UpsPickupGetServiceCenterFacilitiesRequestBody {
-  Request: UpsPickupGetServiceCenterFacilitiesRequestRequest;
-  PickupPiece: UpsPickupGetServiceCenterFacilitiesRequestPickupPiece[];
+  /** Optional: the spec's own example omits it. */
+  Request?: UpsPickupGetServiceCenterFacilitiesRequestRequest;
+  PickupPiece:
+    | UpsPickupGetServiceCenterFacilitiesRequestPickupPiece
+    | UpsPickupGetServiceCenterFacilitiesRequestPickupPiece[];
   OriginAddress?: UpsPickupGetServiceCenterFacilitiesRequestOriginAddress;
   DestinationAddress?: UpsPickupGetServiceCenterFacilitiesRequestDestinationAddress;
   Locale: string;
@@ -252,7 +257,7 @@ export interface UpsPickupCreationRequestPickupDateInfo {
 export interface UpsPickupCreationRequestPickupAddress {
   CompanyName: string;
   ContactName: string;
-  AddressLine: string[];
+  AddressLine: string | string[];
   Room?: string;
   Floor?: string;
   City: string;
@@ -423,6 +428,8 @@ export interface UpsPickupResponseAlert {
 export interface UpsPickupResponseTransactionReference {
   // The CustomerContext information that is echoed back during response.
   CustomerContext?: string;
+  /** In UPS's v1 samples and spec examples, though not in the spec's schema. */
+  TransactionIdentifier?: string;
 }
 
 export interface UpsPickupRateResultDisclaimer {

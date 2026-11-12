@@ -140,6 +140,20 @@ describe("ups client template", () => {
       );
     });
 
+    it("returns a base URL it cannot parse untouched instead of throwing", () => {
+      expect(forwardingBaseUrl("onlinetools.ups.com")).toBe(
+        "onlinetools.ups.com"
+      );
+      expect(forwardingBaseUrl("")).toBe("");
+    });
+
+    it("registers with a scheme-less base URL", async () => {
+      const [client] = await build({ baseUrl: "onlinetools.ups.com" });
+      expect(client.subClients[0].requestOptions.defaults.baseURL).toBe(
+        "onlinetools.ups.com"
+      );
+    });
+
     it("names the client the way core joins sub-clients", () => {
       expect(upsSubClient("ups:_:main", "forwarding")).toBe(
         "ups:_:main:forwarding"

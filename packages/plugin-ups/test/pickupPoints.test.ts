@@ -125,6 +125,7 @@ describe("plugin-ups pickupPoints family", () => {
       `${BASE}/sites/20260401/20260420?offset=0&location_identifier=123&location_id_category_code=01&city=Atlanta&state=GA&country=US`
     );
     expect(config.headers).toMatchObject({
+      "Content-Type": "application/json",
       UUID: "u-1",
       Username: "test.user",
     });

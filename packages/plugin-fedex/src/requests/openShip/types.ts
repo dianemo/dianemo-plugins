@@ -898,10 +898,20 @@ export interface FedExOpenShipReturnShipmentDetail {
   returnType: "PENDING" | "PRINT_RETURN_LABEL";
 }
 
+/** The spec's `allOf` override on this path requires all three of `companyName`, `personName` and `phoneNumber`. */
+export interface FedExOpenShipDeliveryOnInvoiceRecipientContact {
+  companyName: string;
+  personName: string;
+  phoneNumber: string;
+  emailAddress?: string;
+  phoneExtension?: string;
+  faxNumber?: string;
+}
+
 export interface FedExOpenShipDeliveryOnInvoiceAcceptanceDetail {
   recipient?: {
     address: FedExOpenShipPartyAddress;
-    contact: FedExOpenShipPartyContact;
+    contact: FedExOpenShipDeliveryOnInvoiceRecipientContact;
     tins?: FedExOpenShipTaxpayerIdentification[];
     deliveryInstructions?: string;
   };

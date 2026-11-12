@@ -153,7 +153,12 @@ export const getPickupPointsSiteDetails = async (
       requestName: "ups.pickupPoints.getPickupPointsSiteDetails",
       method: "GET",
       url: withQuery(siteDetailsPath(options), query),
-      headers: { ...sessionHeaders(options), ...userHeaders(options) },
+      // The spec marks Content-Type required on this bodyless GET — docs/ups-api.md#ups-pickup-points
+      headers: {
+        "Content-Type": "application/json",
+        ...sessionHeaders(options),
+        ...userHeaders(options),
+      },
     },
     "UPS_0041",
     "Failed to get UPS pickup points site details"

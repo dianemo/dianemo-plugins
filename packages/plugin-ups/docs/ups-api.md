@@ -369,12 +369,15 @@ Source: Forwarding API v1, `servers` block (vendor documentation).
 Forwarding differs in two ways: the production host carries a `www.` prefix, and the
 test host is `onlinetoolsuat.ups.com` rather than `wwwcie.ups.com`.
 
-The environment mapping `wwwcie` to `onlinetoolsuat` is an **inference**. The
-client-auth reading of the spec is that it lists the two hosts without labelling
-environments (production first, "uat" in the name). The Forwarding reading of the
-same spec is that it labels the second server "Customer Integration Environment".
-The two readings conflict. Either way the mapping needs a real Forwarding account to
-confirm.
+**The spec states which host is which environment.** `Forwarding.yaml`'s `servers`
+block labels `https://www.onlinetools.ups.com/...` "Production" and
+`https://www.onlinetoolsuat.ups.com/...` "Customer Integration Environment" (vendor
+documentation, re-read 2026-11-12). Pairing `wwwcie.ups.com` with
+`onlinetoolsuat.ups.com` is therefore the spec's own mapping, not an inference; an
+earlier version of this section and of the comment on `forwardingBaseUrl` said the
+spec never labelled them, which was wrong. What the spec does not say is whether a
+token minted on `wwwcie.ups.com` is accepted by the UAT host (see the open
+questions below).
 
 The spec's `securitySchemes.oauth2.tokenUrl` is
 `https://onlinetools.ups.com/security/v1/oauth/token`, the same endpoint as the rest
@@ -393,10 +396,14 @@ Implementation, as a client-template fact:
   `test/client.test.ts` covers it.
 - The sub-client's `baseURL` is the bare host. Forwarding functions therefore use
   URLs beginning `/api/forwarding/{version}/...`. A base URL that is not recognised
-  (a proxy) is passed through unchanged.
+  (a proxy), or that does not parse (no scheme, say), is passed through unchanged
+  instead of throwing at registration; `test/client.test.ts` covers it.
 - The sub-client has its own rate-limit bucket. A caller mixing Forwarding and other
-  calls gets the 5/s placeholder on each. That figure is this repo's own, not UPS's;
-  see [No published rate limit](#no-published-rate-limit).
+  calls gets the 5/s placeholder on each, so **one credential can reach 10/s
+  combined** (5/s on the parent plus 5/s on `forwarding`). That figure is this
+  repo's own, not UPS's, and whether UPS throttles per credential or per host is
+  unknown; see [No published rate limit](#no-published-rate-limit). Recorded, not
+  changed.
 
 ### Spec `servers` that are not the standard pair
 
@@ -483,6 +490,24 @@ Every v1.0.0 name still exports, as an alias of a spec-derived `UpsShipping*` ty
 `voidShipment` still takes two bare string parameters after `clientName`, against the
 repo's own rule. It is kept because it is published; see
 [Void takes the shipment id](#void-takes-the-shipment-id-not-the-tracking-number).
+
+### Request shapes against UPS's own examples
+
+Method: every request example embedded in the Shipping spec, and UPS's published Java samples run at API version v1, was turned into a typed fixture and type-checked against the package. These are findings from examples, not observed API behaviour.
+
+- **Single objects where arrays were required.** The spec's examples send one object for `Package`, `PaymentInformation.ShipmentCharge`, `Notification`, `ShipmentIndicationType`, `HazMat`, `InternationalForms.Product`, `CN22Content`, `ScheduleB.UnitOfMeasurement` and `PackingListInfo.PackageAssociated`, and a bare string for `AddressLine` and `Notification.EMail.EMailAddress`. The request types are now `T | T[]`.
+- **`TradeDirect.Child.Product`.** The schema (`Child_Product`) is one object, but the Trade Direct examples send an array. The type accepts both.
+- **`LabelStockSize` is optional.** UPS's own examples, and the Java samples, omit it from `LabelSpecification`.
+- **Label Recovery request.** `ResendEmailIndicator` (example) versus `ResendEMailIndicator` (schema): both are typed. The Roadie example sends `TrackingNumbers: { TrackingNumber: [...] }` and a `ReferenceValues` with only `ShipperNumber`; the schema says `TrackingNumbers` is an array of strings and `ReferenceValues.ReferenceNumber` is required. The type accepts the example's shape and makes `ReferenceNumber` optional.
+- **The recoverLabel response is pinned to `v1`.** UPS's v1 Java sample (`LabelRecoveryResponse.json`) returns `LabelResults` as one object. The spec has no "always an array" note for `LabelResults`, `TrackingCandidate` or `Response.Alert`, so all three are typed `T | T[]`.
+- **`TransactionIdentifier`** is on the shared reference type. It appears in the Trade Direct request examples and in the samples' responses, but the schema does not define it.
+- **Example defects left in the spec** (these examples cannot type-check, and no type change was made):
+  - `ShipFromAccountNumber`, `Residential`, `PackedByStoreIndicator`, `SEDFilingOption`, `BarCodeImageIndicator` and `Code` inside Trade Direct `Product` are in no schema.
+  - `MasterCartonIndicator` is defined on `Shipment`, but `World_Wide_Economy_Shipping` puts it in `ShipmentServiceOptions`.
+  - `EMailAddress` and `EmailAddress` casing varies between the schema and the examples. The same goes for `CompanyDisplayableName` and a `Name` under `BillThirdParty`.
+  - `Billing_Third_Party`, `Trade_direct_LTL_shipment` and `Trade_direct_Master_shipment_` send `ShipmentServiceOptions` as a whitespace string.
+  - `WorldEase_Shipment` is missing its `ShipmentRequest` wrapper.
+- **Whether UPS's live service accepts these shapes is unverified.** They are what UPS's published examples send.
 
 ## Rating
 
@@ -601,6 +626,15 @@ and `"02"` as the value, per that finding.
 | `NegotiatedRateCharges` gains `BaseServiceCharge[]`, `RateModifier[]`; `TotalCharge` stays required                                                                                                                                                                                                                  | non-breaking                                           |
 | Response types now named (`UpsRating*`); inline shapes replaced                                                                                                                                                                                                                                                      | non-breaking                                           |
 
+### Findings from the audit against UPS's examples
+
+- **Presence flags admit `""`.** The spec describes these fields as "True if tag exists... Any value inside is ignored", yet `Indicator` was `"X" | "Y" | "true"`, so the empty tag could not be written. It is now `"" | "X" | "Y" | "true"`. Source: Rating spec field descriptions (vendor documentation).
+- **`ServiceCode` and `CODFundsCodes` are no longer closed.** Rating's `Service.Code` says "refer to Service Codes in the Appendix", and `COD.CODFundsCode` says "refer to Rating and Shipping COD Supported Countries or Territories in the Appendix". The spec's own `International_Rate` example sends `"072"`, which the 15-member enum rejected (example embedded in UPS's OpenAPI spec). The fields are now `Enum | (string & {})`, and the enums stay exported as the known subset. No Rating field has an `enum:` in the spec. Every other Rating enum comes from a prose "Valid values" list and is left closed.
+- **Requests accept one object or an array where the spec's examples send one object.** Source: examples embedded in UPS's OpenAPI spec, found by type-checking all 69 request examples and Java samples against the package. Rating `Shipment.Package` is now `Package | Package[]`. Responses were not widened.
+- **`TransactionReference.TransactionIdentifier`** is optional on the response. It appears in UPS's published Java samples, run at API version v1, and in spec examples, but the schema does not define it.
+- **`RateOptions.version` and older versions.** The option still accepts versions before v2403. At those versions UPS returns single objects for `RatedShipment`, `RatedPackage` and `Alert`, while `RateResponse` types them as arrays. Source: UPS's published Java sample, run at v1. Whether any version in between collapses single results is unproven. The stale exported type `RateResponseObject` is kept because `origin/master` exported it.
+- **Example defects left in the spec** (no type change): `shop_TimeInTransit_CIE` sends `RequestOption: "shopTimeInTransit"` (case differs from `Shoptimeintransit`) and `StateProvinceCode: true` (a boolean). `Negotiated_Rate` and `TPFC_Negotiated` put `AttentionName` under `BillThirdParty`, which the schema lacks. `TPFC_Negotiated` puts `ShipmentRatingOptions` inside `Package`; the schema defines it on `Shipment`. `Time_In_Transit` nests `Shipper` inside `Shipper`.
+
 ## Time In Transit
 
 Source: the "Time In Transit" spec (`TimeInTransit.yaml`), vendor documentation.
@@ -629,6 +663,11 @@ There is no `-Ready` twin.
 - Open question (needs a real account): `residentialIndicator` uses `01` residential
   and `02` commercial here, whereas Rating uses a presence flag. Confirm the mapping
   against a real response.
+
+### Findings from the audit against UPS's examples
+
+- **Optional response fields.** `services[].saturdayDeliveryIndicator` is listed in the spec's `required` array but the schema defines no such property, so it is optional in the type. The candidate address `required` list spells `CountryCode`, but the property is `countryCode`, so it is also optional. Source: TimeInTransit spec (vendor documentation).
+- **Request values.** The spec schema types `weight`, `shipmentContentsValue` and `numberOfPackages` as numbers. The spec's own example and UPS's published Java samples, run at v1, send them as strings (`"10.5"`, `"1"`) and send `residentialIndicator: ""`. The request type accepts `number | string` for those three and `""` for the indicator. Whether the live service coerces them is unproven.
 
 ## Tracking
 
@@ -786,6 +825,14 @@ rests on observed responses.
 | `AddressClassification` (both places)                                                                                                                                                                                 | extracted to `UpsAddressClassification`; `Description` gains `"UnClassified"` (the spec's own text); comment typo fixed                                                     | non-breaking for readers except exhaustive switches                      |
 | new exports `UpsAddressValidationOptions`, `UpsAddressValidationRequestOption`, `UpsAddressValidationAddressKeyFormat`, `UpsAddressValidationResponseStatus`, `UpsAddressValidationAlert`, `UpsAddressClassification` | added                                                                                                                                                                       | non-breaking                                                             |
 
+### Findings from the audit against UPS's examples
+
+- `AddressClassification.Description` is the four known values plus any string, because the spec gives no closed list.
+- **`AddressLine` on requests accepts a bare string.** UPS's Java samples (v1) send a bare string; the v2 schema says array. The type is `string | string[]`.
+- **Not typed.** The Java samples nest a `Request` container (with `TransactionReference`) inside `XAVRequest`; the v2 schema has only `AddressKeyFormat`. The spec's own example sends `AddressKeyFormat.BuildingName`, which is in no schema.
+- **`regionalRequestIndicator` casing.** It is sent as lowercase `true`/`false` while the spec prose says "True or False". Unknown query values are silently ignored by this API, so a casing mismatch would degrade quietly into a non-regional request. Neither has been checked against a real account.
+- The spec has one array, `AddressLine`, with no "always an array" note. Whether a single line collapses to a bare string at v2 is unproven; UPS's v1 behaviour is a bare string.
+
 ## Delivery Defense
 
 Source: the "DeliveryDefense API" 1.0 spec, vendor documentation. The `-Ready` twin
@@ -801,7 +848,10 @@ so there is no version parameter.
   pattern `^[0-9]{5}(?:-[0-9]{4})?$`, so the API is US-only (an **inference** from
   the pattern).
 - Responses: 200 (score); **204** (address format valid but no score could be
-  calculated, with an empty body, so `res.data` may be empty); 400 (`Error400`, a
+  calculated, with an empty body). `getDeliveryDefenseAddressScore` returns
+  `undefined` for it, whether axios reports the empty body as `""` or the status is
+  204, and its return type says `| undefined`; a real-handler test
+  (`test/realHandler.test.ts`) serves a 204; 400 (`Error400`, a
   problem-details object with a free-form `errors`); 401 (`{errorCode,
 errorMessage}`); 500 (no schema).
 - `score` bands: 900 to 1000 low likelihood of loss; 700 to 899 4x; 500 to 699 16x;
@@ -892,6 +942,14 @@ Source: the "Pickup" spec (`Pickup.yaml`), vendor documentation. Servers are
 | CancelResponse                                  | `Response.TransactionReference.CustomerContext` required to optional; added `GWNStatus`, `Response.Alert`                                                                                                                                                                                                                  | breaking (reader, minor) |
 | `createPickup`                                  | const arrow to overloaded function declaration; the creation call is unchanged                                                                                                                                                                                                                                             | non-breaking             |
 
+### Findings from the audit against UPS's examples
+
+- **`cancelPickupByAccountNumber`.** The spec defines no parameter for `CancelBy=01`: no `Prn` header and no account number anywhere on the path, so the request names no account. Which account UPS cancels is unverified.
+- **Response arrays.** The Pickup spec has 13 response arrays with no "always an array" note. Whether any collapses to a single object at v2409 is unproven. UPS's v1 Java samples show single objects in several places.
+- **Request shapes.** `PickupCreationRequest.Request`, `PickupRateRequest.Request` and `PickupGetServiceCenterFacilitiesRequest.Request` are in the spec's `required` lists, but UPS's own examples omit them. All three are optional in the types. `PickupPiece` and `PickupAddress.AddressLine` accept one object or string where the examples send one.
+- **`TransactionIdentifier`** is on the response reference. It appears in the spec's Smart Pickup example response.
+- **Error codes.** `cancelPickup` is `UPS_0011` (unchanged from v1.0.0) and `cancelPickupByAccountNumber` is `UPS_0043`.
+
 ## Pickup notification preferences
 
 Source: the "CCPS WS General Preferences API v1" spec (v1.0), vendor documentation.
@@ -906,6 +964,11 @@ Servers are `https://{onlinetools|wwwcie}.ups.com/api/digital-experience/prefere
   callers only) and `id_token` (Auth0 only), modelled as `uuid` and `idToken` options.
 - GET returns `payload` as an array of `{ accountNumber, versionNumber, ...preference }`;
   PUT returns a single object. Typed that way.
+- `versionNumber` is a 19-digit integer in the spec's example (`1740530158285357000`),
+  above `Number.MAX_SAFE_INTEGER` (9007199254740991). `JSON.parse` rounds a number
+  that large, so a caller who reads `versionNumber` and echoes it back on the PUT may
+  send a different value than UPS issued. Whether UPS uses it for optimistic
+  concurrency is not stated. **Inference** from the example; no code change.
 - Header schema contradiction: `transId` has `pattern {3,100}` but `maxLength: 50`;
   `transactionSrc` has `pattern {3,100}` but `maxLength: 36`. The client's values
   (32 hex, `dianemo`) satisfy both readings.
@@ -923,11 +986,19 @@ Servers are `.../api/account/pickup-info/{version}`.
 
 - `Content-Type` is a required header; the JSON body makes the transport send it.
 - `/view` is a POST that only reads.
-- The spec spells `AccountInfo.AccountNmber` (sic). It is typed as spelled; whether
-  the live service accepts `AccountNumber` is unknown.
+- The request schema spells `AccountInfo.AccountNmber` (sic); see
+  [Smart Pickup account key](#smart-pickup-account-key).
 - `transactionSrc` has a maximum length of 30 here; the client default `dianemo`
   fits.
 - `SmartPickupCommonResponseV1.Alert` is a single required object, not an array.
+
+### Smart Pickup account key
+
+The request schema's `AccountInfo` property is the typo `AccountNmber`. The
+`AccountNumber` key is what the request examples embedded in UPS's OpenAPI spec send,
+and what the response schema declares (re-checked 2026-11-12). `UpsSmartPickupAccountInfoV1`
+therefore accepts both spellings, both optional, and sends whichever the caller sets.
+Which one the live service reads is unknown: an open question for a real account.
 
 ## UPS Pickup Points
 
@@ -966,6 +1037,13 @@ All paths are under `/api/uppmanage/v1`.
   and `country`. All are strings in the spec, including the numeric ones. The POST's
   category code travels in its body.
 - Order creation returns `201` in the spec; the others return `200`.
+- **`getPickupPointsSiteDetails` sets `Content-Type: application/json` itself.** It
+  is a body-less GET, and the spec's `getSiteDetailsByDateRangeStandardFetch` lists
+  `Content-Type` among its required parameters (the subscriptions GET does not). A
+  request with no body gets no `Content-Type` from the transport, but an explicit one
+  on a body-less GET does survive, as the Forwarding document download shows
+  (`test/realHandler.test.ts`). Whether UPS would reject the request without it is
+  unknown.
 
 ## Dangerous goods, PreNotification, paperless, Quantum View and Locator
 
@@ -1075,6 +1153,18 @@ accepted for delete request."
 2. Paperless delete: the literal `DocumentId/ShipperNumber` path with header values.
 3. Whether Quantum View accepts the client's `transId` and `transactionSrc` headers.
 
+### Request shapes against UPS's own examples
+
+Source: examples embedded in UPS's OpenAPI specs and UPS's published Java samples, run at API version v1.
+
+- **Single objects where arrays were required**, now `T | T[]` on requests: DG `Shipment.Package` and `ChemicalRecord`; PreNotification `Package`, `ChemicalRecord` and the `AddressLine`s; Locator `SearchOption.OptionCode` and `ServiceSearch.ServiceCode`; Paperless `UserCreatedForm`, `FormsHistoryDocumentID.DocumentID` and `TrackingNumber`; Quantum View `SubscriptionRequest` and `FileName`.
+- **Optional request fields.** DG `ChemicalReferenceDataRequest.Request`; Paperless `UploadRequest.ShipperNumber` and `PushToImageRepositoryRequest.ShipperNumber`. They are in the `required` lists but absent from the examples, and the shipper number is also sent as the `ShipperNumber` header.
+- **Quantum View `Bookmark`.** The schema puts it on `QuantumViewRequest`, but the example nests it in `SubscriptionRequest`. The type accepts both.
+- **`TransactionIdentifier`** is optional on the DG, PreNotification and Quantum View response `TransactionReference`s. It appears in UPS's samples.
+- DG has two arrays with no "always an array" note, `ProperShippingName` and `ElementIdentifier`. Whether they collapse to a single object is unproven.
+- **Left as is** (example defects or v1-only shapes): the DG precheck example's `AddressLinde`; the Locator example's `LanguageCode` under `Translate` (the schema has `Locale`); the PreNotification example's `RequestOption`; the Quantum View example's `XpciVersion`; a Paperless example that sends `null`.
+- Where the spec points to an appendix or gives no closed list, a union is "known values plus any string". Exported enums stay for autocomplete.
+
 ## Trade and customs APIs
 
 Sources: the "Landed Cost", "Global Checkout", "Export Assure", "Interactive
@@ -1118,10 +1208,10 @@ API.
   `required: true`, both already sent by the client.
 - The request `alversion` (integer) is **required** by the schema, yet the spec's own
   example request omits it. The example also sends `transID` inside the body, a second
-  copy of the header's id. The type follows the schema, so callers must supply
-  `alversion`; the description says it "must match the major number of the
-  corresponding ICD version" (examples `1, 2, 3`). Whether UPS enforces it is an open
-  question.
+  copy of the header's id. `alversion` is now optional on the request type, because
+  the example the vendor published omits it; the description says it "must match the
+  major number of the corresponding ICD version" (examples `1, 2, 3`). Whether UPS
+  enforces it is an open question.
 - Request `transModes`, `shipmentType` and `incoterms` are typed `string`, not unions:
   the descriptions list allowed values but they are not `enum`s, and the
   description's shipment types (GIFT, COMMERCIAL, SALE ...) contradict the example
@@ -1136,22 +1226,40 @@ API.
     `transID` at the top level where no such property exists. The example puts
     `transID`, `alversion` (lower-case v), `dpversion`, `error` (singular) and
     `perfStats` at the top level.
-  - The schema's item fields are `commodityID`, `totalCommodityTaxAndFee` and
-    `totalDutyAndTax`; the example uses `commodityId`, `totalCommodityTaxesAndFees`
-    and `totalDutyandTax` (`totalCommodityDutyandTax`). The item type follows the
-    schema only. **Inference:** the example is stale or hand-written. An observed
-    response would settle it.
+  - The schema's item fields are `commodityID`, `totalCommodityTaxAndFee`,
+    `totalCommodityDutyAndTax` and, on the shipment, `totalDutyAndTax`; the example
+    uses `commodityId`, `totalCommodityTaxesAndFees`, `totalCommodityDutyandTax` and
+    `totalDutyandTax`. Both spellings are typed, all optional, on the response; see
+    [Landed Cost response spellings](#landed-cost-response-spellings).
 - `ErrorResponse` (4xx) is `{ response: { errors: [{ code, message }] } }`.
+
+#### Landed Cost response spellings
+
+Evidence is the 200 example embedded in UPS's OpenAPI spec against its schema. The
+two disagree on four names, so `UpsLandedCostResponse` and
+`UpsLandedCostResponseShipmentItems` type both spellings and make every one optional:
+
+| Schema                     | Example                      | Level    |
+| -------------------------- | ---------------------------- | -------- |
+| `commodityID`              | `commodityId`                | item     |
+| `totalCommodityTaxAndFee`  | `totalCommodityTaxesAndFees` | item     |
+| `totalCommodityDutyAndTax` | `totalCommodityDutyandTax`   | item     |
+| `totalDutyAndTax`          | `totalDutyandTax`            | shipment |
+
+Which spelling the live service returns is unknown (an open question for a real
+account); a caller reading either should read both. The earlier statement here that
+the example was "stale or hand-written" was an inference and is withdrawn. The
+request's `alversion` is optional for the reason given above.
 
 ### Global Checkout (Guaranteed Quote)
 
 - The operation id is `createGuaranteedQuote`, summary "returns a guaranteed landed
   cost quote".
 - Required headers per spec: `transId`, `transactionSrc` (client sends), `Accept` and
-  `Content-Type`. The client does not set `Accept` explicitly; axios sends
-  `application/json, text/plain, */*` and `Content-Type: application/json` for an
-  object body. That is an **inference** about axios defaults, not checked against
-  dianemo core. Not exposed.
+  `Content-Type`. `createGuaranteedQuote` now sends `Accept: application/json`
+  explicitly, because the spec marks it required (axios would otherwise send
+  `application/json, text/plain, */*`); `test/realHandler.test.ts` reads it off the
+  wire. `Content-Type: application/json` comes with the object body. Not exposed.
 - The `registration-id` header is optional: "If not passed then it will be obtained
   with the OAuth token's UUID". Exposed as `UpsGuaranteedQuoteOptions.registrationId`
   (pattern: GUID, hyphens optional).
@@ -1180,7 +1288,11 @@ true` incurs a charge each time guidance is provided and requires
   property is `evaluateAdvancedImportExportRequirements`. Typed per schema.
 - The header is `accountNumber` (lower-camel), optional; `transactionSrc` is
   required (client sends). `Accept` and `Content-Type` are marked required and not
-  exposed.
+  exposed; `submitExportAssure` sends `Accept: application/json` explicitly.
+- The spec's own `cieResponseExample` returns `importerPoaOnFileIndicator` and
+  `exporterPoaOnFileIndicator` as booleans (`false`, `true`), where the schema (and
+  the other examples) say `"Yes"`/`"No"`/`null`; both indicator types now admit
+  `boolean`.
 - **207 Multi-Status** returns `ExportAssurePartialResponse` (`shipment` plus
   `response` errors) when some checks fail. The function returns the union. Whether
   dianemo core or `tryHandleRequest` treats 207 as success was not verified
@@ -1247,8 +1359,15 @@ low | medium | high`. A 403 is documented in addition to the usual set. The erro
 - The POST answers **204 No Content**, and `submitCustomsDetail` returns `void`.
   `actionType` is `validate` or `save`; validation failures are 422 with the error
   envelope `{ response: { errors: [{code, message, field?, value?}] } }`.
-- The response `fieldGroups[].fields[].tooltip` is in the `required` list, so it is
-  typed as required `string`.
+- The response `fieldGroups[].fields[].tooltip` is in the `required` list, but its
+  schema type is `[string, "null"]`, so it is typed `string | null`.
+  `requirementConditions` and `displayConditions` are `null` in 154 and 8 places in
+  the spec's examples and were already typed nullable. The audit's claim that
+  `validation.listValues` is `null` in the examples **did not hold**: no example sets
+  it to `null` and the schema types it as a plain array, so it is unchanged. The
+  error envelope's `errors[]` items carry `description` (`VALUE_REQUIRED`,
+  `RESOURCE_NOT_FOUND`, `null` in the 401 example), now on
+  `UpsCustomsDetailError`.
 - `validation.minLength` and `maxLength` carry `minLength` and `maxLength` keywords on
   integer schemas (a spec bug, ignored).
 - Not wired: the `Content-Type` header is documented as required; axios sets it for
@@ -1258,11 +1377,11 @@ low | medium | high`. A 403 is documented in addition to the usual set. The erro
 
 1. Does Landed Cost enforce `alversion` when the spec's own example omits it?
 2. What is the real Landed Cost response shape: schema-nested or example top-level
-   fields?
+   fields, and which spelling of the item and total fields?
 3. Does `tryHandleRequest` or core resolve (not throw) on Export Assure's 207?
 4. Where does a caller obtain Commerce Guard's `partnerId`?
 5. Does Global Checkout need explicit `Accept` and `Content-Type` headers beyond
-   axios defaults?
+   axios defaults? (`Accept: application/json` is now sent regardless.)
 6. What is Customs Detail's literal version path segment?
 
 ## TradeDirect and WorldEase
@@ -1376,11 +1495,18 @@ operation (negative result). All seven operations end `/{tracking_number}`.
   `requesterContactInfo` and `specialInstructions` (nullable).
 - **Spec contradiction: `commonEligibilityMap`.** The schema defines it as a single
   object (`interceptFeature` and `eligibilityValue`); every example returns an array
-  of those. Typed as `Entry | Entry[]`. The `eligibility` examples also give `date`
+  of those, and the 200 `ERROR` example returns `commonEligibilityMap: null`. Typed
+  as `Entry | Entry[] | null`. The `eligibility` examples also give `date`
   and `dayOfWeekNumber` as bare numbers (`20250110`, `6`) where the schema says string
   patterns and `"01"` to `"07"`; typed to accept both. The `dayOfWeekText` enum lists
   Sunday to Friday only, with no Saturday, although `dayOfWeekNumber` includes `07`;
   Saturday was added by **inference**.
+- **The charges 200 examples carry fields the schema lacks.** `response.addrToken`
+  and the six totals `accessorialGrandTotal`, `interceptGrandTotal`,
+  `transportationGrandTotal`, `grandTotalCharge`, `taxesGrandTotal` and
+  `preTaxGrandTotal` appear in the examples embedded in UPS's OpenAPI spec (the totals
+  as empty strings in both) and not in the schema. All seven are typed as optional
+  strings.
 - **Malformed `anyOf` on `packageWeightUOM`.** The third alternative is `{title:
 Kilograms}` with no `const`, and `KGS` has no title. Read as `"LBS" | "KGS"`
   (**inference**).
@@ -1421,11 +1547,18 @@ regardless. There is no `-Ready` twin and no deprecated operation (negative resu
   as `X-UserToken`.
 - **`GET /pins/epra`** takes `trackingNumber` as a required header, `epra` as an
   optional header, `action` as an optional query parameter and `Authorization` as a
-  required header. Implemented as written (`UpsProtectedDeliveryEpraParams`). Open
-  questions that need a real account:
-  1. Whether the required `Authorization` header is the OAuth bearer (the client
-     already sends one; passing a different value in the per-request headers may
-     override it) or a separate credential.
+  required header. `Authorization` is **not a parameter**: core sets the client's own
+  auth header after every request-level header
+  (`handlePreRequest` in `@dianemo/core`, `{ ...request.config.headers, ...authHeader }`,
+  read 2026-11-12), so a caller's value was always discarded. The function used to
+  take a required `authorization` and send it; it was added the same day, so
+  removing it changed no published signature. What UPS receives is the client's
+  bearer token, and `test/realHandler.test.ts` reads that off the wire, including a
+  request that sets its own `Authorization` and loses. Open questions that need a
+  real account:
+  1. Whether UPS accepts the client's OAuth bearer as the required `Authorization`
+     header or expects a separate credential. If it does, this function cannot send
+     one through core's header merge.
   2. What values `action` and `epra` take: the schema is a bare `type: string`, with
      no enum and no description.
   3. The 501 response, documented only on this operation, is not explained.
@@ -1531,9 +1664,9 @@ documentation. There is no `-Ready` twin. The host is not the usual UPS one; see
   already sends it. `transId` is optional and the client sends it.
 - `Content-Type: application/json` is documented as required on every operation,
   including GET. It is sent explicitly on all JSON requests and omitted on the
-  multipart upload so axios supplies the boundary. Whether axios keeps a
-  `Content-Type` on a body-less GET is not verified (**inference**: harmless either
-  way).
+  multipart upload so axios supplies the boundary. A request through a real
+  handler (`test/realHandler.test.ts`) shows an explicit `Content-Type` is kept on a
+  body-less GET.
 - The spec states no rate limit and declares no `429` response at all (responses are
   200, 400, 401, 404 and 500 only). Negative result.
 - The error shape is `{ response: { errors: [{ code, message }] } }`
@@ -1543,7 +1676,10 @@ documentation. There is no `-Ready` twin. The host is not the usual UPS one; see
 ### Operations
 
 There are 24, none deprecated and no `{deprecatedVersion}` paths. Codes are
-`UPS_0100` to `UPS_0123`, listed here by their last four digits. Paths are under
+`UPS_0100` to `UPS_0123`, listed here by their last four digits, plus `UPS_0130`
+(`getForwardingDocuments`: the body was neither PDF bytes nor JSON carrying
+`response.pdfFile`; a gap is left after 0123 so a code added elsewhere in the same
+change could not collide). Paths are under
 `/api/forwarding/v1`.
 
 | Code         | Function                                                                                     | Method             | Path                                                                       |
@@ -1586,8 +1722,9 @@ to the spec's snake_case on the wire.
   from "one or all".
 - **Document download returns `application/pdf` bytes** (`type: string, format:
 binary`), so `getForwardingDocuments` asks for `arraybuffer` and returns a
-  `Buffer`. `doc_type` is required with default `All`; the spec lists no other values
-  for it.
+  `Buffer`; the spec's one example is JSON instead, see
+  [Forwarding documents bytes](#forwarding-documents-bytes). `doc_type` is required
+  with default `All`; the spec lists no other values for it.
 - **Document upload is `multipart/form-data`**, not JSON base64. The parts are
   `AccountNumber`, `ShipmentNumber`, `DocumentType` (enum `PackingList`,
   `CommercialInvoice`, `SLI`, `ExportDeclaration`, `AirWaybill`, `Quote`, `Booking`,
@@ -1596,6 +1733,87 @@ binary`), so `getForwardingDocuments` asks for `arraybuffer` and returns a
   default to `application/pdf`.
 - `POST /documents/labels` returns an inline schema `{ response: ApolloLabelV1 }`
   (named `UpsForwardingPrintLabelResponse`).
+
+### Forwarding response nesting
+
+Evidence is the 2xx examples embedded in UPS's OpenAPI spec (`Forwarding.yaml`,
+extracted and re-read 2026-11-12) set against its schemas. Where they disagree, the
+response types admit both and say which is which. A script type-checked every 2xx
+example (excluding any named `Invalid` or `BadRequest`, which are error scenarios)
+against the response type of its operation; 81 of them, across 22 operations, were
+checked and each one now passes. Findings:
+
+- **`POST /shipments`** (`UpsForwardingAirShipResponseV1`). The schema declares
+  `response` as a bare object and lists `shipmentNumber`, `prqNumber`, `prqStatus`,
+  `rates`, `airWaybillDocument` and `label` beside it; all ten 200 examples put every
+  one of them inside `response` and nothing at the top level. `response` is now typed
+  with those fields and the top-level ones stay optional. Within them, `rates[]
+.totalCharge.amount` is a **number** (`5399.04`) in the examples where the schema
+  (`ApolloChargeAmountV1`) says string or null, and `airWaybillDocument`, `label`,
+  `label.layout` and `label.image` are `null` in places.
+- **`GET /info/countries`, `/info/currencies`, `/info/payment-types`.** The schemas
+  are unwrapped; every example is `{ response: { <list>, message } }`. (The schemas
+  for cities, airports and service types are already wrapped.) Each type admits both
+  forms. The payment-types example's list is `paymentTypes`, a key the schema does
+  not have (it has `shipper`, `consignee`, `thirdParty`), so that is typed too.
+- **`POST /info/accessorials`.** Each `accessorials[]` item carries a `name` the
+  schema lacks.
+- **`PATCH /shipments`.** The manifest fields sit in `response` in some examples and at
+  the top level in others, `response` is `null` in one and holds only `warnings`,
+  `code` and `message` in another, `warnings` is `[null]`, and the success `message`
+  is at the top level. `response` is therefore `Partial<…> | null` with the same
+  fields optional at the top level, and a warning array admits `null` entries.
+- **`GET /shipments/milestones`.** The "no match" 200 example answers
+  `response: { errors: null, code: -1001, message }` with no `primaryInformation`.
+- **`GET /quotes`.** About 65 leaves across the three examples are `null` (the audit's
+  count), including whole objects and arrays: `originPort`, `destinationPort`,
+  `pricingDetail`, `shipmentDetails.location`, `.fclCargoItems`, `.lclCargoItems`,
+  `.airCargoItems`, `portOfLoad`, `portOfDischarge`, `commodityName`, address
+  `stateCode` and `isLoadingDockAvailable`, `charges[].originalChargeAmount`. Every
+  optional field of the quote-summary response types now admits `null`. The
+  `paymentTerm` pair is returned as `type: "COL", code: "CONS"`, the reverse of what
+  the request enums pair, so the **response** `type` and `code` are open (the known
+  values plus any string); the request enums are unchanged. `lclCargoItems[]` items
+  carry `weightDetail`, as the sibling `LclCargoItemV1` schema does, where the
+  schema's `LclCargoItem` (an alias of the FCL `CargoItem`) has `weight`; both are
+  typed.
+- **Other nulls.** `GET /info/cities` (`sortCode`, `tariffDestination`), `GET
+/shipments` (party and address fields), `PATCH /orders` (`orderNumber`,
+  `shipmentNumber`) and `POST /orders` and `/documents/labels` (charge
+  `description`, `includedInd`, consignee fields, `thirdParty`) were already typed
+  nullable and pass.
+
+Limits of the sweep. It can only see what the types declare: two response types
+(`UpsForwardingOrderResponseV1`, `UpsForwardingOrderSearchResponseV1`) carry an
+index signature and accept any extra key, and a type that is optional throughout
+accepts any subset. An example that passes is therefore a necessary check, not a
+proof the type is complete. The fixtures were generated into a scratch folder, not
+the repository.
+
+### Forwarding documents bytes
+
+`GET /documents` is `application/pdf` (`type: string, format: binary`) in the spec,
+and `getForwardingDocuments` asks axios for an `arraybuffer`. The spec's one 200
+example (`PdfResponse`) is JSON instead:
+`{ response: { fileName, pdfFile: "<base64 PDF>", code, isValid, ... } }` (example
+embedded in UPS's OpenAPI spec). Which one the live service returns is unknown, so
+the function returns PDF bytes either way: a body that starts with `%PDF` is returned
+as is, a JSON body carrying a non-empty `response.pdfFile` is base64-decoded, and
+anything else fails with `UPS_0130`.
+
+The error path needed a second fix. Core's `redactBody` replaces a `Buffer` with
+`[Buffer N bytes]` (`utils/redact.js` in `@dianemo/core`, read 2026-11-12), and it
+runs on a failed response before the caller sees the error, so UPS's JSON error
+(`{ response: { errors: [{ code, message }] } }`) was lost on any non-2xx.
+The request now carries a `transformResponse` that decodes the body of a response
+with status 300 or above to JSON (or text if it does not parse) and leaves every
+other body untouched. That is safe for a binary success body because axios passes
+the status to the transform, and the transform returns `data` unchanged for anything
+below 300; `test/realHandler.test.ts` sends a PDF containing bytes that are not
+valid UTF-8 through a real handler and compares it byte for byte. The decoded
+error is what `getOriginalResponseData(err)` returns. One consequence: core's
+redaction still applies to the decoded object, and its key-name list includes
+`code`, so the error `code` reads `[REDACTED]` while `message` survives.
 
 ### Forwarding order search criteria
 
@@ -1613,10 +1831,12 @@ free strings, so they are typed `string`.
 ### Spec contradictions and defects
 
 - `ApolloOrderPrintLabelRequestV1.orderNumber` is the empty schema `{}` (only an
-  example), so it is typed `unknown`. Every other `orderNumber` is a 13-digit string
-  (`ApolloOrderNumberV1`), and it was almost certainly meant to be that type.
-- `ApolloAirShipResponseV1.response` is `type: object` with no properties
-  (`Record<string, unknown>`); the rest of that response is documented as siblings.
+  example). It is typed `string`, as every other `orderNumber` is (a 13-digit string,
+  `ApolloOrderNumberV1`); that is an inference from the sibling schema, not
+  something the spec states for this field.
+- `ApolloAirShipResponseV1.response` is `type: object` with no properties and the
+  rest of that response is documented as siblings, but the examples nest everything
+  in `response`; see [Forwarding response nesting](#forwarding-response-nesting).
 - `ApolloAirFreightRateRequestV1.shipment.paymentType` is a `oneOf` of `const` values
   (`PPD`, `COL`, `OTH/THD`), typed as the literal union. Several other `oneOf`
   code lists of `enum` or `title` are likewise literal unions.
@@ -1638,7 +1858,53 @@ maxLength 12` on service-types.
 1. Where `X-BusinessGUID` and `X-ClientId` come from, and whether they can live on
    the client.
 2. Whether `www.onlinetools.ups.com` accepts tokens issued by `onlinetools.ups.com`,
-   and whether the CIE host is `onlinetoolsuat.ups.com` rather than `wwwcie.ups.com`.
+   and whether the UAT host `onlinetoolsuat.ups.com` (which the spec labels the
+   Customer Integration Environment) accepts a token minted on `wwwcie.ups.com`.
 3. The indexed deepObject syntax for `criteriaList`.
 4. Valid `path` values for the two PATCH bodies.
 5. Whether the DELETE bodies survive UPS's gateway.
+6. Whether `GET /documents` returns raw PDF bytes (the schema) or JSON with a
+   base64 `pdfFile` (the example); both are handled.
+7. Which spelling `POST /shipments` and the other nested-or-unnested responses use
+   on the wire; see [Forwarding response nesting](#forwarding-response-nesting).
+8. Whether the `forwarding` sub-client's own 5/s bucket matters: one credential can
+   reach 10/s combined with the parent, against a limit UPS does not publish.
+
+## What the tests can see
+
+Most of this package's tests mock `RequestHandler.handleRequest` and assert on the
+config handed to it. They therefore **cannot see anything core or axios do before or
+after that call**: which headers survive core's merge, how a response body is
+transformed, what a 204 looks like, what `redactBody` does to an error. That is how
+the EPRA `Authorization` parameter, the lost Forwarding error body and the
+unparseable-`baseUrl` throw went unnoticed.
+
+`test/realHandler.test.ts` runs requests through a real `RequestHandler` against a
+local `node:http` server (which also serves the token endpoint). It currently covers:
+
+- Forwarding document download: raw PDF bytes (non-UTF-8 content, compared byte for
+  byte), the JSON-wrapped PDF, a body that is neither (`UPS_0130`), a 400 with a JSON
+  error and a 404 with a text body, and that an explicit `Content-Type` survives on a
+  body-less GET;
+- the client's bearer token reaching the server on the EPRA call, and an
+  `Authorization` set on the request itself being replaced by it;
+- an empty 204 from Delivery Defense;
+- `Accept: application/json` on the guaranteed quote, as the exact value;
+- that a body-less GET with no `Content-Type` of its own goes out without one.
+
+`test/client.test.ts` covers the sub-client merge with a real handler and the
+unparseable `baseUrl`. `test/responseShapes.test.ts` is type-level only: its literals
+take the shape of examples embedded in UPS's OpenAPI spec, and `vitest --typecheck`
+is the assertion.
+
+Everything else in the package is still checked only at the `handleRequest` seam.
+Another source of the same blind spot: UPS's Java sample repository
+(`github.com/UPS-API/java-api-examples`, fetched 2026-11-12 by an auditor, not
+re-fetched here) runs every API at version `v1`, so its responses can only
+corroborate `v1` behaviour, and no sample from it supports any claim about a newer
+version.
+
+## Open questions from the example cross-check
+
+- `Shipment.Package` on a Rating or Shipping request is now object-or-array. That follows UPS's examples; whether the live API treats the two identically is unproven.
+- The spec contains no example at all for Tracking, Void and several other operations, so their request and response shapes rest on the schema alone.

@@ -61,11 +61,10 @@ describe("ups protectedDeliveryToken", () => {
     });
   });
 
-  it("getProtectedDeliveryEpraCode puts tracking number and Authorization in headers, action in the query", async () => {
+  it("getProtectedDeliveryEpraCode puts the tracking number in a header and sends no Authorization of its own, action in the query", async () => {
     const spy = setup();
     await pins.getProtectedDeliveryEpraCode(CLIENT, {
       trackingNumber: "1Z999AA10123456784",
-      authorization: "Bearer abc",
       action: "release",
       epra: "E1",
     });
@@ -75,17 +74,16 @@ describe("ups protectedDeliveryToken", () => {
       url: "/api/pin-mgmt-sys/v1/pins/epra?action=release",
       headers: {
         trackingNumber: "1Z999AA10123456784",
-        Authorization: "Bearer abc",
         epra: "E1",
       },
     });
+    expect(spy.mock.calls[0][0].headers).not.toHaveProperty("Authorization");
   });
 
   it("getProtectedDeliveryEpraCode omits the optional action and epra when unset", async () => {
     const spy = setup();
     await pins.getProtectedDeliveryEpraCode(CLIENT, {
       trackingNumber: "1Z999AA10123456784",
-      authorization: "Bearer abc",
     });
     const config = spy.mock.calls[0][0];
     expect(config.url).toBe("/api/pin-mgmt-sys/v1/pins/epra");

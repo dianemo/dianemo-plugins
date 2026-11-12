@@ -1,3 +1,4 @@
+import type { FedExDutiesTaxesSummary } from "../src/requests/dutiesAndTaxes/types.js";
 import { estimateDutiesAndTaxes } from "../src/requests/dutiesAndTaxes/index.js";
 import RequestHandler, { memoryBackend } from "@dianemo/core";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -43,5 +44,13 @@ describe("fedex dutiesAndTaxes", () => {
     expect(config.url).toBe("/dutytax/v1/estimate");
     expect(config.data).toBe(data);
     expect(config.headers).toEqual({ "x-content-type": "application/json" });
+  });
+});
+
+describe("fedex dutiesAndTaxes response summary", () => {
+  it("types both the schema's totalDuty and the example's totalDuties", () => {
+    const schema: FedExDutiesTaxesSummary = { totalDuty: 1 };
+    const example: FedExDutiesTaxesSummary = { totalDuties: 1 };
+    expect([schema.totalDuty, example.totalDuties]).toEqual([1, 1]);
   });
 });

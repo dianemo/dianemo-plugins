@@ -11,7 +11,9 @@ export interface UpsQuantumViewResponseWrapper {
 /** Container for QuantumView request information. */
 export interface UpsQuantumViewRequest {
   Request: UpsQuantumViewRequestRequest;
-  SubscriptionRequest?: UpsQuantumViewRequestSubscriptionRequest[];
+  SubscriptionRequest?:
+    | UpsQuantumViewRequestSubscriptionRequest
+    | UpsQuantumViewRequestSubscriptionRequest[];
   Bookmark?: string;
 }
 
@@ -31,7 +33,9 @@ export interface UpsQuantumViewRequestSubscriptionRequest {
   Name?: string;
   DateTimeRange?: UpsQuantumViewSubscriptionRequestDateTimeRange;
   /** File name of specific subscription requested by user. Format: YYMMDD_HHmmssnnn. (nnn - sequence number: usually = 001) */
-  FileName?: string[];
+  FileName?: string | string[];
+  /** UPS's example nests it here; the schema puts it on `QuantumViewRequest`. Either is accepted. */
+  Bookmark?: string;
 }
 
 export interface UpsQuantumViewSubscriptionRequestDateTimeRange {
@@ -62,6 +66,8 @@ export interface UpsQuantumViewResponseTransactionReference {
   CustomerContext?: string;
   XpciVersion?: string;
   ToolVersion?: string;
+  /** In UPS's v1 samples and spec examples, though not in the spec's schema. */
+  TransactionIdentifier?: string;
 }
 
 export interface UpsQuantumViewResponseError {

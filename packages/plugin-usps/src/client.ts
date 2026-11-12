@@ -308,7 +308,12 @@ async function mintAndCachePaymentToken(
     { roles: [payerRole, labelOwnerRole] }
   );
   if (!paymentAuthorizationToken) {
-    throw new Error("USPS payment-authorization response missing token");
+    // The spec does not require the field, so its absence is USPS's answer to
+    // be reported, not a type error: caching `undefined` would send every label
+    // request out without the token until the TTL ran out.
+    throw new Error(
+      `USPS payment-authorization response for ${accountClientName}, account ${accountNumber}, carried no paymentAuthorizationToken`
+    );
   }
 
   await setCachedPaymentToken(

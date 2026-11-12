@@ -1,3 +1,5 @@
+import { toBuffer } from "./multipart.js";
+
 export type UspsRateGroup = "default" | "labels";
 
 /**
@@ -16,3 +18,30 @@ export const uspsSubClient = (clientName: string, group: UspsRateGroup) =>
  * token dispatches it on the same sub-client the interceptor guards.
  */
 export const USPS_PAYMENT_AUTHORIZE_REQUEST_NAME = "usps.payments.authorize";
+
+const isSuccess = (status: number | undefined) =>
+  status !== undefined && status >= 200 && status < 300;
+
+/**
+ * For a request made with `responseType: "arraybuffer"`. Core redacts an error
+ * body before the caller or the log sees it, and replaces a `Buffer` with
+ * `"[Buffer n bytes]"`, so USPS's JSON error text would be lost. A 2xx body is
+ * returned untouched (the very `Buffer` axios built, so a PDF cannot be
+ * altered); only a non-2xx body is decoded, as UTF-8, and parsed when it is
+ * JSON. See docs/usps-api.md#binary-responses-and-error-bodies.
+ */
+export const bytesOnSuccess = (
+  data: unknown,
+  _headers: unknown,
+  status?: number
+): unknown => {
+  if (isSuccess(status)) return data;
+  const bytes = toBuffer(data);
+  if (!bytes) return data;
+  const text = bytes.toString("utf8");
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    return text;
+  }
+};

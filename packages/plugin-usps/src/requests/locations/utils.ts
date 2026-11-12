@@ -7,7 +7,10 @@ type QueryValue = string | number | boolean | string[] | undefined;
 export const locationQuery = (params: object): Record<string, string> => {
   const query: Record<string, string> = {};
   for (const [key, value] of Object.entries(params) as [string, QueryValue][]) {
-    if (value === undefined) continue;
+    // An empty list would be sent as `key=`, which USPS reads as an empty
+    // filter rather than no filter.
+    if (value === undefined || (Array.isArray(value) && value.length === 0))
+      continue;
     query[key] = Array.isArray(value) ? value.join(",") : String(value);
   }
   return query;

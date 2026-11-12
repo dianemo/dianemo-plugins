@@ -19,6 +19,11 @@ export interface RateOptions {
   requestOption?: UPSRequestOption;
   /** Sent as `?additionalinfo=`; also implied by `DeliveryTimeInformation`. */
   additionalinfo?: UPSAdditionalInfoOptions[] | undefined;
+  /**
+   * Anything older than v2403 returns single objects for `RatedShipment`,
+   * `RatedPackage` and `Alert`, which `RateResponse` types as arrays —
+   * docs/ups-api.md#audit-of-the-rating-types
+   */
   version?: UPSVersion;
 }
 
@@ -474,7 +479,8 @@ export interface DeclaredValue {
 }
 
 export interface COD {
-  CODFundsCode: CODFundsCodes;
+  /** The spec points to an appendix for the valid values. */
+  CODFundsCode: CODFundsCodes | (string & {});
   CODAmount: CODAmount;
 }
 
@@ -1006,7 +1012,7 @@ export interface Shipment {
   /** ShipmentTotalWeight is required for all international orders.*/
   ShipmentTotalWeight?: ShipmentTotalWeight;
   DocumentsOnlyIndicator?: Indicator /** Not applicable for FRS rating requests. */;
-  Package: Package[];
+  Package: Package | Package[];
   ShipmentServiceOptions?: ShipmentServiceOptions;
   ShipmentRatingOptions?: ShipmentRatingOptions;
   InvoiceLineTotal?: InvoiceLineTotal;
@@ -1144,7 +1150,8 @@ export interface AlternateDeliveryAddress extends UpsAddress {
  * Only valid with RequestOption = Rate for both Small package and GFP Rating requests
  */
 export interface Service {
-  Code: ServiceCode;
+  /** The spec points to an appendix for the full list; `ServiceCode` is only the domestic subset. */
+  Code: ServiceCode | (string & {});
   Description?: string;
 }
 
@@ -1279,6 +1286,8 @@ export interface UpsRatingResponse {
   AlertDetail?: UpsRatingAlertDetail[];
   TransactionReference?: {
     CustomerContext?: string;
+    /** In UPS's v1 samples and spec examples, though not in the spec's schema. */
+    TransactionIdentifier?: string;
   };
 }
 

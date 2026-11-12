@@ -575,12 +575,24 @@ which is `UspsAuthorizePaymentResponse`. The README token is the placeholder
 
 ### Audit of pre-existing types
 
-| Type                                                     | Change                                                                                                                                      | Class           |
-| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
-| `UspsPaymentRole`                                        | now extends the new `UspsPaymentAccount`; same fields, `permitZIP` and the MID fields gained doc comments only                              | non-breaking    |
-| `UspsAuthorizePaymentResponse.paymentAuthorizationToken` | the spec marks it readOnly and not required; left as a required `string` (always present on a 200), the mint still checks for a falsy value | none (recorded) |
-| `UspsPaymentRole.roleName`                               | the spec's `Role` has no `required`; left required                                                                                          | none (recorded) |
-| `authorizePayment`                                       | request name now from `USPS_PAYMENT_AUTHORIZE_REQUEST_NAME` (same string), code USP_0050 unchanged                                          | none            |
+| Type                                                     | Change                                                                                                                                                                                                    | Class                       |
+| -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------- |
+| `UspsPaymentRole`                                        | now extends the new `UspsPaymentAccount`; same fields, `permitZIP` and the MID fields gained doc comments only                                                                                            | non-breaking                |
+| `UspsAuthorizePaymentResponse.paymentAuthorizationToken` | the spec marks it readOnly and not required (`payments_5_0.yaml` ~271), so it is now optional; the mint in `src/client.ts` throws a plain `Error` naming the account when it is absent and caches nothing | widening on a response type |
+| `UspsPaymentRole.roleName`                               | the spec's `Role` has no `required`; left required                                                                                                                                                        | none (recorded)             |
+| `authorizePayment`                                       | request name now from `USPS_PAYMENT_AUTHORIZE_REQUEST_NAME` (same string), code USP_0050 unchanged                                                                                                        | none                        |
+
+### Open item: PERMIT and OMAS accounts cannot mint a token
+
+`payments_5_0.yaml` (~354-360, example ~495) says `permitNumber` and `permitZIP` are required
+when a role's `accountType` is `PERMIT` or `OMAS` (vendor documentation). `UspsPaymentRole`
+has both fields, but `UspsCredentials` has nowhere to carry them, so the mint in
+`src/client.ts` sends a `PAYER` role without them and USPS can be expected to refuse it
+(inference from the spec; nothing was called). This predates the v3 work and is not fixed
+here. Supporting it would take: `permitNumber` and `permitZIP` on `UspsCredentials`, both
+added to `credsFingerprint` so a rotation is detected; the mint putting them on the `PAYER`
+role for those two account types; and a check that fails before the request when either is
+missing. `EPS` and `METER` need `accountNumber` and are unaffected.
 
 ## Labels
 
@@ -739,8 +751,11 @@ branding calls as requests only.
   (`readIndiciaBody` in `src/requests/labels/utils.ts`): multipart parts become
   `indiciaMetadata`, `indiciaImage` and `receiptImage`, the images as base64 strings. An
   unreadable body throws `USP_0095`. Not breaking against v2.0.0, which had no indicia.
-  The cost: a failure status reaches the caller with a `Buffer` body in the error's
-  `originalError`, not a parsed object.
+  The cost of asking for bytes is handled in
+  [Binary responses and error bodies](#binary-responses-and-error-bodies): a failure
+  body is decoded before core sees it, so USPS's error text still reaches the caller. How
+  the image parts are told apart, and the `USP_0160` failure for a response with none, are in
+  [Multipart parts](#multipart-parts).
 - **Indicia method.** The README says `PATCH /labels/v3/indicia`; Postman and the spec
   say `POST`. The plugin uses `POST`.
 - **Not exemplified at all:** reprint responses (either content type), cancel
@@ -761,6 +776,14 @@ branding calls as requests only.
 Settled by USPS's published examples (not observed): a create or indicia request with no
 `Accept` header is answered with `multipart/form-data`. The plugin never relies on that
 default.
+
+### Fields added from the spec
+
+`UspsLabelLink.title` (spec `Links` items: "A human-readable description of the link
+relationship"; vendor documentation), optional. The same fix applies to
+`UspsServiceStandardFileLink`: `title` and `description` are in the spec's `Links` schema
+and the spec's `FilesExampleA` uses `title` as each file's name (example in the vendor's
+spec), both optional.
 
 ### Audit of pre-existing types (v1.0.0 to now)
 
@@ -847,6 +870,26 @@ Servers `https://apis.usps.com/international-labels/v3` and a testing server
 - Spec quirk: `InternationalShippingContents` is `allOf [ShippingContents, {required:
 [...]}]` with `additionalProperties: false`, so the three required fields come from the
   second member; typed `Required<Pick<...>> & ShippingContents`.
+- **Required lists that sit on composed schemas** (vendor documentation,
+  `international-labels_7_0.yaml`; a sweep with js-yaml over every USPS spec found the
+  shapes below). The generator that produced the types dropped a `required` list that sits
+  beside an `allOf` (`InternationalLabelAddress`, `DomesticLabelAddress`,
+  `DomesticLabelSenderAddress`) or inside an `allOf` member while naming a property declared
+  in another member (`InternationalPackageDescription`: `weight`, `length`, `width`, `height`;
+  `InternationalCustomsForm`: `AESITN`). They are restored on the **request** types:
+  `toAddress` requires `streetAddress`, `city`, `country`, `countryISOAlpha2Code`;
+  `fromAddress`, `senderAddress` and `packageOptions.redirectAddress` require `streetAddress`,
+  `city`, `state`, `ZIPCode`; `packageDescription` requires the four dimensions;
+  `customsForm` requires `AESITN`. The address requirements are new exported types
+  (`UspsInternationalLabelRequestLabelAddress`,
+  `UspsInternationalLabelRequestDomesticLabelAddress`,
+  `UspsInternationalLabelRequestDomesticLabelSenderAddress`) because the existing address
+  types are shared with the response's `labelAddress`, where a missing field should not fail
+  a caller's type check. Callers who built a request without these fields now get a compile
+  error (the stricter request is the point). Swept for the same defect and found clean:
+  adjustments, appointments, containers, open and distribute, scan forms (`SCANFormAddress`
+  is already required in the types), shipping options, pickups, rates, subscriptions and
+  labels. `InternationalShippingContents` was already handled (see the quirk above).
 - Schema names that collide with the domestic Labels API (`PackageDescription`,
   `CustomsForm`, ...) are prefixed `UspsInternationalLabel`.
 - Open question needing an account: whether the duties and taxes prepay detail is returned
@@ -1195,7 +1238,8 @@ The two specs carry the same title and version string but are different APIs. On
 - v3r2 `State` is "no longer available as of June 2025".
 - v3r2 207 is a 2xx, so a partially failed batch resolves rather than throws. Callers must
   inspect each entry's `statusCode`. `trackPackagesV3r2` returns the union of the 200 and
-  207 bodies.
+  207 bodies, which can only be told apart element by element, by `statusCode`: the
+  function carries a one-line comment saying so.
 - USPS defaults `expand` to SUMMARY; `trackPackage` has always sent DETAIL and keeps doing so.
 - The notification and proof-of-delivery operations are 202 acknowledgements; the spec gives
   no status or polling operation.
@@ -1279,7 +1323,17 @@ The first four rows were read from the source, not the spec.
 - `DELETE` lists `If-Match` as optional, but its description says all DELETE and PUT
   operations require it. `cancelPickup` keeps requiring an etag.
 - GET documents an optional `If-None-Match` header and a `304` with an empty body. Modelled
-  as `UspsPickupGetOptions.ifNoneMatch`.
+  as `UspsPickupGetOptions.ifNoneMatch`. Axios rejects a 304 by default (its
+  `validateStatus` admits 2xx only) and core passes a request's own `validateStatus`
+  through to axios (`this.http.request(request.config)` in
+  `@dianemo/core/dist/client/methods/handleRequest.js`), so with `ifNoneMatch` set
+  `getPickup` admits 304 and resolves to `{ notModified: true, etag }`
+  (`UspsPickupNotModified`); without it nothing changes. A typed overload keeps the
+  no-option call returning `UspsPickupGetResult` only. `validateStatus` is spread in only
+  when `ifNoneMatch` is set: an explicit `undefined` would reach axios as "accept every
+  status". Covered by a test through a real `RequestHandler` and a local server
+  (`test/realHandler.test.ts`); that the 304 is a real USPS answer is documented by the
+  spec, not shown by any example.
 - `eligibility` returns a `PickupAddress`. `PickupConfirmation.confirmationNumber` is
   `readOnly`, and all its fields are optional.
 
@@ -1355,7 +1409,9 @@ rule, because they are published.
   object. An array, as the spec says, is also handled.
 - Does the API prefer the flat or the `carrierPickupRequest`-wrapped body on PUT, and does
   it return the same shape it was sent?
-- Does a 304 from `If-None-Match` reach the caller as an error through core? Untested.
+- Settled for core and axios (see Wire notes): a 304 now resolves when `ifNoneMatch` is
+  set. Whether USPS answers 304 with an `ETag` header is unverified; the result falls back to
+  the `ifNoneMatch` that was sent.
 
 ## Locations
 
@@ -1481,7 +1537,8 @@ the table in the interceptor section above).
 - **Create (`POST /containers`).** The 201 is documented only as `multipart/form-data`,
   with schema `Container`. That schema has no image property: `containerID` and `warnings`
   are read-only, `imageInfo` is write-only. The spec never says where the label image sits,
-  and there is no vendor `+json` alternative. **USPS's published example settles the
+  and there is no vendor `+json` alternative, so the request sends `Accept:
+multipart/form-data` explicitly rather than relying on the default. **USPS's published example settles the
   layout** (github.com/USPS/api-examples README, checked 2026-11-12; not an observed
   response): the body is multipart with a JSON part `Content-Disposition: form-data;
 name="containerMetadata"` and a part `name="labelImage"; filename="labelImage.pdf"`,
@@ -1495,24 +1552,23 @@ name="containerMetadata"` and a part `name="labelImage"; filename="labelImage.pd
   `NONSTANDARD`.
 - **How the multipart body is read.** Core's `RequestConfig` extends axios's, so
   `responseType: "arraybuffer"` is passed through (`plugin-labelary` and `plugin-ups` use it)
-  and axios hands back a `Buffer`; text would corrupt a binary image. Core logs a `Buffer`
-  body as `[Buffer n bytes]`. A failure status therefore carries a `Buffer`, not a parsed
-  object, in the error's `originalError`. `createUspsContainerLabel` requests bytes and
+  and axios hands back a `Buffer`; text would corrupt a binary image. `createUspsContainerLabel`
   returns `{ metadata, labelImage? }`, where `labelImage` is `{ bytes: Buffer, contentType,
 filename? }`, through `parseContainerLabelResponse` (`src/requests/containers/utils.ts`,
-  on the generic splitter in `src/requests/multipart.ts`; no new dependency). It takes the
-  boundary from the `Content-Type` header, or from the first body line when the header is
-  missing; counts a delimiter only at a line start; accepts CRLF or LF; and ignores parts it
-  does not know. A body with no boundary that parses as JSON is returned as metadata alone;
-  anything unreadable throws `USP_0094`. **A part is base64-decoded when it says
-  `Content-Transfer-Encoding: base64` or when its whole body is base64 characters.** The README
-  shows the PDF as base64 text with no such header, which a raw PDF never looks like (it
-  starts `%PDF`), and has one stray space inside the string, which the decoder tolerates;
-  whether live responses carry raw bytes or base64 is unverified, so the parser handles both.
-  Verified against the README's own multipart block (it decodes to a 5,964-byte `%PDF-1.4`
-  file) and in tests against a binary part containing every byte value, CRLF and a
-  boundary prefix. The return type changed from the metadata object to `{ metadata,
-labelImage? }`; not breaking against v2.0.0, which had no Containers.
+  on the generic splitter in `src/requests/multipart.ts`; no new dependency). The parser's
+  rules, including how parts are identified and when a part is base64-decoded, are in
+  [Multipart parts](#multipart-parts); what a failure status looks like is in
+  [Binary responses and error bodies](#binary-responses-and-error-bodies). A body with no
+  boundary that parses as JSON is returned as metadata alone; anything unreadable throws
+  `USP_0094`; a multipart body with no image part throws `USP_0159` unless the request
+  asked for `imageInfo.imageType: "NONE"`. Verified against the README's own multipart block
+  (it decodes to a 5,964-byte `%PDF-1.4` file) and in tests against a binary part containing
+  every byte value, CRLF and a boundary prefix. The return type changed from the metadata
+  object to `{ metadata, labelImage? }`; not breaking against v2.0.0, which had no Containers.
+- **Container response address.** The spec's `Address` has `streetAddressAbbreviation` and
+  `cityAbbreviation`, both `readOnly` (vendor documentation, `containers_10.yaml`). They are
+  on the response type `UspsContainerResponseOriginAddress` only, not on the request's
+  `UspsContainerOriginAddress`.
 - **Other Containers examples** (USPS's published examples, checked 2026-11-12).
   The add-packages request (`{ trackingNumbers: [...] }`) and response match
   `UspsContainerResponse`; the response has `secondaryAddress: null` (now `string | null`),
@@ -1719,8 +1775,12 @@ their handler. Verification, per the spec text:
 
 ### Shared types
 
-The `Subscription`, `EmailNotification`, `Links` and `PaginationMetadata` schemas differ only
-in description wording and max-lengths across the eight specs, so they are one shared type.
+The `Subscription`, `EmailNotification`, `Links` and `PaginationMetadata` schemas are
+near-identical across the eight specs, and are one shared type. An earlier version of this
+file called the `Subscription` schemas identical; that is false at schema level (checked
+against the specs, vendor documentation): the addresses spec spells the id `SubscriptionId`,
+and the two tracking specs add `accessControl`. The shared types already cover both (an
+optional `SubscriptionId` and an optional `accessControl`), so nothing in the code changed.
 Filters, subscription types and payloads stay per product.
 
 ### Spec contradictions and quirks
@@ -1856,6 +1916,17 @@ operations (and callback detail) is modelled and passed as `params`.
   The `{callbackKey}/summary|detail` and `{campaignID}/pieces` paths differ in method, so
   they do not collide.
 
+### Read-only fields on the create types
+
+`UspsMailCampaign` and `UspsPackageCampaign` are both the create body and the response, so
+they include fields the specs mark `readOnly` (`campaigns_3.yaml` `Campaign`:
+`campaignID`, `submitterCRID`, `campaignSource`, `addBarcode`, `barcodeCount`, `cancel`,
+`createdDatetime`, `delete`, `fullEdit`, `lastModifiedDatetime`, `lastModifiedSource`,
+`lastModifiedUsername`, `limitedEdit`, `noEdit`, `status`, `submittedDatetime`; the package
+spec's `PackageCampaign` has the same minus `campaignSource`, `lastModifiedSource` and
+`lastModifiedUsername`). Sending one is not stated to be an error, but nothing says USPS ignores
+it either. Not split into request and response types here; documented only.
+
 ### Spec contradictions and oddities
 
 - Mail `Campaign.campaignType` is described as codes A01 NON-SEQ, A02 MID, A03 SEQ, A04 SAT;
@@ -1926,3 +1997,111 @@ USP_0159 is unused.
   `bedload.uspsContainerInfo` (additive). The example's `mailClass` is `PARCEL_SELECT` and
   the availability example's is `USPS_MARKETING_MAIL`, both typed. The collection sends no
   headers beyond bearer auth.
+
+## Multipart and binary responses
+
+The plugin reads two multipart responses: container label creation (`containerMetadata` and
+`labelImage`) and indicia and IMB indicia creation (`indiciaMetadata`, `indiciaImage`,
+`receiptImage`). Other label operations request vendor JSON and never see multipart.
+
+### Binary responses and error bodies
+
+Container label creation and both indicia creations ask axios for
+`responseType: "arraybuffer"`, because text would corrupt a binary image. Source: reading
+`@dianemo/core` (`dist/utils/redact.js`), then a test that fails without the fix.
+
+- **The defect.** On a non-2xx status core runs `sanitizeError`, which runs `redactBody`
+  over `error.response.data`; a `Buffer` is replaced by the string `"[Buffer n bytes]"`. The
+  same redacted value is what core's `tryHandleRequest` puts in the thrown error's
+  `metadata.originalError.data` and logs. USPS's JSON error message was therefore lost for
+  these three calls. An earlier version of this file and of the code comments said the
+  opposite (that the caller would get a `Buffer` to read); it never did.
+- **The fix.** Each of the three requests passes `transformResponse: bytesOnSuccess`
+  (`src/requests/utils.ts`). Axios calls it with `(data, headers, status)` on a success and
+  on an error response alike. For a 2xx status it returns `data` unchanged, which is the very
+  `Buffer` axios built, so the PDF bytes cannot be altered. For any other status it decodes
+  the body as UTF-8 and returns the parsed JSON, or the text when it is not JSON. A failure
+  body is an error message, never an image, which is why decoding it is safe; the success
+  path is the only place bytes matter and it is not touched.
+- **What the caller sees.** `RequestError` with the call's own code (`USP_0083`,
+  `USP_0023`, `USP_0024`) and `metadata.originalError.data` holding USPS's parsed error. Core
+  still redacts by key name, so a field named `code` appears as `"[REDACTED]"`
+  (`SENSITIVE_KEY_PATTERN` in core); the `message` survives.
+- **Tests.** `test/realHandler.test.ts` runs a 400 through a real `RequestHandler`, real axios
+  and a local HTTP server. Without `transformResponse` its first assertion fails with
+  `'"[Buffer 85 bytes]"'` (checked by removing the line). The same file round-trips a
+  PDF containing every byte value and a boundary-like line through the real client, which is
+  what shows the success path is byte-exact.
+
+### Multipart parts
+
+`src/requests/multipart.ts` is a small splitter, not a general MIME parser. Evidence:
+USPS's published README example for the container and indicia bodies, and the specs'
+header examples. Rules, each with a test in `test/multipart.test.ts`:
+
+- **Delimiters.** A delimiter is `--boundary` at the start of a line, followed by a line
+  break, `--`, trailing blanks or the end of the buffer. `--XXY` is therefore not a delimiter
+  for boundary `XX`; it is body text. LF-only bodies are accepted.
+- **No closing delimiter.** A body without `--boundary--` keeps its last part, with the bytes
+  exactly as they arrived (nothing says where such a body ends, so no trailing line break is
+  guessed away). Text after a closing delimiter is ignored.
+- **Boundary parameter.** Quoted or bare; a quoted boundary may contain spaces
+  (`boundary="a b-c"`), as RFC 2046 allows. A parameter that merely ends in `boundary` is not
+  matched. With no header the first body line is the delimiter, as in USPS's bare README
+  example.
+- **Parts without headers** are read (the part opens with its blank line).
+- **Base64.** A part is decoded when it says `Content-Transfer-Encoding: base64`, or when it
+  is declared a PDF or image (by `Content-Type` `application/pdf`, `application/octet-stream`
+  or `image/*`, or by a `.pdf`, `.png`, `.jpg`, `.gif`, `.tif`, `.svg` file name) **and** its
+  whole body is base64 text (whitespace allowed, `=` only as trailing padding). USPS's README
+  shows the PDF as base64 text with no transfer encoding, which is why the second rule exists.
+  Bytes that merely fall in the base64 alphabet are not enough: ZPL, or any part not declared
+  binary, is left as it arrived. A raw PDF (`%PDF`), PNG (0x89) or JPEG (0xFF) starts with a
+  non-alphabet byte, so a binary part is never mistaken for text. An earlier version decoded
+  anything whose body looked like base64.
+- **Which part is which.** The specs' own header example for an image part is
+  `Content-Disposition: attachment; filename="label-image.jpg"` with **no `name`**
+  (`containers_10.yaml` ~312; `labels_18_0.yaml` ~129, 150, 161, 222), while the README
+  example names the part (`name="labelImage"`). The plugin therefore does not depend on a
+  name. The metadata part is the one named `containerMetadata` / `indiciaMetadata`, else the
+  one whose `Content-Type` is JSON. For a container the image is the part named `labelImage`,
+  else the first part that is not the metadata. For indicia a part is `indiciaImage` or
+  `receiptImage` by its `name` when it has one, else by a file name beginning `indicia` or
+  `receipt`, else by document order (indicia first, receipt second). **The file-name and
+  order rules are inferences**; USPS states neither, and the README's own order is receipt
+  first, which is why a name must win when present.
+- **No image at all.** A multipart container response with no image part is `USP_0159`
+  (not a metadata-only result), unless the request asked for `imageInfo.imageType: "NONE"`.
+  An indicia response with no image part is `USP_0160`, unless the request asked for
+  `labelType: "IMI_DATA_ONLY"` or the metadata carries `indiciaIMI`, which is what the spec
+  says that option returns instead of an image (`labels_18_0.yaml` ~3504). A body that is
+  plain JSON is still read as before; the JSON form of indicia carries its images inline.
+
+Open: whether live responses send raw bytes or base64, and whether they name the image part,
+cannot be told without a real account; the parser handles each.
+
+## Testing
+
+Most tests in this package stub `handleRequest` on a real `RequestHandler`. That sees the
+request a function builds and the value it returns, and nothing that core or axios does
+before or after: the stub never decodes a body, applies `validateStatus`, or redacts an
+error. Two defects (a binary error body replaced by `"[Buffer n bytes]"`, and a 304 that
+could never succeed) were invisible to those tests for exactly that reason.
+
+Behaviours that now have a test through a real `RequestHandler`, real axios and a local
+`node:http` server (`test/realHandler.test.ts`, the pattern of
+`plugin-fedex/test/tradeDocuments.test.ts`):
+
+- a failed `createUspsContainerLabel` and `createLabelIndicia` carry USPS's error message,
+  JSON or plain text;
+- `createUspsContainerLabel` returns a PDF containing every byte value unchanged, sends
+  `Accept: multipart/form-data`, reads an image part with a filename and no name, fails
+  `USP_0159` with no image and accepts none for `imageType: "NONE"`;
+- `createLabelIndicia` assigns unnamed image parts by file name and fails `USP_0160` with
+  none;
+- `getPickup` with `ifNoneMatch` resolves a 304, still returns a 200, and without the option
+  still rejects a 304.
+
+Everything else, including the payment-token mint (`test/client.test.ts`), is still checked
+at the `handleRequest` stub and carries that blind spot. The input types are checked by the
+compiler through `npm run check` (`test/specTypes.test.ts` uses `@ts-expect-error`).

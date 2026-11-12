@@ -30,56 +30,61 @@ function documentsBaseUrl(baseUrl: string): string {
 }
 
 export async function registerFedexTemplate(handler: RequestHandler) {
-  await handler.registerClientTemplate("fedex", (creds): CreateClientData[] => [
-    {
-      // Still a usable client in its own right: every request function except
-      // the trade-document uploads dispatches against this name, as in v1.0.0.
-      name: buildClientName("fedex", creds),
-      // FedEx's own figure, verbatim. Scoped to the *project*, not to a set of
-      // credentials, so two clients on one FedEx project each meter to 1,400 and
-      // overrun it together — docs/fedex-api.md#rate-limit-1400-transactions-per-10-seconds-per-project
-      rateLimit: [
-        {
-          type: "requestLimit",
-          interval: 10000,
-          tokensToAdd: 1400,
-          maxTokens: 1400,
-        },
-      ],
-      httpStatusCodesToMute: [500, 503],
-      requestOptions: { defaults: { baseURL: creds.baseUrl } },
-      authentication: {
-        type: "oauth2",
-        clientId: creds.clientId,
-        clientSecret: creds.clientSecret,
-        refreshConfig: {
-          url: `${creds.baseUrl}/oauth/token`,
-          dataLocation: "urlEncodedForm",
-          data: {
-            grant_type: "client_credentials",
-            client_id: "{{clientId}}",
-            client_secret: "{{clientSecret}}",
+  await handler.registerClientTemplate("fedex", (creds): CreateClientData[] => {
+    // `${baseUrl}/oauth/token` would otherwise read `//oauth/token` for a base URL
+    // ending in a slash, which a proxy or mock may route differently.
+    const tokenUrl = `${creds.baseUrl.replace(/\/+$/, "")}/oauth/token`;
+    return [
+      {
+        // Still a usable client in its own right: every request function except
+        // the trade-document uploads dispatches against this name, as in v1.0.0.
+        name: buildClientName("fedex", creds),
+        // FedEx's own figure, verbatim. Scoped to the *project*, not to a set of
+        // credentials, so two clients on one FedEx project each meter to 1,400 and
+        // overrun it together — docs/fedex-api.md#rate-limit-1400-transactions-per-10-seconds-per-project
+        rateLimit: [
+          {
+            type: "requestLimit",
+            interval: 10000,
+            tokensToAdd: 1400,
+            maxTokens: 1400,
           },
-        },
-      },
-      subClients: [
-        {
-          name: FEDEX_DOCUMENTS_CLIENT,
-          // The spec states no quota for the document host, so it draws on the
-          // project's 1,400 per 10 s rather than a bucket of its own: sharing can
-          // under-use a separate quota but cannot overrun a shared one —
-          // docs/fedex-api.md#trade-documents-upload-host.
-          rateLimit: [
-            {
-              type: "sharedLimit",
-              clientName: buildClientName("fedex", creds),
+        ],
+        httpStatusCodesToMute: [500, 503],
+        requestOptions: { defaults: { baseURL: creds.baseUrl } },
+        authentication: {
+          type: "oauth2",
+          clientId: creds.clientId,
+          clientSecret: creds.clientSecret,
+          refreshConfig: {
+            url: tokenUrl,
+            dataLocation: "urlEncodedForm",
+            data: {
+              grant_type: "client_credentials",
+              client_id: "{{clientId}}",
+              client_secret: "{{clientSecret}}",
             },
-          ],
-          requestOptions: {
-            defaults: { baseURL: documentsBaseUrl(creds.baseUrl) },
           },
         },
-      ],
-    },
-  ]);
+        subClients: [
+          {
+            name: FEDEX_DOCUMENTS_CLIENT,
+            // The spec states no quota for the document host, so it draws on the
+            // project's 1,400 per 10 s rather than a bucket of its own: sharing can
+            // under-use a separate quota but cannot overrun a shared one —
+            // docs/fedex-api.md#trade-documents-upload-host.
+            rateLimit: [
+              {
+                type: "sharedLimit",
+                clientName: buildClientName("fedex", creds),
+              },
+            ],
+            requestOptions: {
+              defaults: { baseURL: documentsBaseUrl(creds.baseUrl) },
+            },
+          },
+        ],
+      },
+    ];
+  });
 }

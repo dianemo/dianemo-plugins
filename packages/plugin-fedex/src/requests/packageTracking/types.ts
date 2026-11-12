@@ -574,6 +574,19 @@ export interface FedExTrackNotificationOutput {
 export type FedExTrackNotificationResponse =
   FedExTrackResponse<FedExTrackNotificationOutput>;
 
+/** Exactly one end-date spelling: docs/fedex-api.md#package-tracking-track-api. */
+export type FedExTrackReferencesEndDate =
+  | {
+      /** Format YYYY-MM-DD. The spelling the schema requires. */
+      shipDateEndDate: string;
+      shipDateEnd?: never;
+    }
+  | {
+      /** Format YYYY-MM-DD. The spelling the spec's example and every sibling operation use. */
+      shipDateEnd: string;
+      shipDateEndDate?: never;
+    };
+
 export interface FedExTrackReferencesRequest {
   referencesInformation: {
     carrierCode?: string;
@@ -582,11 +595,9 @@ export interface FedExTrackReferencesRequest {
     accountNumber?: string;
     /** Format YYYY-MM-DD */
     shipDateBegin: string;
-    /** Format YYYY-MM-DD. Spelled shipDateEndDate in the spec schema only. */
-    shipDateEndDate: string;
     destinationCountryCode?: string;
     destinationPostalCode?: string;
-  };
+  } & FedExTrackReferencesEndDate;
   includeDetailedScans?: boolean;
 }
 
@@ -613,9 +624,10 @@ export type FedExTrackTcnResponse = FedExTrackResponse<FedExTrackOutput>;
 
 export interface FedExTrackDocumentsRequest {
   trackDocumentDetail: {
-    documentType: FedExTrackDocumentType;
+    /** The spec types this as a plain string and lists three values in prose; `(string & {})` keeps autocomplete. */
+    documentType: FedExTrackDocumentType | (string & {});
     /** PDF or PNG, case sensitive; PNG is not offered for BILL_OF_LADING or FREIGHT_BILLING_DOCUMENT. */
-    documentFormat?: "PDF" | "PNG";
+    documentFormat?: "PDF" | "PNG" | (string & {});
   };
   /** One to 30 entries. */
   trackDocumentSpecification: {

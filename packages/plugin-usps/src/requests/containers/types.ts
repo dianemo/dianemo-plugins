@@ -43,6 +43,12 @@ export interface UspsContainerOriginAddress {
   urbanization?: string;
 }
 
+/** A response's address: USPS adds the two `readOnly` abbreviations. */
+export interface UspsContainerResponseOriginAddress extends UspsContainerOriginAddress {
+  streetAddressAbbreviation?: string;
+  cityAbbreviation?: string;
+}
+
 export interface UspsContainerWarning {
   warningCode?: string;
   warningDescription?: string;
@@ -80,7 +86,7 @@ export interface UspsContainerResponse {
   sortType: UspsContainerSortType;
   processingCategory: UspsContainerProcessingCategory;
   destinationEntryFacilityType: UspsContainerDestinationEntryFacilityType;
-  originAddress: UspsContainerOriginAddress;
+  originAddress: UspsContainerResponseOriginAddress;
   destinationZIPCode?: string;
   originFacility?: string;
   containerTopology?: "NESTED";
@@ -98,7 +104,7 @@ export interface UspsContainerLabelImage {
 /** The two parts of the `POST /containers` multipart response. */
 export interface UspsContainerLabelResult {
   metadata: UspsContainerResponse;
-  /** Absent when no `labelImage` part came back (for example `imageType: "NONE"`). */
+  /** Absent only when the request asked for `imageType: "NONE"`; otherwise a missing image is USP_0159. */
   labelImage?: UspsContainerLabelImage;
 }
 

@@ -85,6 +85,18 @@ export interface UpsDeliveryInterceptChargesResponseV2 {
       taxDisclaimerIndicator: "NTC" | "NTA" | "TA" | "TE" | "TU";
       interceptChargeDetail?: UpsDeliveryInterceptChargeDetailV2[];
     }[];
+    /**
+     * The totals and the token below are in the charges examples embedded in
+     * UPS's OpenAPI spec but not in its schema, and the examples leave the
+     * totals as empty strings — docs/ups-api.md#delivery-intercept
+     */
+    addrToken?: string;
+    accessorialGrandTotal?: string;
+    interceptGrandTotal?: string;
+    transportationGrandTotal?: string;
+    grandTotalCharge?: string;
+    taxesGrandTotal?: string;
+    preTaxGrandTotal?: string;
   };
 }
 
@@ -134,9 +146,11 @@ export interface UpsDeliveryInterceptEligibilityEntry {
 
 export interface UpsDeliveryInterceptEligibilityOptionsResponseV2 {
   response: UpsDeliveryInterceptCommonResponseV2 & {
+    /** `null` in the spec's own 200 `ERROR` example */
     commonEligibilityMap:
       | UpsDeliveryInterceptEligibilityEntry
-      | UpsDeliveryInterceptEligibilityEntry[];
+      | UpsDeliveryInterceptEligibilityEntry[]
+      | null;
   };
 }
 

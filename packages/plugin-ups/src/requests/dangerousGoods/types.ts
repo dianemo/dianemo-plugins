@@ -9,7 +9,8 @@ export interface UpsDangerousGoodsChemicalReferenceDataResponseWrapper {
 }
 
 export interface UpsDangerousGoodsChemicalReferenceDataRequest {
-  Request: UpsDangerousGoodsChemicalReferenceDataRequestRequest;
+  /** Optional: the spec's own example omits it. */
+  Request?: UpsDangerousGoodsChemicalReferenceDataRequestRequest;
   IDNumber?: string;
   /** The Proper Shipping Name assigned by ADR, CFR or IATA. At least one of the information - IDNumber or ProperShippingName should be provided to retrieve Chemical Reference Data. */
   ProperShippingName?: string;
@@ -57,6 +58,8 @@ export interface UpsDangerousGoodsResponseAlert {
 export interface UpsDangerousGoodsResponseTransactionReference {
   /** The CustomerContext information which will be echoed during response. */
   CustomerContext?: string;
+  /** In UPS's v1 samples and spec examples, though not in the spec's schema. */
+  TransactionIdentifier?: string;
 }
 
 export interface UpsDangerousGoodsChemicalReferenceDataResponseChemicalData {
@@ -128,7 +131,8 @@ export interface UpsDangerousGoodsAcceptanceAuditPreCheckRequestShipment {
   ShipToAddress: UpsDangerousGoodsShipmentShipToAddress;
   Service: UpsDangerousGoodsShipmentService;
   RegulationSet?: string;
-  Package: UpsDangerousGoodsShipmentPackage[];
+  Package:
+    UpsDangerousGoodsShipmentPackage | UpsDangerousGoodsShipmentPackage[];
 }
 
 export interface UpsDangerousGoodsShipmentShipFromAddress {
@@ -168,7 +172,9 @@ export interface UpsDangerousGoodsShipmentPackage {
   TransportationMode?: string;
   EmergencyPhone?: string;
   EmergencyContact?: string;
-  ChemicalRecord: UpsDangerousGoodsPackageChemicalRecord[];
+  ChemicalRecord:
+    | UpsDangerousGoodsPackageChemicalRecord
+    | UpsDangerousGoodsPackageChemicalRecord[];
 }
 
 /** Container to hold package weight information. */

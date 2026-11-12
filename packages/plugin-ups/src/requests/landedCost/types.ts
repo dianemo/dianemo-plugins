@@ -10,7 +10,8 @@ export interface UpsLandedCostRequest {
   currencyCode: string;
   transID: string;
   allowPartialLandedCostResult?: boolean;
-  alversion: number;
+  /** The schema requires it; UPS's own request example omits it — docs/ups-api.md#landed-cost-response-spellings */
+  alversion?: number;
   shipment: UpsLandedCostRequestShipment;
 }
 
@@ -57,7 +58,9 @@ export interface UpsLandedCostResponse {
     totalCommodityLevelTaxesAndFees: number;
     totalShipmentLevelTaxesAndFees: number;
     totalVAT: number;
-    totalDutyAndTax: number;
+    totalDutyAndTax?: number;
+    /** The example's spelling of `totalDutyAndTax` — docs/ups-api.md#landed-cost-response-spellings */
+    totalDutyandTax?: number;
     grandTotal: number;
     shipmentItems: UpsLandedCostResponseShipmentItems[];
     transID?: string;
@@ -72,13 +75,21 @@ export interface UpsLandedCostBrokerageFeeItems {
   chargeAmount?: number;
 }
 
+/**
+ * Each pair below is the schema's spelling and then the 200 example's, both
+ * embedded in UPS's OpenAPI spec; the response can carry either, so every one is
+ * optional — docs/ups-api.md#landed-cost-response-spellings
+ */
 export interface UpsLandedCostResponseShipmentItems {
-  commodityID: string;
+  commodityID?: string;
+  commodityId?: string;
   hsCode: string;
   commodityDuty: number;
   totalCommodityTaxAndFee?: number;
+  totalCommodityTaxesAndFees?: number;
   commodityVAT: number;
-  totalCommodityDutyAndTax: number;
+  totalCommodityDutyAndTax?: number;
+  totalCommodityDutyandTax?: number;
   commodityCurrencyCode: string;
   isCalculable: boolean;
 }

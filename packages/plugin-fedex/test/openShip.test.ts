@@ -1,3 +1,4 @@
+import type { FedExOpenShipDeliveryOnInvoiceAcceptanceDetail } from "../src/requests/openShip/types.js";
 import RequestHandler, { definePlugin, memoryBackend } from "@dianemo/core";
 import * as openShip from "../src/requests/openShip/index.js";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -80,5 +81,28 @@ describe("plugin-fedex openShip", () => {
       ([, , url]) => url === "/ship/v1/openshipments/"
     );
     expect(shared.map(([, method]) => method).sort()).toEqual(["POST", "PUT"]);
+  });
+});
+
+describe("plugin-fedex openShip delivery-on-invoice recipient contact", () => {
+  it("requires companyName, personName and phoneNumber, as the spec's allOf override does", () => {
+    const ok: FedExOpenShipDeliveryOnInvoiceAcceptanceDetail = {
+      recipient: {
+        address: { streetLines: ["1 Main St"], countryCode: "US" } as never,
+        contact: {
+          companyName: "FedEx",
+          personName: "John Taylor",
+          phoneNumber: "9013577890",
+        },
+      },
+    };
+    const missing: FedExOpenShipDeliveryOnInvoiceAcceptanceDetail = {
+      recipient: {
+        address: { streetLines: ["1 Main St"], countryCode: "US" } as never,
+        // @ts-expect-error companyName and personName are required on this path
+        contact: { phoneNumber: "9013577890" },
+      },
+    };
+    expect([ok, missing]).toHaveLength(2);
   });
 });

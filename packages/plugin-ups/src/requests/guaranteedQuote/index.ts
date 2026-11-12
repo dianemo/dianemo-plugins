@@ -20,9 +20,12 @@ export const createGuaranteedQuote = async (
       requestName: "ups.guaranteedQuote.createGuaranteedQuote",
       method: "POST",
       url: `/api/brokerage/${BROKERAGE_VERSION}/content/glc/request-quote`,
-      headers: registrationId
-        ? { "registration-id": registrationId }
-        : undefined,
+      // Marked required by the spec; axios's own default Accept would also cover
+      // it, but a requirement is cheaper to meet than to argue about
+      headers: {
+        Accept: "application/json",
+        ...(registrationId && { "registration-id": registrationId }),
+      },
       data,
     },
     "UPS_0066",

@@ -48,6 +48,9 @@ export interface UpsSmartPickupUpdatePickupInfoResponseV1 {
 }
 
 export interface UpsSmartPickupAccountInfoV1 {
+  /** What every request example in UPS's OpenAPI spec sends, and the response schema declares. */
+  AccountNumber?: UpsSmartPickupAccountNumberV1;
+  /** The request schema's own spelling, a typo; both are accepted — docs/ups-api.md#smart-pickup-account-key */
   AccountNmber?: UpsSmartPickupAccountNumberV1;
   CountryCode?: UpsSmartPickupCountryCodeV1;
 }

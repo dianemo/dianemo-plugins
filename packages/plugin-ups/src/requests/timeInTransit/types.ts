@@ -1,5 +1,5 @@
-/** 01 residential, 02 commercial. */
-export type UpsTimeInTransitResidentialIndicator = "01" | "02";
+/** 01 residential, 02 commercial; UPS's own sample sends an empty string. */
+export type UpsTimeInTransitResidentialIndicator = "" | "01" | "02";
 
 /** 02 document, 03 non-document, 04 WWEF pallet. */
 export type UpsTimeInTransitBillType = "02" | "03" | "04";
@@ -30,11 +30,11 @@ export interface UpsTimeInTransitRequest {
   /** HH:MM:SS; defaults to now. */
   shipTime?: string;
   /** Required for international requests; rounded to tenths, at most 70 kg / 150 lb. */
-  weight?: number;
+  weight?: number | string;
   /** Required for international requests and whenever `weight` is sent. */
   weightUnitOfMeasure?: UpsTimeInTransitWeightUnit;
   /** Required when origin and destination countries differ and billType is 03 or 04. */
-  shipmentContentsValue?: number;
+  shipmentContentsValue?: number | string;
   /** ISO currency code; required when `shipmentContentsValue` is sent. */
   shipmentContentsCurrencyCode?: string;
   /** Required for international requests. */
@@ -42,7 +42,7 @@ export interface UpsTimeInTransitRequest {
   /** The spec says this is not to be exposed to external customers. Defaults to true. */
   avvFlag?: boolean;
   /** Defaults to 1. */
-  numberOfPackages?: number;
+  numberOfPackages?: number | string;
   /** 0 pickup by UPS, 1 dropped off by the shipper; billType 04 only. */
   dropOffAtFacilityIndicator?: 0 | 1;
   /** 0 delivery by UPS, 1 pickup by consignee; billType 04 only. */
@@ -73,7 +73,8 @@ export interface UpsTimeInTransitValidationList {
 
 export interface UpsTimeInTransitCandidateAddress {
   countryName: string;
-  countryCode: string;
+  /** Optional: the spec's `required` list spells it `CountryCode`, which is no property; the property is optional. */
+  countryCode?: string;
   stateProvince?: string;
   city?: string;
   town?: string;
@@ -137,7 +138,8 @@ export interface UpsTimeInTransitService {
   serviceRemarksText?: string;
   /** "1" guaranteed; "0" not guaranteed, always so while `guaranteeSuspended`. */
   guaranteeIndicator: string;
-  saturdayDeliveryIndicator: string;
+  /** Optional: the spec lists it only in `required` and defines no such property. */
+  saturdayDeliveryIndicator?: string;
   /** Business days plus rest days plus holidays; international only. */
   totalTransitDays: number;
   businessTransitDays: number;

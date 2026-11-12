@@ -619,6 +619,8 @@ export interface UspsLabelWarning {
 
 export interface UspsLabelLink {
   rel: string[];
+  /** A human-readable description of the relationship. */
+  title?: string;
   href: string;
   method?: "GET" | "POST" | "PUT" | "DELETE";
   submissionMediaType?: string;

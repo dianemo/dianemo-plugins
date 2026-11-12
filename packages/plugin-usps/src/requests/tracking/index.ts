@@ -88,7 +88,7 @@ export const requestTrackingProofOfDelivery = async (
   return res.data;
 };
 
-/** 207 is a success status; check each entry for a `statusCode`. */
+/** 207 is a success status; 200 and 207 bodies are told apart per entry by `statusCode`. */
 export const trackPackagesV3r2 = async (
   clientName: string,
   data: UspsTrackingV3r2Request

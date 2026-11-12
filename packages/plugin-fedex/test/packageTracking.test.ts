@@ -1,3 +1,4 @@
+import type { FedExTrackReferencesRequest } from "../src/requests/packageTracking/types.js";
 import RequestHandler, { memoryBackend } from "@dianemo/core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { resetBinding } from "@dianemo/plugin-kit/testing";
@@ -112,4 +113,37 @@ describe("plugin-fedex packageTracking", () => {
       expect(config.data).toBe(body);
     }
   );
+});
+
+describe("plugin-fedex trackByReferences end date", () => {
+  const base = {
+    value: "56754674567546754",
+    accountNumber: "697561862",
+    shipDateBegin: "2019-02-13",
+  };
+
+  it.each([
+    ["shipDateEndDate", { ...base, shipDateEndDate: "2019-02-14" }],
+    ["shipDateEnd", { ...base, shipDateEnd: "2019-02-14" }],
+  ] as const)("accepts %s and sends it unchanged", async (_, info) => {
+    const { spy, requests } = setup();
+    await requests.trackByReferences(CLIENT, { referencesInformation: info });
+    expect(spy.mock.calls[0][0].data).toEqual({ referencesInformation: info });
+  });
+
+  it("rejects both spellings together and neither, at the type level", () => {
+    const both: FedExTrackReferencesRequest = {
+      // @ts-expect-error exactly one spelling is allowed
+      referencesInformation: {
+        ...base,
+        shipDateEnd: "a",
+        shipDateEndDate: "b",
+      },
+    };
+    const neither: FedExTrackReferencesRequest = {
+      // @ts-expect-error one spelling is required
+      referencesInformation: { ...base },
+    };
+    expect([both, neither]).toHaveLength(2);
+  });
 });

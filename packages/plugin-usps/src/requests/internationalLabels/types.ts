@@ -26,9 +26,9 @@ export interface UspsInternationalLabelIndiciaOptions {
 
 export interface UspsInternationalLabelRequest {
   imageInfo?: UspsInternationalLabelImageInfo;
-  toAddress: UspsInternationalLabelLabelAddress;
-  fromAddress: UspsInternationalLabelDomesticLabelAddress;
-  senderAddress?: UspsInternationalLabelDomesticLabelSenderAddress;
+  toAddress: UspsInternationalLabelRequestLabelAddress;
+  fromAddress: UspsInternationalLabelRequestDomesticLabelAddress;
+  senderAddress?: UspsInternationalLabelRequestDomesticLabelSenderAddress;
   packageDescription: UspsInternationalLabelInternationalPackageDescription;
   customsForm: UspsInternationalLabelInternationalCustomsForm;
 }
@@ -134,8 +134,39 @@ export type UspsInternationalLabelDomesticLabelSenderAddress =
       platformUserId?: string;
     };
 
+/**
+ * The spec's `required` lists on `InternationalLabelAddress`,
+ * `DomesticLabelAddress` and `DomesticLabelSenderAddress` sit beside their
+ * `allOf`. They apply to a response's `labelAddress` too, but the response
+ * types above stay lenient: a missing field in what USPS sends back should not
+ * fail a caller's type check, whereas a request without them is refused.
+ */
+export type UspsInternationalLabelRequestLabelAddress =
+  UspsInternationalLabelLabelAddress & {
+    streetAddress: string;
+    city: string;
+    country: string;
+    countryISOAlpha2Code: string;
+  };
+
+export type UspsInternationalLabelRequestDomesticLabelAddress =
+  UspsInternationalLabelDomesticLabelAddress & {
+    streetAddress: string;
+    city: string;
+    state: UspsInternationalLabelState;
+    ZIPCode: string;
+  };
+
+export type UspsInternationalLabelRequestDomesticLabelSenderAddress =
+  UspsInternationalLabelDomesticLabelSenderAddress &
+    UspsInternationalLabelRequestDomesticLabelAddress;
+
 export type UspsInternationalLabelInternationalPackageDescription =
   UspsInternationalLabelPackageDescription & {
+    weight: number;
+    length: number;
+    width: number;
+    height: number;
     mailClass:
       | "FIRST-CLASS_PACKAGE_INTERNATIONAL_SERVICE"
       | "PRIORITY_MAIL_INTERNATIONAL"
@@ -183,6 +214,7 @@ export type UspsInternationalLabelInternationalCustomsForm =
     importersReference?: UspsInternationalLabelCustomsReference;
     exportersReference?: UspsInternationalLabelCustomsReference;
     incoterm?: ("1" | "2") | null;
+    AESITN: string;
     contents: UspsInternationalLabelInternationalShippingContents[];
   };
 
@@ -282,7 +314,7 @@ export interface UspsInternationalLabelPackageDescription {
 
 export type UspsInternationalLabelInternationalPackageOptions =
   UspsInternationalLabelPackageOptions & {
-    redirectAddress?: UspsInternationalLabelDomesticLabelAddress & {
+    redirectAddress?: UspsInternationalLabelRequestDomesticLabelAddress & {
       email?: UspsInternationalLabelEmail;
     };
     originalPackage?: {

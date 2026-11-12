@@ -224,6 +224,9 @@ export interface UspsServiceStandardDirectoryResponse {
 
 export interface UspsServiceStandardFileLink {
   rel: string[];
+  /** The file's name: each entry of the spec's `FilesExampleA` carries one. */
+  title?: string;
+  description?: string;
   href: string;
   method?: "GET" | "POST" | "PUT" | "DELETE";
   submissionMediaType?: string;

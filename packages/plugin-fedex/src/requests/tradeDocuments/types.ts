@@ -99,7 +99,8 @@ export interface FedExLetterheadImageDocument {
   referenceId: string;
   /** File name sent with the `attachment` part. */
   name: string;
-  contentType: FedExLetterheadImageContentType;
+  /** A plain string in the multipart schema; its description names these two. The base64 variant has a real enum and stays narrow. */
+  contentType: FedExLetterheadImageContentType | (string & {});
   meta: FedExLetterheadImageMeta;
 }
 

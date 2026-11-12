@@ -89,8 +89,8 @@ export interface UpsCustomsDetailField {
   label: string;
   /** Up to three characters; a string, not a number. */
   order: string;
-  /** Required by the schema but not described there; the field's help text. */
-  tooltip: string;
+  /** The field's help text; the schema's type is `[string, "null"]`. */
+  tooltip: string | null;
   isRequired: UpsCustomsDetailRequired;
   requirementConditions?: UpsCustomsDetailRequirementCondition[] | null;
   displayConditions?: UpsCustomsDetailDisplayCondition[] | null;
@@ -183,6 +183,8 @@ export interface UpsCustomsDetailSubmitOptions {
 export interface UpsCustomsDetailError {
   code: string;
   message: string;
+  /** A symbolic name such as `VALUE_REQUIRED`; the 401 example has `null`. */
+  description?: string | null;
   field?: string | null;
   value?: string | null;
 }

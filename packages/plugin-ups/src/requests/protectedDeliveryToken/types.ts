@@ -5,11 +5,12 @@ export interface UpsProtectedDeliveryPinByTokenParams {
 
 /**
  * The spec makes `trackingNumber` and `Authorization` required *headers* and `action`
- * and `epra` optional, on a GET — see docs/ups-api.md#protected-delivery-token.
+ * and `epra` optional, on a GET. There is no `authorization` field here: the
+ * client's own bearer token is what UPS receives — see
+ * docs/ups-api.md#protected-delivery-token.
  */
 export interface UpsProtectedDeliveryEpraParams {
   trackingNumber: string;
-  authorization: string;
   action?: string;
   epra?: string;
 }

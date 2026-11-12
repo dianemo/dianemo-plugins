@@ -21,7 +21,9 @@ export interface CreatePickupData {
   accountAddressOfRecord?: FedExPickupAddress1;
   remarks?: string;
   countryRelationships?: "DOMESTIC" | "INTERNATIONAL";
-  pickupType?: "ON_CALL" | "PACKAGE_RETURN_PROGRAM" | "REGULAR_STOP";
+  /** A plain string in the spec; these three come from its prose. */
+  pickupType?:
+    "ON_CALL" | "PACKAGE_RETURN_PROGRAM" | "REGULAR_STOP" | (string & {});
   trackingNumber?: string;
   commodityDescription?: string;
   expressFreightDetail?: FedExPickupExpressFreightPickupDetail;
@@ -154,7 +156,8 @@ export interface CheckPickupAvailabilityData {
   packageReadyTime?: string;
   /** HH:MM:SS in the pickup location's timezone. */
   customerCloseTime?: string;
-  pickupType?: "ON_CALL" | "TAG";
+  /** A plain string in the spec; these two come from its prose. */
+  pickupType?: "ON_CALL" | "TAG" | (string & {});
   pickupRequestType: ("SAME_DAY" | "FUTURE_DAY")[];
   shipmentAttributes?: FedExPickupShipmentAttributes;
   numberOfBusinessDays?: number;
@@ -180,7 +183,8 @@ export interface FedExPickupPickupAddress {
 export interface FedExPickupShipmentAttributes {
   serviceType?: string;
   weight?: FedExPickupWeight;
-  packagingType?: FedExPackageType;
+  /** A plain string in the spec (example `YOUR_PACKAGING`). */
+  packagingType?: FedExPackageType | (string & {});
   dimensions?: FedExPickupDimensions;
 }
 

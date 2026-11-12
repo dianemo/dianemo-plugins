@@ -160,10 +160,18 @@ export type UspsPickupDetails = UspsPickupConfirmation;
 
 export interface UspsPickupGetOptions {
   /**
-   * A 304 has no body and is likely to reject as an error; see
-   * docs/usps-api.md before relying on it.
+   * An ETag from an earlier `getPickup`. When it still matches, USPS answers
+   * 304 with no body and the call resolves to `UspsPickupNotModified` instead
+   * of failing — see docs/usps-api.md#pickups.
    */
   ifNoneMatch?: string;
+}
+
+/** What `getPickup` resolves to when `ifNoneMatch` still matched (a 304). */
+export interface UspsPickupNotModified {
+  notModified: true;
+  /** The `ETag` header of the 304, else the `ifNoneMatch` that was sent. */
+  etag: string;
 }
 
 export interface UspsPickupGetResult {

@@ -31,11 +31,12 @@ export interface UpsPreNotificationRequestShipment {
   PickupDate: string;
   Service: UpsPreNotificationShipmentService;
   RegulationSet: string;
-  Package: UpsPreNotificationShipmentPackage[];
+  Package:
+    UpsPreNotificationShipmentPackage | UpsPreNotificationShipmentPackage[];
 }
 
 export interface UpsPreNotificationShipmentShipToAddress {
-  AddressLine: string[];
+  AddressLine: string | string[];
   City?: string;
   StateProvinceCode?: string;
   /** The Ship To location's postal code. 9 characters are accepted. */
@@ -45,7 +46,7 @@ export interface UpsPreNotificationShipmentShipToAddress {
 }
 
 export interface UpsPreNotificationShipmentShipFromAddress {
-  AddressLine: string[];
+  AddressLine: string | string[];
   City?: string;
   StateProvinceCode?: string;
   /** The Ship From location's postal code. 9 characters are accepted. */
@@ -69,7 +70,9 @@ export interface UpsPreNotificationShipmentPackage {
   TransportationMode?: string;
   VoidIndicator?: string;
   PackagePoints?: string;
-  ChemicalRecord: UpsPreNotificationPackageChemicalRecord[];
+  ChemicalRecord:
+    | UpsPreNotificationPackageChemicalRecord
+    | UpsPreNotificationPackageChemicalRecord[];
 }
 
 /** Container to hold package weight information. */
@@ -149,4 +152,6 @@ export interface UpsPreNotificationResponseAlert {
 export interface UpsPreNotificationResponseTransactionReference {
   /** The CustomerContext information which will be echoed during response. */
   CustomerContext?: string;
+  /** In UPS's v1 samples and spec examples, though not in the spec's schema. */
+  TransactionIdentifier?: string;
 }

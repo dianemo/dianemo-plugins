@@ -48,6 +48,21 @@ describe("usps locations", () => {
     );
   });
 
+  it("drops an empty array filter instead of sending `key=`", async () => {
+    const spy = setup();
+    await locations.getPostOfficeLocations(CLIENT, {
+      ZIPCode: "90210",
+      postOfficeType: [],
+      passportService: ["PASSPORT_PHOTO"],
+    });
+    const { params } = spy.mock.calls[0][0];
+    expect(params).toEqual({
+      ZIPCode: "90210",
+      passportService: "PASSPORT_PHOTO",
+    });
+    expect(params).not.toHaveProperty("postOfficeType");
+  });
+
   it("getPostOfficeLocations stringifies numbers and comma-joins array filters", async () => {
     const spy = setup();
     await locations.getPostOfficeLocations(CLIENT, {

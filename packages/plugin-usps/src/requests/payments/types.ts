@@ -55,6 +55,7 @@ export interface UspsAuthorizePaymentRequest {
 }
 
 export interface UspsAuthorizePaymentResponse {
-  paymentAuthorizationToken: string;
+  /** Not in the spec's `required` list; the token mint fails if it is absent. */
+  paymentAuthorizationToken?: string;
   roles: UspsPaymentRole[];
 }

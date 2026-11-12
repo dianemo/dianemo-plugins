@@ -36,7 +36,8 @@ describe("ups guaranteedQuote", () => {
     expect(config.method).toBe("POST");
     expect(config.url).toBe("/api/brokerage/v1/content/glc/request-quote");
     expect(config.data).toBe(body);
-    expect(config.headers).toBeUndefined();
+    // The spec marks Accept required
+    expect(config.headers).toEqual({ Accept: "application/json" });
   });
 
   it("sends registration-id only when given", async () => {
@@ -45,6 +46,7 @@ describe("ups guaranteedQuote", () => {
       registrationId: "643F7EAC-DC06-19E3-84C9-0274164A04E9",
     });
     expect(spy.mock.calls[0][0].headers).toEqual({
+      Accept: "application/json",
       "registration-id": "643F7EAC-DC06-19E3-84C9-0274164A04E9",
     });
   });

@@ -1,6 +1,6 @@
+import { bytesOnSuccess, uspsSubClient } from "../utils.js";
 import { tryHandleRequest } from "@dianemo/plugin-kit";
 import { readIndiciaBody } from "./utils.js";
-import { uspsSubClient } from "../utils.js";
 import type {
   UspsLabelAccountOptions,
   UspsLabelImbCancelResponse,
@@ -14,8 +14,8 @@ import type {
 // Every success content type of the indicia operations has the same schema;
 // plain JSON is asked for because the spec lists multipart/form-data first, but
 // USPS's own example shows multipart anyway, so the body is requested as bytes
-// and read by `readIndiciaBody`. A failure status therefore reaches the caller
-// with a `Buffer` body — see docs/usps-api.md#labels.
+// and read by `readIndiciaBody`. `bytesOnSuccess` keeps a failure's body
+// readable — see docs/usps-api.md#binary-responses-and-error-bodies.
 const JSON_ACCEPT = { Accept: "application/json" };
 
 export const createLabelIndicia = async (
@@ -32,6 +32,7 @@ export const createLabelIndicia = async (
       data,
       headers: JSON_ACCEPT,
       responseType: "arraybuffer",
+      transformResponse: bytesOnSuccess,
       metadata: { uspsAccountNumber: options.accountNumber },
     },
     "USP_0023",
@@ -39,7 +40,8 @@ export const createLabelIndicia = async (
   );
   return readIndiciaBody<UspsLabelIndiciaResponse>(
     res.data,
-    res.headers?.["content-type"] as string | undefined
+    res.headers?.["content-type"] as string | undefined,
+    data.imageInfo?.labelType !== "IMI_DATA_ONLY"
   );
 };
 
@@ -57,6 +59,7 @@ export const createLabelIndiciaImb = async (
       data,
       headers: JSON_ACCEPT,
       responseType: "arraybuffer",
+      transformResponse: bytesOnSuccess,
       metadata: { uspsAccountNumber: options.accountNumber },
     },
     "USP_0024",
@@ -64,7 +67,8 @@ export const createLabelIndiciaImb = async (
   );
   return readIndiciaBody<UspsLabelIndiciaImbResponse>(
     res.data,
-    res.headers?.["content-type"] as string | undefined
+    res.headers?.["content-type"] as string | undefined,
+    data.imageInfo?.labelType !== "IMI_DATA_ONLY"
   );
 };
 

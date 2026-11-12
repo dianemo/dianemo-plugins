@@ -56,4 +56,46 @@ describe("fedex ratesAndTransitTimes", () => {
     // The wrapper is unwrapped: FedEx receives the body itself.
     expect(config.data).toBe(data.body);
   });
+
+  it("types the fields the spec's own rate samples send", () => {
+    const data: GetRatesAndTransitTimesData = {
+      body: {
+        accountNumber: { value: "123456789" },
+        rateRequestControlParameters: { returnLocalizedDateTime: true },
+        requestedShipment: {
+          shipper: {
+            address: {
+              streetLines: ["SENDER ADDRESS"],
+              postalCode: "5003",
+              countryCode: "NO",
+            },
+          },
+          recipient: { address: { postalCode: "5003", countryCode: "NO" } },
+          pickupType: "CONTACT_FEDEX_TO_SCHEDULE",
+          requestedPackageLineItems: [
+            {
+              physicalPackaging: "YOUR_PACKAGING",
+              weight: { units: "KG", value: 2 },
+            },
+          ],
+          customsClearanceDetail: {
+            commodities: [],
+            brokers: [
+              {
+                type: "IMPORT",
+                broker: {
+                  address: { countryCode: "US" },
+                  // The spec defines no contact fields, so none is required.
+                  contact: { personName: "A Broker" },
+                },
+              },
+            ],
+          },
+        },
+      },
+    };
+    expect(data.body.requestedShipment.requestedPackageLineItems).toHaveLength(
+      1
+    );
+  });
 });

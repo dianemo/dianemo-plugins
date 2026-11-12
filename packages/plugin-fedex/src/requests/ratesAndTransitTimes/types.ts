@@ -38,6 +38,8 @@ export interface FedExRateAccountNumber {
 }
 
 export interface RateRequestControlParameters {
+  /** Not in the schema; the spec's freight sample sends it here, the intra-Europe sample at the top level. */
+  returnLocalizedDateTime?: boolean;
   returnTransitTimes?: boolean;
   servicesNeededOnRateFailure?: boolean;
   variableOptions?:
@@ -78,6 +80,8 @@ export interface Shipper {
 }
 
 export interface FedexAddress {
+  /** Not in the Shipper/Recipient address schema; the spec's freight and intra-Europe samples send it. */
+  streetLines?: string[];
   city?: string;
   stateOrProvinceCode?: string;
   postalCode: string;
@@ -96,6 +100,8 @@ export interface FedExRatePickupDetail {
 }
 
 export interface RequestedPackageLineItem {
+  /** Not in the schema; the spec's intra-Europe sample sends `"YOUR_PACKAGING"`. */
+  physicalPackaging?: string;
   subPackagingType?: FedExSubPackagingType;
   groupPackageCount?: number;
   declaredValue?: FixedValue;
@@ -372,7 +378,8 @@ export interface FedExRateBrokerDetail {
 export interface FedExRateBrokerDetailBroker {
   address: FedExRateAddress1;
   accountNumber?: FedExRateAccountNumber;
-  contact: FedexContact;
+  /** The spec requires a contact but defines none of its fields, so all are optional (unlike the delivery-on-invoice recipient). */
+  contact: FedExRateContact2;
 }
 
 export interface FedExRateCommercialInvoice {

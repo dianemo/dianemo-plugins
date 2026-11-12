@@ -143,7 +143,7 @@ export interface UpsForwardingCancelOrderResponseV1 {
 }
 
 export interface UpsForwardingOrderPrintLabelRequestV1 {
-  orderNumber?: unknown;
+  orderNumber?: UpsForwardingOrderNumberV1;
   shipmentNumber?: string | null;
   format?: "PDF" | "PNG" | "JPG" | "SVG" | "TIFF" | "BMP" | "DATA" | null;
   layout?: string | null;
@@ -207,92 +207,103 @@ export interface UpsForwardingOrderSearchResponseV1 {
   };
 }
 
-export interface UpsForwardingAirShipmentDataResponseV1 {
-  response: {
-    account: UpsForwardingShipperAccountNumberV1;
-    pickupDate: UpsForwardingDateV1;
-    shipmentCount: number;
-    pieceCount: number;
-    weight: number;
-    weightUnit: string | null;
-    manifest?: {
-      manifestNumber: string | null;
-      manifestFormat: string | null;
-      shipper: UpsForwardingShipmentAddressV1;
-      shipments:
+/**
+ * The 200 examples embedded in UPS's OpenAPI spec for PATCH /shipments put
+ * these fields in `response` (or, in two, beside a `response` that is `null` or
+ * carries only a warning) and the success `message` at the top level, so the
+ * body is declared once and admitted in both places —
+ * docs/ups-api.md#forwarding-response-nesting
+ */
+export interface UpsForwardingAirShipmentDataBody {
+  account: UpsForwardingShipperAccountNumberV1;
+  pickupDate: UpsForwardingDateV1;
+  shipmentCount: number;
+  pieceCount: number;
+  weight: number;
+  weightUnit: string | null;
+  manifest?: {
+    manifestNumber: string | null;
+    manifestFormat: string | null;
+    shipper: UpsForwardingShipmentAddressV1;
+    shipments:
+      | ({
+          number: number;
+          shipmentNumber: UpsForwardingShipmentNumberV1;
+          serviceType: string | null;
+          paymentType: string | null;
+          weight: number;
+          orderDescription?: string | null;
+          currency: string | null;
+          shipperReference?: string | null;
+          consigneeReference?: string | null;
+          consignee: UpsForwardingShipmentAddressV1;
+        } | null)[]
+      | null;
+    summary?: {
+      services:
         | ({
-            number: number;
-            shipmentNumber: UpsForwardingShipmentNumberV1;
-            serviceType: string | null;
-            paymentType: string | null;
-            weight: number;
-            orderDescription?: string | null;
-            currency: string | null;
-            shipperReference?: string | null;
-            consigneeReference?: string | null;
-            consignee: UpsForwardingShipmentAddressV1;
+            shipmentCount: number;
+            itemCount: number;
+            totalWeight: number;
+            freightChargesAmount: UpsForwardingAmountV1;
+            surchargesAmount: UpsForwardingAmountV1;
+            addedChargesAmount: UpsForwardingAmountV1;
+            billedAmount: UpsForwardingAmountV1;
+            serviceCode:
+              | "AMG"
+              | "AM"
+              | "D2G"
+              | "D2"
+              | "DFG"
+              | "DF"
+              | "CX"
+              | "CA"
+              | "EC"
+              | "MEXDF"
+              | "SAT"
+              | "SATG"
+              | "GOLDP"
+              | "CXD"
+              | "CXC"
+              | "CXCD"
+              | "CAD"
+              | "CAC"
+              | "CACD"
+              | "ECD"
+              | "ECC"
+              | "ECCD"
+              | "EG"
+              | "EA"
+              | null;
+            serviceName: string | null;
+            pieceCount: number;
           } | null)[]
         | null;
-      summary?: {
-        services:
-          | ({
-              shipmentCount: number;
-              itemCount: number;
-              totalWeight: number;
-              freightChargesAmount: UpsForwardingAmountV1;
-              surchargesAmount: UpsForwardingAmountV1;
-              addedChargesAmount: UpsForwardingAmountV1;
-              billedAmount: UpsForwardingAmountV1;
-              serviceCode:
-                | "AMG"
-                | "AM"
-                | "D2G"
-                | "D2"
-                | "DFG"
-                | "DF"
-                | "CX"
-                | "CA"
-                | "EC"
-                | "MEXDF"
-                | "SAT"
-                | "SATG"
-                | "GOLDP"
-                | "CXD"
-                | "CXC"
-                | "CXCD"
-                | "CAD"
-                | "CAC"
-                | "CACD"
-                | "ECD"
-                | "ECC"
-                | "ECCD"
-                | "EG"
-                | "EA"
-                | null;
-              serviceName: string | null;
-              pieceCount: number;
-            } | null)[]
-          | null;
-        serviceTotal: {
-          shipmentCount: number;
-          itemCount: number;
-          pieceCount: number;
-          totalWeight: number;
-          freightChargesAmount: number;
-          surchargesAmount: number;
-          addedChargesAmount: number;
-          billedAmount: number;
-        };
-        dailyPickupTotals: UpsForwardingPickupTotalV1;
-        currentPickupTotals: UpsForwardingPickupTotalV1;
+      serviceTotal: {
+        shipmentCount: number;
+        itemCount: number;
+        pieceCount: number;
+        totalWeight: number;
+        freightChargesAmount: number;
+        surchargesAmount: number;
+        addedChargesAmount: number;
+        billedAmount: number;
       };
+      dailyPickupTotals: UpsForwardingPickupTotalV1;
+      currentPickupTotals: UpsForwardingPickupTotalV1;
     };
-    manifestNumber?: string | null;
-    manifestFormat?: string | null;
-    manifestPDF?: string | null;
-    warnings?: UpsForwardingWarningArrayV1;
-    message?: string;
   };
+  manifestNumber?: string | null;
+  manifestFormat?: string | null;
+  manifestPDF?: string | null;
+  warnings?: UpsForwardingWarningArrayV1;
+  code?: string | number | null;
+  message?: string;
+}
+
+export interface UpsForwardingAirShipmentDataResponseV1 extends Partial<UpsForwardingAirShipmentDataBody> {
+  // Partial: one 200 example's `response` holds only `warnings`, `code`, `message`
+  response: Partial<UpsForwardingAirShipmentDataBody> | null;
 }
 
 export interface UpsForwardingAirShipmentCancelRequestV1 {
@@ -367,7 +378,9 @@ export interface UpsForwardingWarningArrayV1Item {
   message: string;
 }
 
-export type UpsForwardingWarningArrayV1 = UpsForwardingWarningArrayV1Item[];
+// Null entries appear in the PATCH /shipments examples (`"warnings": [null]`)
+export type UpsForwardingWarningArrayV1 =
+  (UpsForwardingWarningArrayV1Item | null)[];
 
 export interface UpsForwardingErrorResponseV1 {
   response: {
@@ -598,8 +611,13 @@ export interface UpsForwardingLabelRequest {
   details?: Record<string, string>;
 }
 
-export interface UpsForwardingAirShipResponseV1 {
-  response: Record<string, unknown>;
+/**
+ * The schema (`ApolloAirShipResponseV1`) declares `response` as a bare object
+ * and puts these fields beside it; all ten 200 examples embedded in UPS's
+ * OpenAPI spec put them inside `response` and nothing at the top level, so both
+ * placements are typed — docs/ups-api.md#forwarding-response-nesting
+ */
+export interface UpsForwardingAirShipResponseBody {
   shipmentNumber?: string;
   prqNumber?: string;
   prqStatus?: string;
@@ -607,8 +625,12 @@ export interface UpsForwardingAirShipResponseV1 {
   destinationServiceCenter?: string;
   paymentType?: string;
   rates?: UpsForwardingRateDetail[];
-  airWaybillDocument?: string;
-  label?: UpsForwardingLabelResponse;
+  airWaybillDocument?: string | null;
+  label?: UpsForwardingLabelResponse | null;
+}
+
+export interface UpsForwardingAirShipResponseV1 extends UpsForwardingAirShipResponseBody {
+  response: UpsForwardingAirShipResponseBody;
 }
 
 export interface UpsForwardingRateDetail {
@@ -616,7 +638,11 @@ export interface UpsForwardingRateDetail {
   guaranteedDelivery?: boolean;
   deliveryTime?: string;
   holdAtAirportTime?: string;
-  totalCharge?: UpsForwardingChargeAmountV1;
+  // The schema says string | null; the POST /shipments examples have a number
+  totalCharge?: {
+    amount?: string | number | null;
+    currencyCode?: string | null;
+  };
   currency?: string;
   billableWeight?: number;
   weightUnit?: string;
@@ -628,8 +654,8 @@ export interface UpsForwardingRateDetail {
 
 export interface UpsForwardingLabelResponse {
   format?: string;
-  layout?: string;
-  image?: string;
+  layout?: string | null;
+  image?: string | null;
 }
 
 export interface UpsForwardingUtilityAirportDetailResponseV1 {
@@ -645,10 +671,19 @@ export interface UpsForwardingAirportResponseDetailsV1 {
   stateProvince?: string;
 }
 
-export interface UpsForwardingCountryCodeResponseV1 {
+/**
+ * The schema is unwrapped; every example embedded in UPS's OpenAPI spec for
+ * /info/countries, /info/currencies and /info/payment-types is wrapped in
+ * `response`, so both are typed — docs/ups-api.md#forwarding-response-nesting
+ */
+export interface UpsForwardingCountryCodeResponseBody {
   countries?: UpsForwardingCountryCodeV1[];
   warnings?: UpsForwardingWarningArrayV1;
   message?: string;
+}
+
+export interface UpsForwardingCountryCodeResponseV1 extends UpsForwardingCountryCodeResponseBody {
+  response?: UpsForwardingCountryCodeResponseBody;
 }
 
 export interface UpsForwardingCountryCodeV1 {
@@ -666,7 +701,9 @@ export interface UpsForwardingPaymentTermInfoV1 {
   serviceLine?: string;
 }
 
-export interface UpsForwardingPaymentTypeResponseV1 {
+/** The example's list is `paymentTypes`; the schema's are the three party keys. */
+export interface UpsForwardingPaymentTypeResponseBody {
+  paymentTypes?: UpsForwardingPaymentTermInfoV1[];
   shipper?: UpsForwardingPaymentTermInfoV1[];
   consignee?: UpsForwardingPaymentTermInfoV1[];
   thirdParty?: UpsForwardingPaymentTermInfoV1[];
@@ -674,10 +711,18 @@ export interface UpsForwardingPaymentTypeResponseV1 {
   message?: string;
 }
 
-export interface UpsForwardingCurrenciesResponseV1 {
+export interface UpsForwardingPaymentTypeResponseV1 extends UpsForwardingPaymentTypeResponseBody {
+  response?: UpsForwardingPaymentTypeResponseBody;
+}
+
+export interface UpsForwardingCurrenciesResponseBody {
   currencies?: UpsForwardingCurrencyDataV1[];
   warnings?: UpsForwardingWarningArrayV1;
   message?: string;
+}
+
+export interface UpsForwardingCurrenciesResponseV1 extends UpsForwardingCurrenciesResponseBody {
+  response?: UpsForwardingCurrenciesResponseBody;
 }
 
 export interface UpsForwardingCurrencyDataV1 {
@@ -719,6 +764,16 @@ export interface UpsForwardingQuoteData {
 export interface UpsForwardingPaymentTerm {
   type: "SHPR" | "CONS" | "THRD";
   code: "PPD" | "COL" | "OTH/CON";
+}
+
+/**
+ * Response side of `paymentTerm`: the GET /quotes example returns `COL` under
+ * `type` and `CONS` under `code`, the reverse of what the request enums pair, so
+ * the response admits any string — docs/ups-api.md#forwarding-response-nesting
+ */
+export interface UpsForwardingPaymentTermResponse {
+  type?: UpsForwardingPaymentTerm["type"] | (string & {}) | null;
+  code?: UpsForwardingPaymentTerm["code"] | (string & {}) | null;
 }
 
 export interface UpsForwardingRouting {
@@ -911,111 +966,124 @@ export interface UpsForwardingQuoteDataResponseV1 {
 }
 
 export interface UpsForwardingQuoteSummaryV1 {
-  quoteId?: string;
-  status?: string;
-  confirmationId?: string;
-  shipmentNumber?: string;
-  serviceType?: string;
-  transitTime?: number;
-  serviceLine?: string;
-  serviceGroup?: string;
-  movementTypeCode?: string;
-  incoTermType?: string;
-  createDate?: string;
-  netTotal?: number;
-  validTill?: string;
-  validity?: number;
-  originPort?: UpsForwardingLocation;
-  destinationPort?: UpsForwardingLocation;
-  portOfLoad?: string;
-  portOfDischarge?: string;
-  pricingDetail?: UpsForwardingPricingDetailV1;
-  estimateChargableWeight?: number;
-  estimateChargableWeightUnit?: string;
-  chargeDetails?: UpsForwardingChargeDetail[];
-  paymentTerm?: UpsForwardingPaymentTerm;
-  shipmentPartyDetail?: UpsForwardingShipmentPartyDetailV1[];
-  shipmentDetails?: UpsForwardingQuoteShipmentDetails;
+  quoteId?: string | null;
+  status?: string | null;
+  confirmationId?: string | null;
+  shipmentNumber?: string | null;
+  serviceType?: string | null;
+  transitTime?: number | null;
+  serviceLine?: string | null;
+  serviceGroup?: string | null;
+  movementTypeCode?: string | null;
+  incoTermType?: string | null;
+  createDate?: string | null;
+  netTotal?: number | null;
+  validTill?: string | null;
+  validity?: number | null;
+  originPort?: UpsForwardingLocation | null;
+  destinationPort?: UpsForwardingLocation | null;
+  portOfLoad?: string | null;
+  portOfDischarge?: string | null;
+  pricingDetail?: UpsForwardingPricingDetailV1 | null;
+  estimateChargableWeight?: number | null;
+  estimateChargableWeightUnit?: string | null;
+  chargeDetails?: UpsForwardingChargeDetail[] | null;
+  paymentTerm?: UpsForwardingPaymentTermResponse | null;
+  shipmentPartyDetail?: UpsForwardingShipmentPartyDetailV1[] | null;
+  shipmentDetails?: UpsForwardingQuoteShipmentDetails | null;
 }
 
 export interface UpsForwardingLocation {
-  portCode?: string;
-  portName?: string;
-  serviceType?: string;
-  serviceCenterCode?: string;
-  serviceRatedOverCode?: string;
+  portCode?: string | null;
+  portName?: string | null;
+  serviceType?: string | null;
+  serviceCenterCode?: string | null;
+  serviceRatedOverCode?: string | null;
 }
 
 export interface UpsForwardingPricingDetailV1 {
-  rateType?: string;
-  rateDescription?: string;
-  currencyCode?: string;
-  actualTotalPrice?: number;
-  netTotalPrice?: number;
-  discountDetail?: UpsForwardingDiscountDetailV1;
+  rateType?: string | null;
+  rateDescription?: string | null;
+  currencyCode?: string | null;
+  actualTotalPrice?: number | null;
+  netTotalPrice?: number | null;
+  discountDetail?: UpsForwardingDiscountDetailV1 | null;
 }
 
 export interface UpsForwardingDiscountDetailV1 {
-  discount?: number;
-  discountPercent?: number;
-  eligibleDiscount?: number;
-  eligibleDiscountPercent?: number;
-  discountAdjustedFor?: string;
-  discountValidTill?: string;
+  discount?: number | null;
+  discountPercent?: number | null;
+  eligibleDiscount?: number | null;
+  eligibleDiscountPercent?: number | null;
+  discountAdjustedFor?: string | null;
+  discountValidTill?: string | null;
 }
 
 export interface UpsForwardingChargeDetail {
-  shipmentPartyType?: string;
-  charges?: UpsForwardingBookChargeV1[];
+  shipmentPartyType?: string | null;
+  charges?: UpsForwardingBookChargeV1[] | null;
 }
 
 export interface UpsForwardingBookChargeV1 {
-  chargeType?: string;
-  description?: string;
-  chargeAmount?: number;
-  currency?: string;
-  originalChargeAmount?: string;
+  chargeType?: string | null;
+  description?: string | null;
+  chargeAmount?: number | null;
+  currency?: string | null;
+  originalChargeAmount?: string | null;
 }
 
 export interface UpsForwardingShipmentPartyDetailV1 {
-  type?: string;
-  accountNumber?: string;
-  contactDetail?: UpsForwardingContactDetail;
-  address?: UpsForwardingAddress;
+  type?: string | null;
+  accountNumber?: string | null;
+  contactDetail?: UpsForwardingContactDetailV1 | null;
+  address?: UpsForwardingAddress | null;
 }
 
 export interface UpsForwardingAddress {
-  companyName1?: string;
-  companyName2?: string;
-  addressLine1?: string;
-  addressLine2?: string;
-  addressLine3?: string;
-  city?: string;
-  stateCode?: string;
-  postalCode?: string;
-  countryCode?: string;
-  isLoadingDockAvailable?: string;
-  isResidentialAddress?: string;
+  companyName1?: string | null;
+  companyName2?: string | null;
+  addressLine1?: string | null;
+  addressLine2?: string | null;
+  addressLine3?: string | null;
+  city?: string | null;
+  stateCode?: string | null;
+  postalCode?: string | null;
+  countryCode?: string | null;
+  isLoadingDockAvailable?: string | null;
+  isResidentialAddress?: string | null;
 }
 
 export interface UpsForwardingQuoteShipmentDetails {
-  insuredValueCurrency?: string;
-  insuredValue?: number;
-  customsValueCurrency?: string;
-  customsValue?: number;
-  commodityName?: string;
-  fclCargoItems?: UpsForwardingCargoItem[];
-  lclCargoItems?: UpsForwardingLclCargoItem[];
-  airCargoItems?: UpsForwardingAirCargoItem[];
-  location?: UpsForwardingLocation[];
+  insuredValueCurrency?: string | null;
+  insuredValue?: number | null;
+  customsValueCurrency?: string | null;
+  customsValue?: number | null;
+  commodityName?: string | null;
+  fclCargoItems?: UpsForwardingCargoItem[] | null;
+  lclCargoItems?: UpsForwardingLclCargoItem[] | null;
+  airCargoItems?: UpsForwardingAirCargoItem[] | null;
+  location?: UpsForwardingLocation[] | null;
 }
 
-export type UpsForwardingLclCargoItem = UpsForwardingCargoItem;
+/**
+ * The schema's `LclCargoItem` is the FCL `CargoItem` (`weight`); the GET /quotes
+ * examples carry `weightDetail`, as the sibling `LclCargoItemV1` does, so both
+ * are typed.
+ */
+export interface UpsForwardingLclCargoItem {
+  quantity?: number;
+  packageType?: string | null;
+  packageTypeCode?: string | null;
+  weight?: UpsForwardingWeightDetail;
+  weightDetail?: UpsForwardingWeightDetail;
+  dimensions?: UpsForwardingDimensions;
+  fclCargoItems?: UpsForwardingFclCargoItem[] | null;
+}
 
 export interface UpsForwardingAirCargoItem {
-  quantity?: number;
-  weight?: UpsForwardingWeightDetail;
-  dimensions?: UpsForwardingDimensions;
+  quantity?: number | null;
+  weight?: UpsForwardingWeightDetail | null;
+  dimensions?: UpsForwardingDimensions | null;
 }
 
 export interface UpsForwardingShipmentDetailResponseV1 {
@@ -1057,7 +1125,7 @@ export interface UpsForwardingShipmentSummary {
   incoTermType?: string | null;
   originPort?: UpsForwardingPortInfo;
   destinationPort?: UpsForwardingPortInfo;
-  paymentTerm?: UpsForwardingPaymentTerm;
+  paymentTerm?: UpsForwardingPaymentTermResponse | null;
   partyDetails?: UpsForwardingPartyDetail[];
   cargoDetails?: UpsForwardingCargoDetails;
   pickupDetail?: UpsForwardingPickupDetail;
@@ -1180,6 +1248,8 @@ export interface UpsForwardingAirUtilityValidAccessorialsResponseV1 {
 
 export interface UpsForwardingAccessorialsResponseDetailsV1 {
   code?: "CC" | "CV" | "DDU" | "DLV" | "DV" | "DDP" | "LIFTGT";
+  // In the example, absent from the schema
+  name?: string;
 }
 
 export interface UpsForwardingAccessorialPaymentTermResponseV1 {
@@ -1190,6 +1260,10 @@ export interface UpsForwardingAccessorialPaymentTermResponseV1 {
 export interface UpsForwardingFullTrackingDetailsResponseV1 {
   response: {
     primaryInformation?: UpsForwardingPrimaryInformation;
+    // The "no match" 200 example answers `errors: null, code: -1001` here
+    errors?: unknown[] | null;
+    code?: string | number | null;
+    message?: string;
   };
 }
 
