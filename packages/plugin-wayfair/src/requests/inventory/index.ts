@@ -1,6 +1,12 @@
-import { GetWayfairInventoryResponse, WayfairInventoryData } from "./types.js";
 import handleGraphQLRequest from "../handleGraphQLRequest.js";
 import { RequestError } from "@dianemo/core";
+import {
+  GetWayfairInventoryResponse,
+  SaveInventoryParams,
+  SaveWayfairInventoryResponse,
+  WayfairInventoryData,
+  WayfairSaveInventoryData,
+} from "./types.js";
 
 const PAGE_SIZE = 100;
 
@@ -40,5 +46,39 @@ export const getInventory = async (
               discontinued
             }
           }`
+  );
+};
+
+/**
+ * Wayfair permits one `TRUE_UP` feed per 24 hours and recommends
+ * `DIFFERENTIAL` every 30 minutes, so a caller that reaches for the full
+ * replacement on every sync will be refused for the rest of the day.
+ *
+ * The sandbox accepts `TRUE_UP` only.
+ */
+export const saveInventory = async (
+  clientName: string,
+  params: SaveInventoryParams
+): Promise<SaveWayfairInventoryResponse> => {
+  return await handleGraphQLRequest<WayfairSaveInventoryData>(
+    clientName,
+    "wayfair.inventory.save",
+    "WFR_0005",
+    "Failed to save Wayfair inventory",
+    `mutation saveInventory($inventory: [inventoryInput]!, $feedKind: inventoryFeedKind, $dryRun: Boolean) {
+      inventory {
+        save(inventory: $inventory, feedKind: $feedKind, dryRun: $dryRun) {
+          handle
+          status
+          itemCount
+          errorCount
+          errors {
+            key
+            message
+          }
+        }
+      }
+    }`,
+    { ...params }
   );
 };

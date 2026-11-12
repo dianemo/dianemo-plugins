@@ -1,0 +1,5 @@
+---
+"@dianemo/plugin-wayfair": major
+---
+
+You can now accept a purchase order with `acceptOrder`, send an advance shipment notice with `shipOrder`, and submit an inventory feed with `saveInventory` (`DIFFERENTIAL` or `TRUE_UP`, with an optional `dryRun`). Each answers with a feed handle, so `status` reports that Wayfair accepted the submission, not that the work succeeded; poll the handle for the outcome. `getOrders` now reads Wayfair's `getDropshipPurchaseOrders`, which returns the warehouse, addresses, shipping method and per-product cancellation state and takes typed `hasResponse`, `poNumbers`, `sortOrder` and `offset` filters. BREAKING: `getOrders` takes `{ limit, hasResponse?, fromDate?, poNumbers?, sortOrder?, offset? }` instead of `{ limit?, fromDate?, toDate? }`, so drop `toDate`, pass `limit` explicitly (Wayfair caps it at 25), and expect the `WayfairOrderResponse` shape; the `WayfairPurchaseOrder`, `WayfairPurchaseOrderProduct`, `WayfairPurchaseOrdersData` and `WayfairPurchaseOrdersResponse` types are removed, and its failures now throw `WFR_0001` rather than `WFR_0002` or `WFR_0004`.
