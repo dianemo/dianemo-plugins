@@ -117,6 +117,8 @@ export interface SmartyIntlRequest {
   postal_code?: string;
   geocode?: "true" | "false";
   language?: string;
+  /** 1 to 10 suggestions; on Smarty's reference page, not in the collection. */
+  max_results?: number;
   /** Comma-separated license names (e.g. "international-basic"). */
   license?: string;
   /** Comma-separated feature flags: `occupant-use`, `geocode-classification`,
@@ -209,6 +211,14 @@ export interface SmartyIntlCandidate {
   address2?: string;
   address3?: string;
   address4?: string;
+  address5?: string;
+  address6?: string;
+  address7?: string;
+  address8?: string;
+  address9?: string;
+  address10?: string;
+  address11?: string;
+  address12?: string;
   components: SmartyIntlComponents;
   metadata: SmartyIntlMetadata;
   analysis: SmartyIntlAnalysis;

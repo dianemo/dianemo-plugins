@@ -123,7 +123,7 @@ const CASES: Case[] = [
     dir: "plugin-smarty",
     template: "smarty",
     credentials: { ...base, authId: "id", authToken: "tok" },
-    call: (r) => r.verifySmartyUs({ street: "1 Main St" }, { alias: "main" }),
+    call: (r, c) => r.verifySmartyUs(c, { street: "1 Main St" }),
   },
   {
     dir: "plugin-stripe",

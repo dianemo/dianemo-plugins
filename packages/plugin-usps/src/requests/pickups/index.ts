@@ -1,11 +1,17 @@
 import { tryHandleRequest } from "@dianemo/plugin-kit";
 import { uspsSubClient } from "../utils.js";
+import { singlePickup } from "./utils.js";
 import type {
   UspsPickupEligibilityParams,
   UspsPickupEligibilityResponse,
   UspsSchedulePickupRequest,
   UspsPickupConfirmation,
   UspsPickupDetails,
+  UspsPickupGetOptions,
+  UspsPickupGetResult,
+  UspsPickupNotModified,
+  UspsPickupUpdateOptions,
+  UspsPickupUpdateResult,
 } from "./types.js";
 
 export const checkEligibility = async (
@@ -44,25 +50,58 @@ export const schedulePickup = async (
   return res.data;
 };
 
-export const getPickup = async (
+const isSuccessOrNotModified = (status: number) =>
+  (status >= 200 && status < 300) || status === 304;
+
+/**
+ * `pickup` is one object, as v2.0.0 returned and as USPS's example shows. The
+ * spec's schema says array, so an array body is unwrapped to its only element;
+ * more than one is not something a confirmation number can mean, and is
+ * rejected rather than silently trimmed. See docs/usps-api.md#pickups.
+ *
+ * With `ifNoneMatch` a 304 resolves to `UspsPickupNotModified`. Axios rejects a
+ * 304 by default, so the per-request `validateStatus` is set only in that case:
+ * passing it as `undefined` would make axios accept every status.
+ */
+export async function getPickup(
   clientName: string,
-  confirmationNumber: string
-): Promise<{ pickup: UspsPickupDetails; etag: string }> => {
-  const res = await tryHandleRequest<UspsPickupDetails>(
+  confirmationNumber: string,
+  options?: { ifNoneMatch?: undefined }
+): Promise<UspsPickupGetResult>;
+export async function getPickup(
+  clientName: string,
+  confirmationNumber: string,
+  options: UspsPickupGetOptions
+): Promise<UspsPickupGetResult | UspsPickupNotModified>;
+export async function getPickup(
+  clientName: string,
+  confirmationNumber: string,
+  options: UspsPickupGetOptions = {}
+): Promise<UspsPickupGetResult | UspsPickupNotModified> {
+  const res = await tryHandleRequest<UspsPickupDetails | UspsPickupDetails[]>(
     {
       clientName: uspsSubClient(clientName, "default"),
       requestName: "usps.pickups.get",
       method: "GET",
-      url: `/pickup/v3/carrier-pickup/${confirmationNumber}`,
+      url: `/pickup/v3/carrier-pickup/${encodeURIComponent(confirmationNumber)}`,
+      headers: options.ifNoneMatch
+        ? { "If-None-Match": options.ifNoneMatch }
+        : undefined,
+      ...(options.ifNoneMatch
+        ? { validateStatus: isSuccessOrNotModified }
+        : {}),
     },
     "USP_0011",
     "Failed to get USPS pickup details"
   );
+  const etag = (res.headers?.["etag"] as string | undefined) ?? "";
+  if (res.status === 304)
+    return { notModified: true, etag: etag || (options.ifNoneMatch ?? "") };
   return {
-    pickup: res.data,
-    etag: (res.headers?.["etag"] as string) ?? "",
+    pickup: singlePickup(res.data, confirmationNumber),
+    etag,
   };
-};
+}
 
 export const cancelPickup = async (
   clientName: string,
@@ -74,7 +113,7 @@ export const cancelPickup = async (
       clientName: uspsSubClient(clientName, "default"),
       requestName: "usps.pickups.cancel",
       method: "DELETE",
-      url: `/pickup/v3/carrier-pickup/${confirmationNumber}`,
+      url: `/pickup/v3/carrier-pickup/${encodeURIComponent(confirmationNumber)}`,
       headers: {
         "If-Match": etag,
       },
@@ -82,4 +121,27 @@ export const cancelPickup = async (
     "USP_0007",
     "Failed to cancel USPS pickup"
   );
+};
+
+export const updatePickup = async (
+  clientName: string,
+  { confirmationNumber, ifMatch }: UspsPickupUpdateOptions,
+  data: UspsPickupConfirmation
+): Promise<UspsPickupUpdateResult> => {
+  const res = await tryHandleRequest<UspsPickupConfirmation>(
+    {
+      clientName: uspsSubClient(clientName, "default"),
+      requestName: "usps.pickups.update",
+      method: "PUT",
+      url: `/pickup/v3/carrier-pickup/${encodeURIComponent(confirmationNumber)}`,
+      headers: { "If-Match": ifMatch },
+      data,
+    },
+    "USP_0070",
+    "Failed to update USPS pickup"
+  );
+  return {
+    pickup: res.data,
+    etag: (res.headers?.["etag"] as string) ?? "",
+  };
 };

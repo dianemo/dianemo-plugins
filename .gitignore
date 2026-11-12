@@ -10,3 +10,6 @@ coverage/
 .idea/
 .vscode/
 .readme-examples/
+
+# Vendor API specs kept locally for reference; not ours to redistribute.
+vendor-specs/

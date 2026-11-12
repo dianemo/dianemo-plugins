@@ -2,18 +2,21 @@ export type FedExWeightUnit = "KG" | "LB";
 
 export type FedExDimensionUnit = "CM" | "IN";
 
+/**
+ * No FedEx spec marks any response field required, so none is here:
+ * docs/fedex-api.md#response-envelope.
+ */
 export interface FedExResponse<T extends object> {
-  transactionId: string;
+  transactionId?: string;
   customerTransactionId?: string;
-  output: {
-    alerts?: FedExAlert[];
-  } & T;
+  /** `T` owns `alerts` when it declares one, so the two array types are not intersected. */
+  output?: Omit<{ alerts?: FedExAlert[] }, keyof T> & T;
 }
 
 export type FedExAlert = {
-  code: string;
-  message: string;
-  alertType: "NOTE" | "WARNING";
+  code?: string;
+  message?: string;
+  alertType?: "NOTE" | "WARNING";
 };
 
 export interface FedExWeight {

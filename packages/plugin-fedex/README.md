@@ -1,6 +1,6 @@
 # @dianemo/plugin-fedex
 
-FedEx plugin — shipping, rates, tracking, pickups, and address validation
+FedEx plugin — shipping, rates, tracking, pickups, address validation, trade documents and customs
 
 A plugin for [dianemo](https://github.com/dianemo/dianemo), which distributes one API rate limit
 across every process that draws on it.

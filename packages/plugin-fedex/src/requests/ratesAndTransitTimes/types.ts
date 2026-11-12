@@ -1,14 +1,1180 @@
-import { CurrencyCodes } from "@dianemo/plugin-kit";
 import {
-  FedExDimensions,
   FedExPackageType,
   FedExResponse,
   FedExServiceType,
   FedExSubPackagingType,
-  FedExWeight,
   FedexCarrierCodes,
 } from "../types.js";
 
+/**
+ * The request body is sent as `data.body`. `body` is the name of the spec's
+ * request-body schema, carried into this wrapper in v1.0.0; the spec has no
+ * such property, so the wrapper adds nothing on the wire.
+ */
+export interface GetRatesAndTransitTimesData {
+  body: FedexBody;
+}
+
+export type GetRatesAndTransitTimesResponse =
+  FedExResponse<GetRatesAndTransitTimesOutput>;
+
+export type Recipient = Shipper;
+
+export type TotalVariableHandlingCharges = VariableHandlingCharge;
+
+// Wire types generated from the Rates and Transit Times v1.0.0 spec.
+
+export interface FedexBody {
+  accountNumber: FedExRateAccountNumber;
+  rateRequestControlParameters?: RateRequestControlParameters;
+  requestedShipment: RequestedShipment;
+  processingOptions?: "INCLUDE_PICKUPRATES"[];
+  carrierCodes?: FedexCarrierCodes[];
+  version?: FedExRateVersion;
+}
+
+export interface FedExRateAccountNumber {
+  value?: string;
+}
+
+export interface RateRequestControlParameters {
+  /** Not in the schema; the spec's freight sample sends it here, the intra-Europe sample at the top level. */
+  returnLocalizedDateTime?: boolean;
+  returnTransitTimes?: boolean;
+  servicesNeededOnRateFailure?: boolean;
+  variableOptions?:
+    | "SATURDAY_DELIVERY"
+    | "FREIGHT_GUARANTEE"
+    | "SMART_POST_ALLOWED_INDICIA"
+    | "SMARTPOST_HUB_ID";
+  rateSortOrder?:
+    "COMMITASCENDING" | "SERVICENAMETRADITIONAL" | "COMMITDESCENDING";
+}
+
+export interface RequestedShipment {
+  shipper: Shipper;
+  pickupDetail?: FedExRatePickupDetail;
+  recipient: Shipper;
+  serviceType?: FedExServiceType;
+  preferredCurrency?: string;
+  rateRequestType?: ("LIST" | "INCENTIVE" | "ACCOUNT" | "PREFERRED")[];
+  /** YYYY-MM-DD. The spec text also says the time portion is used, which contradicts that format; see docs/fedex-api.md. */
+  shipDateStamp?: string;
+  pickupType:
+    | "CONTACT_FEDEX_TO_SCHEDULE"
+    | "DROPOFF_AT_FEDEX_LOCATION"
+    | "USE_SCHEDULED_PICKUP";
+  requestedPackageLineItems: RequestedPackageLineItem[];
+  documentShipment?: boolean;
+  variableHandlingChargeDetail?: VariableHandlingChargeDetail;
+  packagingType?: string;
+  totalPackageCount?: number;
+  totalWeight?: number;
+  shipmentSpecialServices?: ShipmentSpecialServices;
+  customsClearanceDetail?: CustomsClearanceDetail;
+  smartPostInfoDetail?: SmartPostInfoDetail;
+}
+
+export interface Shipper {
+  address: FedexAddress;
+}
+
+export interface FedexAddress {
+  /** Not in the Shipper/Recipient address schema; the spec's freight and intra-Europe samples send it. */
+  streetLines?: string[];
+  city?: string;
+  stateOrProvinceCode?: string;
+  postalCode: string;
+  countryCode: string;
+  residential?: boolean;
+}
+
+export interface FedExRatePickupDetail {
+  /** YYYY-MM-DD despite the name; the spec declares format date. */
+  readyDateTime?: string;
+  /** YYYY-MM-DD despite the name; the spec declares format date. */
+  latestPickupDateTime?: string;
+  courierInstructions?: string;
+  requestType?: "FUTURE_DAY" | "SAME_DAY";
+  requestSource?: "AUTOMATION" | "CUSTOMER_SERVICE";
+}
+
+export interface RequestedPackageLineItem {
+  /** Not in the schema; the spec's intra-Europe sample sends `"YOUR_PACKAGING"`. */
+  physicalPackaging?: string;
+  subPackagingType?: FedExSubPackagingType;
+  groupPackageCount?: number;
+  declaredValue?: FixedValue;
+  weight: FedExRateWeight2;
+  dimensions?: FedExRateRequestePackageLineItemDimensions;
+  variableHandlingChargeDetail?: VariableHandlingChargeDetail;
+  packageSpecialServices?: FedExRatePackageSpecialServicesRequested;
+}
+
+export interface FixedValue {
+  amount?: number;
+  currency?: string;
+}
+
+export interface FedExRateWeight2 {
+  units: "KG" | "LB";
+  value: number;
+}
+
+export interface FedExRateRequestePackageLineItemDimensions {
+  length: number;
+  width: number;
+  height: number;
+  units: "CM" | "IN";
+}
+
+export interface VariableHandlingChargeDetail {
+  rateType?: FedExRateRateType;
+  percentValue?: number;
+  rateLevelType?: "BUNDLED_RATE" | "INDIVIDUAL_PACKAGE_RATE";
+  fixedValue?: FixedValue;
+  rateElementBasis:
+    "NET_CHARGE" | "NET_FREIGHT" | "BASE_CHARGE" | "NET_CHARGE_EXCLUDING_TAXES";
+}
+
+export interface FedExRatePackageSpecialServicesRequested {
+  specialServiceTypes?: string[];
+  signatureOptionType?: FedExRateSignatureOptionType;
+  alcoholDetail?: FedExRateAlcoholDetail;
+  dangerousGoodsDetail?: FedExRateDangerousGoodsDetail;
+  packageCODDetail?: FedExRatePackageSpecialServicesRequestedPackageCODDetail;
+  pieceCountVerificationBoxCount?: number;
+  batteryDetails?: FedExRateBatteryClassificationDetail[];
+  dryIceWeight?: FedExRateWeight12;
+  standaloneBatteryDetails?: FedExRateStandaloneBatteryDetails[];
+}
+
+export interface FedExRateAlcoholDetail {
+  alcoholRecipientType: "LICENSEE" | "CONSUMER";
+  shipperAgreementType?: string;
+}
+
+export interface FedExRateDangerousGoodsDetail {
+  accessibility?: "ACCESSIBLE" | "INACCESSIBLE";
+  options?: FedExRateOption[];
+  containers?: FedExRateDangerousGoodsContainer[];
+  regulation?: "ADR" | "DOT" | "IATA" | "ORMD";
+}
+
+export interface FedExRateDangerousGoodsContainer {
+  offeror?: string;
+  hazardousCommodities?: FedExRateHazardousCommodityContent[];
+  numberOfContainers?: number;
+  containerType?: string;
+  emergencyContactNumber?: FedExRatePhoneNumber;
+  packaging?: FedExRateHazardousCommodityPackagingDetail;
+  packingType?: "ALL_PACKED_IN_ONE";
+  radioactiveContainerClass?: FedExRateRadioactiveContainerClass;
+}
+
+export interface FedExRateHazardousCommodityContent {
+  quantity?: FedExRateHazardousCommodityQuantityDetail;
+  innerReceptacles?: FedExRateHazardousCommodityInnerReceptacleDetail[];
+  options?: FedExRateHazardousCommodityOptionDetail;
+  description?: FedExRateHazardousCommodityDescription;
+}
+
+export interface FedExRateHazardousCommodityQuantityDetail {
+  quantityType?: "GROSS" | "NET";
+  amount?: number;
+  units?: string;
+}
+
+export interface FedExRateHazardousCommodityInnerReceptacleDetail {
+  quantity?: FedExRateHazardousCommodityQuantityDetail;
+}
+
+export interface FedExRateHazardousCommodityOptionDetail {
+  labelTextOption?: "APPEND" | "OVERRIDE" | "STANDARD";
+  customerSuppliedLabelText?: string;
+}
+
+export interface FedExRateHazardousCommodityDescription {
+  sequenceNumber?: number;
+  processingOptions?: "INCLUDE_SPECIAL_PROVISIONS"[];
+  subsidiaryClasses?: string[];
+  labelText?: string;
+  technicalName?: string;
+  packingDetails?: FedExRateHazardousCommodityPackingDetail;
+  authorization?: string;
+  reportableQuantity?: boolean;
+  percentage?: number;
+  id?: string;
+  packingGroup?: "DEFAULT" | "I" | "II" | "III";
+  properShippingName?: string;
+  hazardClass?: string;
+}
+
+export interface FedExRateHazardousCommodityPackingDetail {
+  packingInstructions?: string;
+  cargoAircraftOnly?: boolean;
+}
+
+export interface FedExRatePhoneNumber {
+  areaCode: string;
+  extension?: string;
+  countryCode: string;
+  personalIdentificationNumber?: string;
+  localNumber?: string;
+}
+
+export interface FedExRateHazardousCommodityPackagingDetail {
+  count?: number;
+  units?: string;
+}
+
+export interface FedExRatePackageSpecialServicesRequestedPackageCODDetail {
+  codCollectionAmount?: FixedValue;
+  codCollectionType?: FedExRateCodCollectionType;
+}
+
+export interface FedExRateBatteryClassificationDetail {
+  material?: "LITHIUM_METAL" | "LITHIUM_ION";
+  regulatorySubType?: "IATA_SECTION_II";
+  packing?: "CONTAINED_IN_EQUIPMENT" | "PACKED_WITH_EQUIPMENT";
+}
+
+export interface FedExRateWeight12 {
+  units?: "KG" | "LB";
+  value?: number;
+}
+
+export interface FedExRateStandaloneBatteryDetails {
+  batteryMaterialType?: "LITHIUM_METAL" | "LITHIUM_ION";
+}
+
+export interface ShipmentSpecialServices {
+  returnShipmentDetail?: FedExRateShipmentSpecialServicesRequestedReturnShipmentDetail;
+  deliveryOnInvoiceAcceptanceDetail?: FedExRateDeliveryOnInvoiceAcceptanceDetail;
+  internationalTrafficInArmsRegulationsDetail?: FedExRateInternationalTrafficInArmsRegulationsDetail;
+  holdAtLocationDetail?: FedExRateHoldAtLocationDetail;
+  shipmentCODDetail?: FedExRateShipmentSpecialServicesRequestedShipmentCODDetail;
+  shipmentDryIceDetail?: FedExRateShipmentDryIceDetail;
+  internationalControlledExportDetail?: FedExRateInternationalControlledExportDetail;
+  homeDeliveryPremiumDetail?: FedExRateHomeDeliveryPremiumDetail;
+  specialServiceTypes?: string[];
+}
+
+export interface FedExRateShipmentSpecialServicesRequestedReturnShipmentDetail {
+  returnType?: FedExRateReturnType;
+}
+
+export interface FedExRateDeliveryOnInvoiceAcceptanceDetail {
+  recipient?: FedExRateDeliveryOnInvoiceAcceptanceDetailRecipient;
+}
+
+export interface FedExRateDeliveryOnInvoiceAcceptanceDetailRecipient {
+  address: FedExRateAddress2;
+  contact: FedexContact;
+  accountNumber?: FedExRateAccountNumber;
+}
+
+export interface FedExRateAddress2 {
+  city?: string;
+  stateOrProvinceCode?: string;
+  postalCode?: string;
+  countryCode: string;
+  residential?: boolean;
+  streetLines?: string[];
+}
+
+export interface FedexContact {
+  personName: string;
+  emailAddress?: string;
+  phoneNumber: string;
+  phoneExtension?: string;
+  faxNumber?: string;
+  companyName: string;
+}
+
+export interface FedExRateInternationalTrafficInArmsRegulationsDetail {
+  licenseOrExemptionNumber?: string;
+}
+
+export interface FedExRateHoldAtLocationDetail {
+  locationId: string;
+  locationContactAndAddress?: FedExRateContactAndAddress;
+  locationType?: FedExRateLocationType;
+}
+
+export interface FedExRateContactAndAddress {
+  contact?: FedExRateContact2;
+  address?: FedExRateAddress1;
+}
+
+export interface FedExRateContact2 {
+  personName?: string;
+  emailAddress?: string;
+  phoneNumber?: string;
+  phoneExtension?: string;
+  faxNumber?: string;
+  companyName?: string;
+}
+
+export interface FedExRateAddress1 {
+  city?: string;
+  stateOrProvinceCode?: string;
+  postalCode?: string;
+  countryCode?: string;
+  residential?: boolean;
+}
+
+export interface FedExRateShipmentSpecialServicesRequestedShipmentCODDetail {
+  addTransportationChargesDetail?: FedExRateCODTransportationChargesDetail;
+  codRecipient?: FedExRateParty2;
+  remitToName?: string;
+  codCollectionType?: FedExRateCodCollectionType;
+  financialInstitutionContactAndAddress?: FedExRateContactAndAddress;
+  returnReferenceIndicatorType?: "INVOICE" | "PO" | "REFERENCE" | "TRACKING";
+}
+
+export interface FedExRateCODTransportationChargesDetail {
+  rateType?: FedExRateRateType;
+  rateLevelType?: "BUNDLED_RATE" | "INDIVIDUAL_PACKAGE_RATE";
+  chargeLevelType?: "CURRENT_PACKAGE" | "SUM_OF_PACKAGES";
+  chargeType?:
+    "COD_SURCHARGE" | "NET_CHARGE" | "NET_FREIGHT" | "TOTAL_CUSTOMER_CHARGE";
+}
+
+export interface FedExRateParty2 {
+  address?: FedExRateAddress1;
+  contact?: FedExRateContact2;
+  accountNumber?: FedExRateAccountNumber;
+}
+
+export interface FedExRateShipmentDryIceDetail {
+  totalWeight?: FedExRateWeight12;
+  packageCount?: number;
+}
+
+export interface FedExRateInternationalControlledExportDetail {
+  type?: FedExRateType;
+}
+
+export interface FedExRateHomeDeliveryPremiumDetail {
+  /** YYYY-MM-DD */
+  shipTimestamp?: string;
+  homedeliveryPremiumType?: "APPOINTMENT" | "DATE_CERTAIN" | "EVENING";
+}
+
+export interface CustomsClearanceDetail {
+  brokers?: FedExRateBrokerDetail[];
+  commercialInvoice?: FedExRateCommercialInvoice;
+  freightOnValue?: "CARRIER_RISK" | "OWN_RISK";
+  dutiesPayment?: DutiesPayment;
+  commodities: Commodity[];
+}
+
+export interface FedExRateBrokerDetail {
+  broker: FedExRateBrokerDetailBroker;
+  type: "IMPORT";
+}
+
+export interface FedExRateBrokerDetailBroker {
+  address: FedExRateAddress1;
+  accountNumber?: FedExRateAccountNumber;
+  /** The spec requires a contact but defines none of its fields, so all are optional (unlike the delivery-on-invoice recipient). */
+  contact: FedExRateContact2;
+}
+
+export interface FedExRateCommercialInvoice {
+  shipmentPurpose?: FedExRateShipmentPurpose;
+}
+
+export interface DutiesPayment {
+  payor?: FedExRatePayor;
+  paymentType?: "SENDER";
+}
+
+export interface FedExRatePayor {
+  responsibleParty?: FedExRateResponsibleParty;
+}
+
+export interface FedExRateResponsibleParty {
+  address?: FedExRateAddress1;
+  contact?: FedExRateContact2;
+  accountNumber: FedExRateAccountNumber;
+}
+
+export interface Commodity {
+  description?: string;
+  weight?: FedExRateWeight2;
+  quantity?: number;
+  customsValue?: FixedValue;
+  unitPrice?: FixedValue;
+  numberOfPieces?: number;
+  countryOfManufacture?: string;
+  quantityUnits?: string;
+  name?: string;
+  harmonizedCode?: string;
+  partNumber?: string;
+}
+
+export interface SmartPostInfoDetail {
+  ancillaryEndorsement?: FedExRateAncillaryEndorsement;
+  hubId?: string;
+  indicia?: FedExRateIndicia;
+  specialServices?: "USPS_DELIVERY_CONFIRMATION";
+}
+
+export interface FedExRateVersion {
+  major?: number;
+  minor?: number;
+  patch?: number;
+}
+
+export interface GetRatesAndTransitTimesOutput {
+  rateReplyDetails?: RateReplyDetail[];
+  quoteDate?: string;
+  isEncoded?: boolean;
+}
+
+export interface RateReplyDetail {
+  serviceType?: FedExServiceType;
+  serviceName?: string;
+  packagingType?: FedExPackageType;
+  customerMessages?: CustomerMessage[];
+  ratedShipmentDetails?: RatedShipmentDetails[];
+  operationalDetail?: OperationalDetail;
+  signatureOptionType?: string;
+  serviceDescription?: ServiceDescription;
+  brokerDetail?: BrokerDetail;
+  commit?: Commit;
+  serviceSubOptionDetail?: ServiceSubOptionDetail;
+}
+
+export interface CustomerMessage {
+  code?: string;
+  message?: string;
+}
+
+export interface RatedShipmentDetails {
+  rateType?: FedExRateRateType;
+  totalNetTransportationAndPickupCharge?: FixedValue;
+  totalNetFedExTransportationAndPickupCharge?: FixedValue;
+  pickupRateDetail?: FedExRatePickupRateDetail;
+  ratedWeightMethod?: FedExRateRatedWeightMethod;
+  totalDutiesTaxesAndFees?: number;
+  totalDiscounts?: number;
+  totalDutiesAndTaxes?: number;
+  variableHandlingCharges?: VariableHandlingCharge;
+  edtCharges?: EdtCharge[];
+  totalAncillaryFeesAndTaxes?: number;
+  ratedPackages?: RatedPackage[];
+  totalNetFedExCharge?: number;
+  quoteNumber?: string;
+  shipmentLegRateDetails?: ShipmentLegRateDetail[];
+  freightChargeBasis?: "CWT" | "FLAT" | "MINIMUM";
+  totalVariableHandlingCharges?: VariableHandlingCharge;
+  totalVatCharge?: number;
+  ancillaryFeesAndTaxes?: FedExRateAncillaryFeesAndTaxes[];
+  preferredEdtCharges?: EdtCharge[];
+  totalNetCharge?: number;
+  totalBaseCharge?: number;
+  totalNetChargeWithDutiesAndTaxes?: number;
+  shipmentRateDetail?: ShipmentRateDetail;
+}
+
+export interface FedExRatePickupRateDetail {
+  rateType?: FedExRateRateType2;
+  rateScale?: string;
+  rateZone?: string;
+  ratingBasis?:
+    | "SHIPMENT_WEIGHT_BASED"
+    | "FLAT_RATE_PER_PAK"
+    | "PACK_WEIGHT_BASED"
+    | "UNKNOWN";
+  pricingCode?: FedExRatePricingCode;
+  minimumChargeType?: FedExRateMinimumChargeType;
+  currencyExchangeRate?: CurrencyExchangeRate;
+  specialRatingApplied?: (
+    "FEDEX_ONE_RATE" | "FIXED_FUEL_SURCHARGE" | "IMPORT_PRICING"
+  )[];
+  fuelSurchargePercent?: number;
+  pickupBaseChargeDescription?: FedExRatePickupBaseChargeDescription;
+  totalBaseCharge?: FixedValue;
+  totalFreightDiscounts?: FixedValue;
+  totalNetFreight?: FixedValue;
+  totalSurcharges?: FixedValue;
+  totalNetFedExCharge?: FixedValue;
+  totalTaxes?: FixedValue;
+  totalNetCharge?: FixedValue;
+  totalRebates?: FixedValue;
+  totalDutiesAndTaxes?: FixedValue;
+  totalAncillaryFeesAndTaxes?: FixedValue;
+  totalDutiesTaxesAndFees?: FixedValue;
+  totalNetChargeWithDutiesAndTaxes?: FixedValue;
+  freightDiscounts?: FedExRateRateDiscount2[];
+  rebates?: FedExRateRebate[];
+  surcharges?: FedExRateSurcharge2[];
+  taxes?: FedExRateTax2[];
+  dutiesAndTaxes?: FedExRateEdtCommodityTax[];
+  ancillaryFeesAndTaxes?: AncillaryFeeAndTax[];
+  variableHandlingCharges?: FedExRateVariableHandlingCharges1;
+  totalVariableHandlingCharges?: FedExRateVariableHandlingCharges1;
+}
+
+export interface CurrencyExchangeRate {
+  fromCurrency?: string;
+  intoCurrency?: string;
+  rate?: number;
+}
+
+export interface FedExRateRateDiscount2 {
+  rateDiscountType?: FedExRateRateDiscountType;
+  description?: string;
+  amount?: FixedValue;
+  percent?: number;
+}
+
+export interface FedExRateRebate {
+  rebateType?: "BONUS" | "EARNED" | "OTHER";
+  description?: string;
+  amount?: FixedValue;
+  percent?: number;
+}
+
+export interface FedExRateSurcharge2 {
+  surchargeType?: FedExRateSurchargeType;
+  level?: "PACKAGE" | "SHIPMENT";
+  description?: string;
+  amount?: FixedValue;
+}
+
+export interface FedExRateTax2 {
+  taxType?: FedExRateTaxType;
+  description?: string;
+  amount?: FixedValue;
+}
+
+export interface FedExRateEdtCommodityTax {
+  harmonizedCode?: string;
+  taxes?: FedExRateEdtTaxDetail1;
+  total?: FixedValue;
+}
+
+export interface FedExRateEdtTaxDetail1 {
+  taxType?: FedExRateTaxType2;
+  taxcode?: string;
+  /** YYYY-MM-DD */
+  effectiveDate?: string;
+  name?: string;
+  taxableValue?: FixedValue;
+  description?: string;
+  formula?: string;
+  amount?: FixedValue;
+  taxRates?: FedExRateTaxRate[];
+  appliedPreferentialTradeAgreement?: FedExRateAppliedPreferentialTradeAgreement;
+}
+
+export interface FedExRateTaxRate {
+  value?: string;
+  currency?: string;
+  quantity?: number;
+  unitOfMeasure?: string;
+}
+
+export interface FedExRateAppliedPreferentialTradeAgreement {
+  id?: string;
+  name?: string;
+  description?: string;
+}
+
+export interface AncillaryFeeAndTax {
+  type?:
+    | "CLEARANCE_ENTRY_FEE"
+    | "GOODS_AND_SERVICES_TAX"
+    | "HARMONIZED_SALES_TAX"
+    | "OTHER";
+  description?: string;
+  amount?: FixedValue;
+}
+
+export interface FedExRateVariableHandlingCharges1 {
+  variableHandlingCharge?: FixedValue;
+  fixedVariableHandlingCharge?: FixedValue;
+  percentVariableHandlingCharge?: FixedValue;
+  totalCustomerCharge?: FixedValue;
+}
+
+export interface VariableHandlingCharge {
+  totalCustomerCharge?: number;
+  variableHandlingCharge?: number;
+}
+
+export interface EdtCharge {
+  edtTaxDetail?: EdtTaxDetail;
+  harmonizedCode?: string;
+}
+
+export interface EdtTaxDetail {
+  edtTaxType?: string;
+  amount?: number;
+  taxableValue?: number;
+  name?: string;
+  description?: string;
+  formula?: string;
+  /** YYYY-MM-DD */
+  effectiveDate?: string;
+}
+
+export interface RatedPackage {
+  effectiveNetDiscount?: number;
+  packageRateDetail?: PackageRateDetail;
+  groupNumber?: number;
+}
+
+export interface PackageRateDetail {
+  ratedWeightMethod?: string;
+  totalTaxes?: number;
+  totalFreightDiscounts?: number;
+  baseCharge?: number;
+  totalRebates?: number;
+  rateType?: string;
+  billingWeight?: FedExRateWeight2;
+  netFreight?: number;
+  surcharges?: Surcharge[];
+  totalSurcharges?: number;
+  netFedExCharge?: number;
+  netCharge?: number;
+  freightDiscounts?: Discount[];
+}
+
+export interface Surcharge {
+  type?: string;
+  description?: string;
+  amount?: number;
+  level?: string;
+  name?: string;
+}
+
+export interface Discount {
+  amount?: number;
+  name?: string;
+  description?: string;
+  type?: string;
+  percent?: number;
+}
+
+export interface ShipmentLegRateDetail {
+  discounts?: Discount[];
+  pricingCode?: string;
+  legDescription?: string;
+  surcharges?: Surcharge[];
+  specialRatingApplied?: string[];
+  taxes?: Tax[];
+  rateScale?: string;
+  totalNetCharge?: number;
+  totalBaseCharge?: number;
+  currencyExchangeRate?: CurrencyExchangeRate;
+  totalBillingWeight?: FedExRateWeight12;
+  currency?: string;
+}
+
+export interface Tax {
+  amount?: number;
+  name?: string;
+  description?: string;
+  type?: string;
+}
+
+export interface FedExRateAncillaryFeesAndTaxes {
+  amount?: number;
+  description?: string;
+  type?: string;
+}
+
+export interface ShipmentRateDetail {
+  currencyExchangeRate?: CurrencyExchangeRate;
+  currency?: string;
+  rateZone?: string;
+  ratingBasis?:
+    "SHIPMENT_WEIGHT_BASED" | "FLAT_RATE_PER_PACK" | "PACK_WEIGHT_BASED";
+  pricingCode?: string;
+  totalFreightDiscount?: number;
+  specialRatingApplied?: string[];
+  totalSurcharges?: number;
+  freightDiscount?: Discount[];
+  fuelSurchargePercent?: number;
+  totalBillingWeight?: FedExRateWeight12;
+  totalDimWeight?: FedExRateWeight12;
+  dimDivisor?: number;
+  surCharges?: Surcharge[];
+  taxes?: Tax[];
+}
+
+export interface OperationalDetail {
+  originLocationIds?: string[];
+  commitDays?: string[];
+  serviceCode?: string;
+  airportId?: string;
+  scac?: string;
+  originServiceAreas?: string[];
+  deliveryDay?: string;
+  originLocationNumbers?: number[];
+  destinationPostalCode?: string;
+  commitDate?: string;
+  astraDescription?: string;
+  deliveryDate?: string;
+  deliveryEligibilities?: string[];
+  ineligibleForMoneyBackGuarantee?: boolean;
+  MaximumTransitTime?: string;
+  astraPlannedServiceLevel?: string;
+  destinationLocationIds?: string[];
+  destinationLocationStateOrProvinceCodes?: string[];
+  transitTime?: string;
+  packagingCode?: string;
+  destinationLocationNumbers?: number[];
+  publishedDeliveryTime?: string;
+  countryCodes?: string[];
+  stateOrProvinceCodes?: string[];
+  ursaPrefixCode?: string;
+  ursaSuffixCode?: string;
+  destinationServiceAreas?: string[];
+  originPostalCodes?: string[];
+  customTransitTime?: string;
+}
+
+export interface ServiceDescription {
+  serviceType?: string;
+  code?: string;
+  names?: Name[];
+  astraDescription?: string;
+  description?: string;
+  serviceId?: string;
+  serviceCategory?: string;
+}
+
+export interface Name {
+  type?: string;
+  encoding?: string;
+  value?: string;
+}
+
+export interface BrokerDetail {
+  broker: Broker;
+  type: "EXPORT" | "IMPORT";
+  brokerAddress?: FedexAdvancedAddress;
+}
+
+export interface Broker {
+  address: FedExRateAddress1;
+  accountNumber?: FedExRateAccountNumber;
+}
+
+export interface FedexAdvancedAddress {
+  streetLines?: string[];
+  city?: string;
+  stateOrProvinceCode?: string;
+  postalCode?: string;
+  countryCode?: string;
+  residential?: boolean;
+  classification?: string;
+  geographicCoordinates?: string;
+  urbanizationCode?: string;
+  countryName?: string;
+}
+
+export interface Commit {
+  daysInTransit?: FedExRateDaysInTransit;
+  guaranteedType?: "GUARANTEED_MORNING" | "GUARANTEED_CLOSE_OF_BUSINESS";
+  smartPostCommitTime?: string;
+  dateDetail?: DateDetail;
+  delayDetails?: FedExRateDelayDetail;
+  saturdayDelivery?: boolean;
+  alternativeCommodityNames?: string[];
+  transitDays?: TransitDays;
+  label?: string;
+  commitMessageDetails?: string;
+  commodityName?: string;
+}
+
+export interface DateDetail {
+  dayOfWeek?: string;
+  /** YYYY-MM-DDTHH:mm:ss */
+  dayFormat?: string;
+}
+
+export interface FedExRateDelayDetail {
+  /** YYYY-MM-DD */
+  date?: string;
+  dayOfWeek?: string;
+  level?: string;
+  point?: string;
+  type?: string;
+  description?: string;
+}
+
+export interface TransitDays {
+  description?: string;
+  minimumTransitTime?: FedExRateDaysInTransit;
+  maximumTransitTime?: string;
+}
+
+export interface ServiceSubOptionDetail {
+  smartPostIndiciaType?: FedExRateIndicia;
+}
+
+export type FedExRateRateType =
+  | "ACCOUNT"
+  | "ACTUAL"
+  | "CURRENT"
+  | "CUSTOM"
+  | "LIST"
+  | "INCENTIVE"
+  | "PREFERRED"
+  | "PREFERRED_INCENTIVE"
+  | "PREFERRED_CURRENCY";
+
+export type FedExRateSignatureOptionType =
+  "SERVICE_DEFAULT" | "NO_SIGNATURE_REQUIRED" | "INDIRECT" | "DIRECT" | "ADULT";
+
+export type FedExRateOption =
+  | "HAZARDOUS_MATERIALS"
+  | "BATTERY"
+  | "ORM_D"
+  | "REPORTABLE_QUANTITIES"
+  | "SMALL_QUANTITY_EXCEPTION"
+  | "LIMITED_QUANTITIES_COMMODITIES";
+
+export type FedExRateRadioactiveContainerClass =
+  | "EXCEPTED_PACKAGE"
+  | "INDUSTRIAL_IP1"
+  | "INDUSTRIAL_IP2"
+  | "INDUSTRIAL_IP3"
+  | "TYPE_A"
+  | "TYPE_B_M"
+  | "TYPE_B_U"
+  | "TYPE_C";
+
+export type FedExRateCodCollectionType =
+  "ANY" | "CASH" | "COMPANY_CHECK" | "GUARANTEED_FUNDS" | "PERSONAL_CHECK";
+
+export type FedExRateReturnType =
+  | "FEDEX_TAG"
+  | "PENDING"
+  | "PRINT_RETURN_LABEL"
+  | "EMAIL_LABEL"
+  | "NET_RETURN"
+  | "VOICE_CALL_TAG";
+
+export type FedExRateLocationType =
+  | "FEDEX_AUTHORIZED_SHIP_CENTER"
+  | "FEDEX_OFFICE"
+  | "FEDEX_SELF_SERVICE_LOCATION"
+  | "FEDEX_STAFFED"
+  | "RETAIL_ALLICANCE_LOCATION"
+  | "FEDEX_GROUND_TERMINAL"
+  | "FEDEX_ONSITE";
+
+export type FedExRateType =
+  | "DEA_036"
+  | "DEA_236"
+  | "DEA_486"
+  | "DSP_05"
+  | "DSP_61"
+  | "DSP_73"
+  | "DSP_85"
+  | "DSP_94"
+  | "DSP_LICENSE_AGREEMENT"
+  | "FROM_FOREIGN_TRADE_ZONE"
+  | "WAREHOUSE_WITHDRAWAL";
+
+export type FedExRateShipmentPurpose =
+  | "GIFT"
+  | "NOT_SOLD"
+  | "PERSONAL_EFFECTS"
+  | "REPAIR_AND_RETURN"
+  | "SAMPLE"
+  | "SOLD"
+  | "COMMERCIAL"
+  | "RETURN_AND_REPAIR"
+  | "PERSONAL_USE";
+
+export type FedExRateAncillaryEndorsement =
+  | "ADDRESS_CORRECTION"
+  | "CARRIER_LEAVE_IF_NO_RESPONSE"
+  | "CHANGE_SERVICE"
+  | "FORWARDING_SERVICE"
+  | "RETURN_SERVICE";
+
+export type FedExRateIndicia =
+  | "MEDIA_MAIL"
+  | "PARCEL_RETURN"
+  | "PARCEL_SELECT"
+  | "PRESORTED_BOUND_PRINTED_MATTER"
+  | "PRESORTED_STANDARD";
+
+export type FedExRateRateType2 =
+  | "INCENTIVE"
+  | "NEGOTIATED"
+  | "PAYOR_ACCOUNT_PACKAGE"
+  | "PAYOR_ACCOUNT_SHIPMENT"
+  | "PAYOR_CUSTOM_PACKAGE"
+  | "PAYOR_CUSTOM_SHIPMENT"
+  | "PAYOR_LIST_PACKAGE"
+  | "PAYOR_LIST_SHIPMENT"
+  | "PAYOR_RETAIL_PACKAGE"
+  | "PAYOR_RETAIL_SHIPMENT"
+  | "PREFERRED_ACCOUNT_PACKAGE"
+  | "PREFERRED_ACCOUNT_SHIPMENT"
+  | "PREFERRED_CUSTOM_PACKAGE"
+  | "PREFERRED_CUSTOM_SHIPMENT"
+  | "PREFERRED_INCENTIVE"
+  | "PREFERRED_LIST_PACKAGE"
+  | "PREFERRED_LIST_SHIPMENT"
+  | "PREFERRED_NEGOTIATED"
+  | "PREFERRED_RETAIL_PACKAGE"
+  | "PREFERRED_RETAIL_SHIPMENT"
+  | "RATED_ACCOUNT_PACKAGE"
+  | "RATED_ACCOUNT_SHIPMENT"
+  | "RATED_CUSTOM_PACKAGE"
+  | "RATED_CUSTOM_SHIPMENT"
+  | "RATED_LIST_PACKAGE"
+  | "RATED_LIST_SHIPMENT"
+  | "RATED_RETAIL_PACKAGE"
+  | "RATED_RETAIL_SHIPMENT"
+  | "UNKNOWN";
+
+export type FedExRatePricingCode =
+  | "ACTUAL"
+  | "ALTERNATE"
+  | "BASE"
+  | "HUNDREDWEIGHT"
+  | "HUNDREDWEIGHT_ALTERNATE"
+  | "INTERNATIONAL_DISTRIBUTION"
+  | "INTERNATIONAL_ECONOMY_SERVICE"
+  | "LTL_FREIGHT"
+  | "PACKAGE"
+  | "SHIPMENT"
+  | "SHIPMENT_FIVE_POUND_OPTIONAL"
+  | "SHIPMENT_OPTIONAL"
+  | "SPECIAL"
+  | "UNKNOWN";
+
+export type FedExRateMinimumChargeType =
+  | "CUSTOMER"
+  | "CUSTOMER_FREIGHT_WEIGHT"
+  | "EARNED_DISCOUNT"
+  | "MIXED"
+  | "RATE_SCALE"
+  | "UNKNOWN";
+
+export type FedExRatePickupBaseChargeDescription =
+  | "Regularly Scheduled Pickup Mon-Fri"
+  | "Automated Pickup Mon-Fri"
+  | "Same Day OC Pickup Mon-Fri (CS)"
+  | "Same Day OC Pickup Mon-Fri (Online)"
+  | "Fut. Day OC Pickup Mon-Fri (CS)"
+  | "Fut. Day OC Pickup Mon-Fri (Online)"
+  | "Regularly Scheduled Pickup Sat"
+  | "Automated Pickup Sat"
+  | "Same Day OC Pickup Sat (CS)"
+  | "Same Day OC Pickup Sat (Online)"
+  | "Fut. Day OC Pickup Sat (CS)"
+  | "Fut. Day OC Pickup Sat (Online)"
+  | "Regularly Scheduled Pickup Sun"
+  | "Automated Pickup Sun"
+  | "Same Day OC Pickup Sun (CS)"
+  | "Same Day OC Pickup Sun (Online)"
+  | "Fut. Day OC Pickup Sun (CS)"
+  | "Fut. Day OC Pickup Sun (Online)"
+  | "Residential On-Call Pickup Surcharge"
+  | "Pickup Area Surcharge"
+  | "Extended Pickup Area Surcharge"
+  | "Remote Pickup Area Surcharge"
+  | "Fuel Surcharge";
+
+export type FedExRateRateDiscountType =
+  "BONUS" | "COUPON" | "EARNED" | "INCENTIVE" | "OTHER" | "VOLUME";
+
+export type FedExRateSurchargeType =
+  | "ACCOUNT_NUMBER_PROCESSING_FEE"
+  | "ADDITIONAL_HANDLING"
+  | "ADDRESS_CORRECTION"
+  | "ANCILLARY_FEE"
+  | "APPOINTMENT_DELIVERY"
+  | "BLIND_SHIPMENT"
+  | "BROKER_SELECT_OPTION"
+  | "CANADIAN_DESTINATION"
+  | "CHARGEABLE_PALLET_WEIGHT"
+  | "COD"
+  | "CUT_FLOWERS"
+  | "DANGEROUS_GOODS"
+  | "DELIVERY_AREA"
+  | "DELIVERY_CONFIRMATION"
+  | "DELIVERY_ON_INVOICE_ACCEPTANCE"
+  | "DEMAND"
+  | "DEMAND_ADDITIONAL_HANDLING"
+  | "DEMAND_OVERSIZE"
+  | "DEMAND_RESIDENTIAL_DELIVERY"
+  | "DETENTION"
+  | "DOCUMENTATION_FEE"
+  | "DRY_ICE"
+  | "EMAIL_LABEL"
+  | "ENHANCED_SECURITY"
+  | "EUROPE_FIRST"
+  | "EXCESS_VALUE"
+  | "EXCLUSIVE_USE"
+  | "EXHIBITION"
+  | "EXPEDITED"
+  | "EXPORT"
+  | "EXTRA_LABOR"
+  | "EXTRA_SURFACE_HANDLING_CHARGE"
+  | "EXTREME_LENGTH"
+  | "FEDEX_INTRACOUNTRY_FEES"
+  | "FEDEX_TAG"
+  | "FICE"
+  | "FLATBED"
+  | "FREIGHT_DIRECT_BASIC_BY_APPOINTMENT_DELIVERY"
+  | "FREIGHT_DIRECT_BASIC_BY_APPOINTMENT_PICKUP"
+  | "FREIGHT_DIRECT_BASIC_DELIVERY"
+  | "FREIGHT_DIRECT_BASIC_PICKUP"
+  | "FREIGHT_DIRECT_PREMIUM_DELIVERY"
+  | "FREIGHT_DIRECT_PREMIUM_PICKUP"
+  | "FREIGHT_DIRECT_STANDARD_DELIVERY"
+  | "FREIGHT_DIRECT_STANDARD_PICKUP"
+  | "FREIGHT_GUARANTEE"
+  | "FREIGHT_ON_VALUE"
+  | "FREIGHT_TO_COLLECT"
+  | "FUEL"
+  | "HIGH_COST_SERVICE_AREA_DESTINATION"
+  | "HIGH_COST_SERVICE_AREA_ORIGIN"
+  | "HIGH_DENSITY"
+  | "HOLD_AT_LOCATION"
+  | "HOLIDAY_DELIVERY"
+  | "HOLIDAY_GUARANTEE"
+  | "HOME_DELIVERY_APPOINTMENT"
+  | "HOME_DELIVERY_DATE_CERTAIN"
+  | "HOME_DELIVERY_EVENING"
+  | "INSIDE_DELIVERY"
+  | "INSIDE_PICKUP"
+  | "INSURED_VALUE"
+  | "INTERHAWAII"
+  | "LIFTGATE_DELIVERY"
+  | "LIFTGATE_PICKUP"
+  | "LIMITED_ACCESS_DELIVERY"
+  | "LIMITED_ACCESS_PICKUP"
+  | "MARKING_OR_TAGGING"
+  | "METRO_DELIVERY"
+  | "METRO_PICKUP"
+  | "MONITORING_AND_INTERVENTION"
+  | "NON_BUSINESS_TIME"
+  | "NON_MACHINABLE"
+  | "OFFSHORE"
+  | "ON_CALL_PICKUP"
+  | "ON_DEMAND_CARE"
+  | "OTHER"
+  | "OUT_OF_DELIVERY_AREA"
+  | "OUT_OF_PICKUP_AREA"
+  | "OVER_DIMENSION"
+  | "OVER_LENGTH"
+  | "OVERSIZE"
+  | "OVERWEIGHT"
+  | "PALLET_SHRINKWRAP"
+  | "PALLETS_PROVIDED"
+  | "PEAK"
+  | "PEAK_ADDITIONAL_HANDLING"
+  | "PEAK_OVERSIZE"
+  | "PEAK_RESIDENTIAL_DELIVERY"
+  | "PERMIT"
+  | "PIECE_COUNT_VERIFICATION"
+  | "PORT"
+  | "PRE_DELIVERY_NOTIFICATION"
+  | "PRIORITY_ALERT"
+  | "PROTECTION_FROM_FREEZING"
+  | "REGIONAL_MALL_DELIVERY"
+  | "REGIONAL_MALL_PICKUP"
+  | "REROUTE"
+  | "RESCHEDULE"
+  | "RESIDENTIAL_DELIVERY"
+  | "RESIDENTIAL_PICKUP"
+  | "RETURN_LABEL"
+  | "SATURDAY_DELIVERY"
+  | "SATURDAY_PICKUP"
+  | "SHIPMENT_ASSEMBLY"
+  | "SIGNATURE_OPTION"
+  | "SINGLE_PIECE"
+  | "SORT_AND_SEGREGATE"
+  | "SPECIAL_DELIVERY"
+  | "SPECIAL_EQUIPMENT"
+  | "STORAGE"
+  | "SUNDAY_DELIVERY"
+  | "TARP"
+  | "THIRD_PARTY_BILLING"
+  | "THIRD_PARTY_CONSIGNEE"
+  | "TRANSMART_SERVICE_FEE"
+  | "USPS"
+  | "WEIGHING";
+
+export type FedExRateTaxType =
+  "EXPORT" | "GST" | "HST" | "INTRACOUNTRY" | "OTHER" | "PST" | "SST" | "VAT";
+
+export type FedExRateTaxType2 =
+  | "ADDITIONAL_TAXES"
+  | "CONSULAR_INVOICE_FEE"
+  | "CUSTOMS_SURCHARGES"
+  | "DUTY"
+  | "EXCISE_TAX"
+  | "FOREIGN_EXCHANGE_TAX"
+  | "GENERAL_SALES_TAX"
+  | "IMPORT_LICENSE_FEE"
+  | "INTERNAL_ADDITIONAL_TAXES"
+  | "INTERNAL_SENSITIVE_PRODUCTS_TAX"
+  | "OTHER"
+  | "SENSITIVE_PRODUCTS_TAX"
+  | "STAMP_TAX"
+  | "STATISTICAL_TAX"
+  | "TRANSPORT_FACILITIES_TAX";
+
+export type FedExRateRatedWeightMethod =
+  | "ACTUAL"
+  | "AVERAGE_PACKAGE_WEIGHT_MINIMUM"
+  | "DEFAULT_WEIGHT_APPLIED"
+  | "BALLOON"
+  | "DIM"
+  | "FREIGHT_MINIMUM"
+  | "MIXED"
+  | "OVERSIZE"
+  | "OVERSIZE_1"
+  | "OVERSIZE_2"
+  | "OVERSIZE_3"
+  | "PACKAGING_MINIMUM"
+  | "WEIGHT_BREAK";
+
+export type FedExRateDaysInTransit =
+  | "EIGHT_DAYS"
+  | "EIGHTEEN_DAYS"
+  | "ELEVEN_DAYS"
+  | "FIFTEEN_DAYS"
+  | "FIVE_DAYS"
+  | "FOUR_DAYS"
+  | "FOURTEEN_DAYS"
+  | "NINE_DAYS"
+  | "NINETEEN_DAYS"
+  | "ONE_DAY"
+  | "SEVEN_DAYS"
+  | "SEVENTEEN_DAYS"
+  | "SIX_DAYS"
+  | "SIXTEEN_DAYS"
+  | "TEN_DAYS"
+  | "THIRTEEN_DAYS"
+  | "THREE_DAYS"
+  | "TWELVE_DAYS"
+  | "TWENTY_DAYS"
+  | "TWO_DAYS"
+  | "SMARTPOST_TRANSIT_DAYS"
+  | "UNKNOWN";
+
+// Exports kept from v1.0.0 so imports keep compiling. Wire fields are now
+// string-literal unions, so these enums are no longer referenced by any field
+// type (their members still assign to the unions). Several members are not
+// values the spec lists; see docs/fedex-api.md.
 export enum VariableOption {
   SATURDAY_DELIVERY = "SATURDAY_DELIVERY",
   FREIGHT_GUARANTEE = "FREIGHT_GUARANTEE",
@@ -128,6 +1294,7 @@ export enum PrintedReferenceType {
  * Indicate the type of rates to be returned.
  * @example ["LIST","PREFERRED"]
  */
+
 export type RateRequestType =
   /** Returns FedEx published list rates in addition to account-specific rates (if applicable). */
   | "LIST"
@@ -463,26 +1630,6 @@ export enum SmartPostIndiciaType {
   PRESORTED_STANDARD = "PRESORTED_STANDARD",
 }
 
-export interface FixedValue {
-  currency: CurrencyCodes;
-  amount: number;
-}
-
-export interface RateRequestControlParameters {
-  returnTransitTimes?: boolean;
-  servicesNeededOnRateFailure?: boolean;
-  variableOptions?: VariableOption;
-  rateSortOrder?: RateSortOrder;
-}
-
-export interface FedexAddress {
-  city?: string;
-  stateOrProvinceCode?: string;
-  postalCode: string;
-  countryCode: string;
-  residential?: boolean;
-}
-
 export interface SmsDetail {
   phoneNumber: string;
   phoneNumberCountryCode: string;
@@ -509,58 +1656,11 @@ export interface EmailNotificationDetail {
   PrintedReference: PrintedReference;
 }
 
-export interface VariableHandlingChargeDetail {
-  rateType?: RateType;
-  percentValue?: number;
-  rateLevelType?: RateLevelType;
-  fixedValue?: FixedValue;
-  rateElementBasis: RateElementBasis;
-}
-
-export interface DutiesPayment {
-  paymentType: "SENDER" | "RECIPIENT" | "THIRD_PARTY" | "COLLECT";
-  payor: {
-    responsibleParty: {
-      accountNumber: { value: string };
-      address?: FedexAddress;
-      contact?: FedexContact;
-    };
-  };
-}
-
-export interface Commodity {
-  description: string;
-  weight: FedExWeight;
-  quantity: number;
-  customsValue?: FixedValue;
-  unitPrice?: FixedValue;
-  numberOfPieces?: number;
-  countryOfManufacture?: string;
-  quantityUnits?: string;
-  name?: string;
-  harmonizedCode?: string;
-  partNumber?: string;
-}
-
-export interface CustomsClearanceDetail {
-  commercialInvoice?: { shipmentPurpose: ShipmentPurpose };
-  freightOnValue?: FreightOnValue;
-  dutiesPayment?: DutiesPayment;
-  commodities: Commodity[];
-}
-
 export interface ServiceTypeDetail {
   carrierCode?: FedexCarrierCodes;
   description?: string;
   serviceName?: string;
   serviceCategory?: string;
-}
-
-export interface SmartPostInfoDetail {
-  ancillaryEndorsement?: AncillaryEndorsement;
-  hubId?: SmartPostHubId;
-  indicia?: Indicia;
-  specialServices?: SpecialService;
 }
 
 export interface ExpressFreightDetail {
@@ -575,626 +1675,10 @@ export interface ContentRecord {
   partNumber?: string;
 }
 
-export interface VariableHandlingChargeDetail {
-  rateType?: RateType;
-  percentValue?: number;
-  rateLevelType?: RateLevelType;
-  fixedValue?: FixedValue;
-  rateElementBasis: RateElementBasis;
-}
-
-export interface RequestedPackageLineItem {
-  subPackagingType?: FedExSubPackagingType;
-  groupPackageCount?: number;
-  contentRecord?: ContentRecord[];
-  declaredValue?: FixedValue;
-  weight: FedExWeight;
-  dimensions?: FedExDimensions;
-  variableHandlingChargeDetail?: VariableHandlingChargeDetail;
-  /** See FedEx documentation for details: https://developer.fedex.com/api/en-us/catalog/rate/v1/docs.html */
-  packageSpecialServices?: {
-    specialServiceTypes: PackageSpecialService[];
-    signatureOptionType: string;
-  };
-}
-
-export interface Shipper {
-  address: FedexAddress;
-}
-
-export interface Recipient {
-  address: FedexAddress;
-  contact?: FedexContact;
-  accountNumber?: string;
-}
-
-export interface FedexContact {
-  personName: string;
-  emailAddress?: string;
-  phoneNumber: string;
-  phoneExtension?: string;
-  faxNumber?: string;
-  companyName: string;
-}
-
-export interface RequestedShipment {
-  shipper: Shipper;
-  recipient: Recipient;
-  pickupType?: PickupType;
-  requestedPackageLineItems: RequestedPackageLineItem[];
-  serviceType?: FedExServiceType;
-  emailNotificationDetail?: EmailNotificationDetail;
-  preferredCurrency?: CurrencyCodes;
-  rateRequestType: RateRequestType[];
-  /**
-   * This is the Shipment date. Required for future ship date rates. Default is current date if not indicated or date is in the past.
-   *
-   * The date format must be YYYY-MM-DDTHH:MM:SS.
-   * The time must be in the format: HH:MM:SS using a 24-hour clock.
-   * The date and time are separated by the letter T.
-   *
-   * @example '2015-03-25T09:30:00'
-   */
-  shipDateStamp?: string;
-  documentShipment?: boolean;
-  variableHandlingChargeDetail?: VariableHandlingChargeDetail;
-  totalPackageCount?: number;
-  totalWeight?: number;
-  /** See FedEx documentation for details: https://developer.fedex.com/api/en-us/catalog/rate/v1/docs.html */
-  shipmentSpecialServices?: ShipmentSpecialServices;
-  customsClearanceDetail?: CustomsClearanceDetail;
-  groundShipment?: boolean;
-  groupShipment?: boolean;
-  serviceTypeDetail?: ServiceTypeDetail;
-  smartPostInfoDetail?: SmartPostInfoDetail;
-  expressFreightDetail?: ExpressFreightDetail;
-  packagingType?: string;
-}
-
-interface ReturnShipmentDetail {
-  returnType?: string;
-}
-
-interface DeliveryOnInvoiceAcceptanceDetail {
-  recipient?: Recipient;
-}
-
-interface InternationalTrafficInArmsRegulationsDetail {
-  licenseOrExemptionNumber: string;
-}
-
-interface ProcessingOptions {
-  options: string[];
-}
-
-interface RecommendedDocumentSpecification {
-  types: RecommendedDocumentSpecificationTypes[];
-}
-
-enum EmailLabelDetailOptionsRequestedOptionsEnum {
-  PRODUCE_PAPERLESS_SHIPPING_FORMAT = "PRODUCE_PAPERLESS_SHIPPING_FORMAT",
-  SUPPRESS_ADDITIONAL_LANGUAGES = "SUPPRESS_ADDITIONAL_LANGUAGES",
-  SUPPRESS_ACCESS_EMAILS = "SUPPRESS_ACCESS_EMAILS",
-}
-
-enum EmailLabelDetailRoleEnum {
-  SHIPMENT_COMPLETOR = "SHIPMENT_COMPLETOR",
-  SHIPMENT_INITIATOR = "SHIPMENT_INITIATOR",
-}
-
-enum FedExLanguageCode {
-  ar_AE = "ar_AE",
-  bg_BG = "bg_BG",
-  zh_CN = "zh_CN",
-  zh_HK = "zh_HK",
-  zh_TW = "zh_TW",
-  cs_CZ = "cs_CZ",
-  da_DK = "da_DK",
-  nl_NL = "nl_NL",
-  en_CA = "en_CA",
-  en_GB = "en_GB",
-  en_US = "en_US",
-  et_EE = "et_EE",
-  fi_FI = "fi_FI",
-  fr_CA = "fr_CA",
-  fr_FR = "fr_FR",
-  de_DE = "de_DE",
-  de_CH = "de_CH",
-  el_GR = "el_GR",
-  hu_HU = "hu_HU",
-  it_IT = "it_IT",
-  ja_JP = "ja_JP",
-  ko_KR = "ko_KR",
-  lv_LV = "lv_LV",
-  lt_LT = "lt_LT",
-  no_NO = "no_NO",
-  pl_PL = "pl_PL",
-  pt_BR = "pt_BR",
-  pt_PT = "pt_PT",
-  ro_RO = "ro_RO",
-  ru_RU = "ru_RU",
-  sk_SK = "sk_SK",
-  sl_SL = "sl_SL",
-  es_AR = "es_AR",
-  es_MX = "es_MX",
-  es_US = "es_US",
-  sv_SE = "sv_SE",
-  th_TH = "th_TH",
-  tr_TR = "tr_TR",
-  uk_UA = "uk_UA",
-  vi_VN = "vi_VN",
-}
-interface EmailLabelDetailLocale {
-  country?: FedExCountryCode;
-  language?: FedExLanguageCode;
-}
-
-interface EmailLabelDetailRecipient {
-  emailAddress: string;
-  optionsRequested?: EmailLabelDetailOptionsRequestedOptionsEnum[];
-  role?: EmailLabelDetailRoleEnum;
-  locale?: EmailLabelDetailLocale;
-}
-interface EmailLabelDetail {
-  recipients: EmailLabelDetailRecipient[];
-  message: string;
-}
-
-enum DocumentReferencesDocumentTypeEnum {
-  CERTIFICATE_OF_ORIGIN = "CERTIFICATE_OF_ORIGIN",
-  COMMERCIAL_INVOICE = "COMMERCIAL_INVOICE",
-  ETD_LABEL = "ETD_LABEL",
-  NAFTA_CERTIFICATE_OF_ORIGIN = "NAFTA_CERTIFICATE_OF_ORIGIN",
-  NET_RATE_SHEET = "NET_RATE_SHEET",
-  OTHER = "OTHER",
-  PRO_FORMA_INVOICE = "PRO_FORMA_INVOICE",
-}
-interface DocumentReference {
-  documentType?: DocumentReferencesDocumentTypeEnum;
-  customerReference?: string;
-  description?: string;
-  documentId?: string;
-}
-
-interface ShipmentDryIceDetail {
-  totalWeight?: FedExWeight;
-  packageCount: number;
-}
-interface PendingShipmentDetail {
-  pendingShipmentType?: string;
-  processingOptions?: ProcessingOptions;
-  recommendedDocumentSpecification?: RecommendedDocumentSpecification;
-  emailLabelDetail?: EmailLabelDetail[];
-  documentReferences?: DocumentReference[];
-  /**
-   * Specify the Email Return Label expiration date. The Maximum expiration date for an Email Return Label must
-   * be greater or equal to the day of the label request and not greater than 2 years in the future.
-   * Example: 2012-12-31.
-   */
-  expirationTimeStamp?: string;
-  shipmentDryIceDetail?: ShipmentDryIceDetail;
-}
-
-interface LocationContactAndAddress {
-  contact?: FedexContact;
-  address?: FedexAddress;
-}
-
-enum HoldAtLocationDetailLocationTypeEnum {
-  FEDEX_AUTHORIZED_SHIP_CENTER = "FEDEX_AUTHORIZED_SHIP_CENTER",
-  FEDEX_OFFICE = "FEDEX_OFFICE",
-  FEDEX_SELF_SERVICE_LOCATION = "FEDEX_SELF_SERVICE_LOCATION",
-  FEDEX_STAFFED = "FEDEX_STAFFED",
-  RETAIL_ALLICANCE_LOCATION = "RETAIL_ALLICANCE_LOCATION",
-  FEDEX_GROUND_TERMINAL = "FEDEX_GROUND_TERMINAL",
-  FEDEX_ONSITE = "FEDEX_ONSITE",
-}
-interface HoldAtLocationDetail {
-  locationId: string;
-  locationContactAndAddress?: LocationContactAndAddress;
-  locationType?: HoldAtLocationDetailLocationTypeEnum;
-}
-
-enum ChargeTotalTypeEnum {
-  CURRENT_PACKAGE = "CURRENT_PACKAGE",
-  SUM_OF_PACKAGES = "SUM_OF_PACKAGES",
-}
-
-enum ChargeTypeEnum {
-  COD_SURCHARGE = "COD_SURCHARGE",
-  NET_CHARGE = "NET_CHARGE",
-  NET_FREIGHT = "NET_FREIGHT",
-  TOTAL_CUSTOMER_CHARGE = "TOTAL_CUSTOMER_CHARGE",
-}
-interface AddTransportationChargesDetail {
-  rateType?: RateType;
-  rateLevelType?: RateLevelType;
-  chargeTotalType?: ChargeTotalTypeEnum;
-  chargeType?: ChargeTypeEnum;
-}
-
-interface CodRecipient {
-  address?: FedexAddress;
-  contact?: FedexContact;
-  accountNumber?: {
-    value: string;
-  };
-}
-
-enum CodCollectionTypeEnum {
-  ANY = "ANY",
-  CASH = "CASH",
-  COMPANY_CHECK = "COMPANY_CHECK",
-  GUARANTEED_FUNDS = "GUARANTEED_FUNDS",
-  PERSONAL_CHECK = "PERSONAL_CHECK",
-}
-
-interface FinancialInstitutionContactAndAddress {
-  contact: FedexContact;
-  address: FedexAddress;
-}
-
-enum ReturnReferenceIndicatorTypeEnum {
-  INVOICE = "INVOICE",
-  PO = "PO",
-  REFERENCE = "REFERENCE",
-  TRACKING = "TRACKING",
-}
-
-interface ShipmentCODDetail {
-  addTransportationChargesDetail?: AddTransportationChargesDetail;
-  codRecipient?: CodRecipient;
-  remitToName?: string;
-  codCollectionType?: CodCollectionTypeEnum;
-  financialInstitutionContactAndAddress?: FinancialInstitutionContactAndAddress;
-  returnReferenceIndicatorType?: ReturnReferenceIndicatorTypeEnum;
-}
-
-enum InternationalControlledExportDetailEnum {
-  DEA_036 = "DEA_036",
-  DEA_236 = "DEA_236",
-  DEA_486 = "DEA_486",
-  DSP_05 = "DSP_05",
-  DSP_61 = "DSP_61",
-  DSP_73 = "DSP_73",
-  DSP_85 = "DSP_85",
-  DSP_94 = "DSP_94",
-  DSP_LICENSE_AGREEMENT = "DSP_LICENSE_AGREEMENT",
-  FROM_FOREIGN_TRADE_ZONE = "FROM_FOREIGN_TRADE_ZONE",
-  WAREHOUSE_WITHDRAWAL = "WAREHOUSE_WITHDRAWAL",
-}
-interface InternationalControlledExportDetail {
-  type: InternationalControlledExportDetailEnum;
-}
-
-interface FedexPhoneNumber {
-  areaCode?: string;
-  extension?: string;
-  countryCode?: FedExCountryCode;
-  personalIdentificationNumber?: string;
-  localNumber?: string;
-}
-
-enum HomeDeliveryPremiumTypeEnum {
-  APPOINTMENT = "APPOINTMENT",
-  DATE_CERTAIN = "DATE_CERTAIN",
-  EVENING = "EVENING",
-}
-interface HomeDeliveryPremiumDetail {
-  phoneNumber?: FedexPhoneNumber;
-  /**
-   * This is shipment date. Both the date and time portions of the string are expected to be used.
-   * The date should not be a past date or a date more than 10 days in the future.
-   * The time is the local time of the shipment based on the shipper's time zone.
-   * Format: YYYY-MM-DD.
-   * Example: 2019-06-26.
-   */
-  shipTimestamp?: string;
-  homedeliveryPremiumType?: HomeDeliveryPremiumTypeEnum;
-}
-
-export interface ShipmentSpecialServices {
-  returnShipmentDetail?: ReturnShipmentDetail;
-  deliveryOnInvoiceAcceptanceDetail?: DeliveryOnInvoiceAcceptanceDetail;
-  internationalTrafficInArmsRegulationsDetail?: InternationalTrafficInArmsRegulationsDetail;
-  pendingShipmentDetail?: PendingShipmentDetail;
-  holdAtLocationDetail?: HoldAtLocationDetail;
-  shipmentCODDetail?: ShipmentCODDetail;
-  shipmentDryIceDetail?: ShipmentDryIceDetail;
-  internationalControlledExportDetail?: InternationalControlledExportDetail;
-  homeDeliveryPremiumDetail?: HomeDeliveryPremiumDetail;
-  specialServiceTypes?: SpecialServiceType[];
-}
-
-export interface FedexBody {
-  accountNumber?: { value: string };
-  carrierCodes?: FedexCarrierCodes[];
-  rateRequestControlParameters?: RateRequestControlParameters;
-  requestedShipment: RequestedShipment;
-}
-
-export interface GetRatesAndTransitTimesData {
-  body: FedexBody;
-}
-
 export interface Alert {
   code: string;
   alertType: AlertType;
   message: string;
-}
-
-export interface CustomerMessage {
-  message: string;
-  code: string;
-}
-
-export interface VariableHandlingCharge {
-  totalCustomerCharge: number;
-  variableHandlingCharge: number;
-}
-
-export interface EdtTaxDetail {
-  edtTaxType: string;
-  amount: number;
-  taxableValue: number;
-  name: string;
-  description: string;
-  formula: string;
-  effectiveDate: string;
-}
-
-export interface EdtCharge {
-  alternateHarmonizedCodes: string[];
-  edtTaxDetail: EdtTaxDetail;
-  harmonizedCode: string;
-}
-
-export interface Surcharge {
-  type: SurchargeType;
-  description: string;
-  amount: number;
-  level: string;
-  name: string;
-}
-
-export interface Discount {
-  amount: number;
-  description: string;
-  name: string;
-  percent: number;
-  type: string;
-}
-
-export interface PackageRateDetail {
-  ratedWeightMethod: RatedWeightMethod;
-  totalTaxes: number;
-  totalFreightDiscounts: number;
-  baseCharge: number;
-  totalRebates: number;
-  rateType: RateType;
-  billingWeight: FedExWeight;
-  netFreight: number;
-  surcharges: Surcharge[];
-  totalSurcharges: number;
-  netFedExCharge: number;
-  netCharge: number;
-  freightDiscounts: Discount[];
-}
-
-export interface RatedPackage {
-  effectiveNetDiscount: number;
-  groupNumber: number;
-  packageRateDetail: PackageRateDetail;
-}
-
-export interface Tax {
-  amount: number;
-  description: string;
-  name: string;
-  type: string;
-}
-
-export interface CurrencyExchangeRate {
-  fromCurrency: CurrencyCodes;
-  toCurrency: CurrencyCodes;
-  rate: number;
-}
-
-export interface ShipmentLegRateDetail {
-  discounts: Discount[];
-  pricingCode: string;
-  legDescription: string;
-  surcharges: Surcharge[];
-  specialRatingApplied: string[];
-  taxes: Tax[];
-  rateScale: string;
-  totalNetCharge: number;
-  totalBaseCharge: number;
-  currencyExchangeRate: CurrencyExchangeRate;
-  totalBillingWeight: FedExWeight;
-  currency: CurrencyCodes;
-}
-
-export interface TotalVariableHandlingCharges {
-  totalCustomerCharge: number;
-  variableHandlingCharge: number;
-}
-
-export interface AncillaryFeeAndTax {
-  amount: number;
-  description: string;
-  type: string;
-}
-
-export interface ShipmentRateDetail {
-  currencyExchangeRate: CurrencyExchangeRate;
-  currency: CurrencyCodes;
-  rateZone: string;
-  pricingCode: string;
-  totalFreightDiscount: number;
-  specialRatingApplied: string[];
-  totalSurcharges: number;
-  freightDiscount: Discount[];
-  fuelSurchargePercent: number;
-  totalBillingWeight: FedExWeight;
-  totalDimWeight: number;
-  dimDivisor: number;
-  surcharges: Surcharge[];
-}
-
-export interface RatedShipmentDetails {
-  rateType: RateType;
-  ratedWeightMethod: RatedWeightMethod;
-  totalDutiesTaxesAndFees: number;
-  totalDiscounts: number;
-  totalDutiesAndTaxes: number;
-  variableHandlingCharges: VariableHandlingCharge;
-  edtCharges: EdtCharge[];
-  totalAncillaryFeesAndTaxes: number;
-  totalNetFedExCharge: number;
-  quoteNumber: string;
-  freightChargeBasis: FreightChargeBasis;
-  totalVatCharge: number;
-  totalNetCharge: number;
-  totalBaseCharge: number;
-  totalNetChargeWithDutiesAndTaxes: number;
-  ratedPackages: RatedPackage[];
-  shipmentLegRateDetails: ShipmentLegRateDetail[];
-  totalVariableHandlingCharges: TotalVariableHandlingCharges;
-  ancillaryFeesAndTaxes: AncillaryFeeAndTax[];
-  preferredEdtCharges: EdtCharge[];
-  shipmentRateDetail: ShipmentRateDetail;
-}
-
-export interface OperationalDetail {
-  originLocationIds: string[];
-  commitDays: string[];
-  serviceCode: string;
-  airportId: string;
-  scac: string;
-  originServiceAreas: string[];
-  deliveryDay: string;
-  originLocationNumbers: number[];
-  destinationPostalCode: string;
-  commitDate: string;
-  astraDescription: string;
-  deliveryDate: string;
-  deliveryEligibilities: string[];
-  ineligibleForMoneyBackGuarantee: boolean;
-  MaximumTransitTime: string;
-  astraPlannedServiceLevel: string;
-  destinationLocationIds: string[];
-  destinationLocationStateOrProvinceCodes: string[];
-  transitTime: string;
-  packagingCode: string;
-  destinationLocationNumbers: number[];
-  publishedDeliveryTime: string;
-  countryCodes: string[];
-  stateOrProvinceCodes: string[];
-  ursaPrefixCode: string;
-  ursaSuffixCode: string;
-  destinationServiceAreas: string[];
-  originPostalCodes: string[];
-  customTransitTime: string;
-}
-
-export interface Name {
-  type: string;
-  encoding: string;
-  value: string;
-}
-
-export interface ServiceDescription {
-  serviceType: FedExServiceType;
-  code: string;
-  names: Name[];
-  operatingOrgCodes: string[];
-  astraDescription: string;
-  description: string;
-  serviceId: string;
-  serviceCategory: string;
-}
-
-export interface Broker {
-  accountNumber: {
-    value: string;
-  };
-  contact: FedexContact;
-  address: FedexAddress;
-}
-
-export interface FedexAdvancedAddress {
-  streetLines: string[];
-  city: string;
-  stateOrProvinceCode: string;
-  postalCode: string;
-  countryCode: string;
-  residential: boolean;
-  classification: string;
-  geographicCoordinates: string;
-  urbanizationCode: string;
-  countryName: string;
-}
-
-export interface BrokerDetail {
-  broker: Broker;
-  type: BrokerType;
-  brokerCommitTimestamp: string;
-  brokerCommitDayOfWeek: string;
-  brokerLocationId: string;
-  brokerAddress: FedexAdvancedAddress;
-  brokerToDestinationDays: number;
-}
-
-export interface DateDetail {
-  dayOfWeek: string;
-  dayFormat: string;
-}
-
-export interface TransitDays {
-  description: string;
-  minimumTransitTime: DaysInTransit;
-  maximumTransitTime: string;
-}
-
-export interface Commit {
-  daysInTransit: DaysInTransit;
-  guaranteedType: GuaranteedType;
-  dateDetail: DateDetail;
-  saturdayDelivery: boolean;
-  alternativeCommodityNames: string[];
-  smartPostCommitTime: string;
-  transitDays: TransitDays;
-  label: string;
-  commitMessageDetails: string;
-  commodityName: string;
-}
-
-export interface ServiceSubOptionDetail {
-  smartPostIndiciaType: SmartPostIndiciaType;
-}
-
-export interface RateReplyDetail {
-  serviceType: FedExServiceType;
-  serviceName: string;
-  packagingType: FedExPackageType;
-  customerMessages: CustomerMessage[];
-  ratedShipmentDetails: RatedShipmentDetails[];
-  operationalDetail: OperationalDetail;
-  signatureOptionType: string;
-  serviceDescription: ServiceDescription;
-  brokerDetail: BrokerDetail;
-  commit: Commit;
-  serviceSubOptionDetail: ServiceSubOptionDetail;
-}
-
-export type GetRatesAndTransitTimesResponse =
-  FedExResponse<GetRatesAndTransitTimesOutput>;
-
-interface GetRatesAndTransitTimesOutput {
-  quoteDate: string;
-  encoded: boolean;
-  rateReplyDetails: RateReplyDetail[];
 }
 
 export enum FedExCountryCode {
@@ -1440,79 +1924,4 @@ export enum FedExCountryCode {
   YE = "YE",
   ZM = "ZM",
   ZW = "ZW",
-}
-
-enum RecommendedDocumentSpecificationTypes {
-  ANTIQUE_STATEMENT_EUROPEAN_UNION = "ANTIQUE_STATEMENT_EUROPEAN_UNION",
-  ANTIQUE_STATEMENT_UNITED_STATES = "ANTIQUE_STATEMENT_UNITED_STATES",
-  ASSEMBLER_DECLARATION = "ASSEMBLER_DECLARATION",
-  BEARING_WORKSHEET = "BEARING_WORKSHEET",
-  CERTIFICATE_OF_SHIPMENTS_TO_SYRIA = "CERTIFICATE_OF_SHIPMENTS_TO_SYRIA",
-  COMMERCIAL_INVOICE_FOR_THE_CARIBBEAN_COMMON_MARKET = "COMMERCIAL_INVOICE_FOR_THE_CARIBBEAN_COMMON_MARKET",
-  CONIFEROUS_SOLID_WOOD_PACKAGING_MATERIAL_TO_THE_PEOPLES_REPUBLIC_OF_CHINA = "CONIFEROUS_SOLID_WOOD_PACKAGING_MATERIAL_TO_THE_PEOPLES_REPUBLIC_OF_CHINA",
-  DECLARATION_FOR_FREE_ENTRY_OF_RETURNED_AMERICAN_PRODUCTS = "DECLARATION_FOR_FREE_ENTRY_OF_RETURNED_AMERICAN_PRODUCTS",
-  DECLARATION_OF_BIOLOGICAL_STANDARDS = "DECLARATION_OF_BIOLOGICAL_STANDARDS",
-  DECLARATION_OF_IMPORTED_ELECTRONIC_PRODUCTS_SUBJECT_TO_RADIATION_CONTROL_STANDARD = "DECLARATION_OF_IMPORTED_ELECTRONIC_PRODUCTS_SUBJECT_TO_RADIATION_CONTROL_STANDARD",
-  ELECTRONIC_INTEGRATED_CIRCUIT_WORKSHEET = "ELECTRONIC_INTEGRATED_CIRCUIT_WORKSHEET",
-  FILM_AND_VIDEO_CERTIFICATE = "FILM_AND_VIDEO_CERTIFICATE",
-  INTERIM_FOOTWEAR_INVOICE = "INTERIM_FOOTWEAR_INVOICE",
-  NAFTA_CERTIFICATE_OF_ORIGIN_CANADA_ENGLISH = "NAFTA_CERTIFICATE_OF_ORIGIN_CANADA_ENGLISH",
-  NAFTA_CERTIFICATE_OF_ORIGIN_CANADA_FRENCH = "NAFTA_CERTIFICATE_OF_ORIGIN_CANADA_FRENCH",
-  NAFTA_CERTIFICATE_OF_ORIGIN_SPANISH = "NAFTA_CERTIFICATE_OF_ORIGIN_SPANISH",
-  NAFTA_CERTIFICATE_OF_ORIGIN_UNITED_STATES = "NAFTA_CERTIFICATE_OF_ORIGIN_UNITED_STATES",
-  PACKING_LIST = "PACKING_LIST",
-  PRINTED_CIRCUIT_BOARD_WORKSHEET = "PRINTED_CIRCUIT_BOARD_WORKSHEET",
-  REPAIRED_WATCH_BREAKOUT_WORKSHEET = "REPAIRED_WATCH_BREAKOUT_WORKSHEET",
-  STATEMENT_REGARDING_THE_IMPORT_OF_RADIO_FREQUENCY_DEVICES = "STATEMENT_REGARDING_THE_IMPORT_OF_RADIO_FREQUENCY_DEVICES",
-  TOXIC_SUBSTANCES_CONTROL_ACT = "TOXIC_SUBSTANCES_CONTROL_ACT",
-  UNITED_STATES_CARIBBEAN_BASIN_TRADE_PARTNERSHIP_ACT_CERTIFICATE_OF_ORIGIN_TEXTILES = "UNITED_STATES_CARIBBEAN_BASIN_TRADE_PARTNERSHIP_ACT_CERTIFICATE_OF_ORIGIN_TEXTILES",
-  UNITED_STATES_CARIBBEAN_BASIN_TRADE_PARTNERSHIP_ACT_CERTIFICATE_OF_ORIGIN_NON_TEXTILES = "UNITED_STATES_CARIBBEAN_BASIN_TRADE_PARTNERSHIP_ACT_CERTIFICATE_OF_ORIGIN_NON_TEXTILES",
-  UNITED_STATES_NEW_WATCH_WORKSHEET = "UNITED_STATES_NEW_WATCH_WORKSHEET",
-  UNITED_STATES_WATCH_REPAIR_DECLARATIO = "UNITED_STATES_WATCH_REPAIR_DECLARATION",
-}
-
-enum SpecialServiceType {
-  /**FedEx Appointment Home Delivery®*/
-  APPOINTMENT,
-  /**Broker Select Option*/
-  BROKER_SELECT_OPTION,
-  /** Call Before Delivery*/
-  CALL_BEFORE_DELIVERY,
-  COD, //Collect on Delivery(COD)
-  CUSTOM_DELIVERY_WINDOW, //Custom Delivery Window
-  CUT_FLOWERS, //Cut Flowers
-  DO_NOT_BREAK_DOWN_PALLETS, //Do Not Break Down Pallets
-  DO_NOT_STACK_PALLETS, //Do Not Stack Pallets
-  DRY_ICE, //Dry Ice
-  EAST_COAST_SPECIAL, //East Coast Special Service
-  EXCLUDE_FROM_CONSOLIDATION, //Exclude From Consolidation
-  EXTREME_LENGTH, //Extreme Length
-  INSIDE_DELIVERY, //FedEx Inside Delivery
-  INSIDE_PICKUP, //FedEx Inside Pickup
-  INTERNATIONAL_CONTROLLED_EXPORT_SERVICE, //FedEx International Controlled Export
-  FEDEX_ONE_RATE, //FedEx One Rate®
-  THIRD_PARTY_CONSIGNEE, //FedEx Third Party Consignee International Priority service (TPC)
-  ELECTRONIC_TRADE_DOCUMENTS, //FedEx® Electronic Trade Documents
-  FOOD, //Food
-  FUTURE_DAY_SHIPMENT, //Future Day Shipment
-  HOLD_AT_LOCATION, //Hold At Location
-  INTERNATIONAL_TRAFFIC_IN_ARMS_REGULATIONS, //International Traffic in Arms Regulations(ITAR)
-  LIFTGATE_DELIVERY, //LiftGate Delivery
-  LIFTGATE_PICKUP, //LiftGate Pickup
-  LIMITED_ACCESS_DELIVERY, //Limited Access Delivery
-  LIMITED_ACCESS_PICKUP, //Limited Access Pickup
-  OVER_LENGTH, //Over Length
-  PENDING_SHIPMENT, //Pending Shipment
-  PHARMACY_DELIVERY, //Pharmacy Delivery
-  POISON, //Poison
-  HOME_DELIVERY_PREMIUM, //Premium Home Delivery
-  PROTECTION_FROM_FREEZING, //Protection From Freezing
-  RETURNS_CLEARANCE, //Return Clearance
-  RETURN_SHIPMENT, //Return Shipment
-  SATURDAY_DELIVERY, //Saturday Delivery
-  SATURDAY_PICKUP, //Saturday Pickup
-  EVENT_NOTIFICATION, //Shipment Event Notification
-  DELIVERY_ON_INVOICE_ACCEPTANCE, //Delivery on Invoice Acceptance
-  TOP_LOAD, //Top Load
-  FREIGHT_GUARANTEE, //Freight Guarantee
 }

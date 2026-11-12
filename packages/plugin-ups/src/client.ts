@@ -1,6 +1,7 @@
 import RequestHandler, { buildClientName } from "@dianemo/core";
 import {
   CreateClientData,
+  DeclaredRateLimit,
   OAuth2Credentials,
 } from "@dianemo/core/client/types";
 
@@ -24,21 +25,41 @@ declare module "@dianemo/core" {
 
 const DEFAULT_TRANSACTION_SRC = "dianemo";
 
+// UNSOURCED, and deliberately labelled as such: UPS publishes no rate limit for
+// its REST APIs, so 5/s is a placeholder to calibrate against your own 429s —
+// see docs/ups-api.md#no-published-rate-limit
+const rateLimit: DeclaredRateLimit[] = [
+  { type: "requestLimit", interval: 1000, tokensToAdd: 5, maxTokens: 5 },
+];
+
+/**
+ * Forwarding is the one UPS API served from a different host: `Forwarding.yaml`
+ * lists `www.onlinetools.ups.com` ("Production") and `www.onlinetoolsuat.ups.com`
+ * ("Customer Integration Environment") rather than the `onlinetools`/`wwwcie`
+ * pair — see docs/ups-api.md#the-forwarding-host. The spec states which host is
+ * which environment; whether a token minted on `wwwcie` is accepted by the UAT
+ * host is not stated. A base URL that is neither known host (a proxy, say) or
+ * that does not parse is returned untouched rather than guessed at.
+ */
+export function forwardingBaseUrl(baseUrl: string): string {
+  let hostname: string;
+  try {
+    ({ hostname } = new URL(baseUrl));
+  } catch {
+    return baseUrl;
+  }
+  if (hostname === "onlinetools.ups.com")
+    return "https://www.onlinetools.ups.com";
+  if (hostname === "wwwcie.ups.com")
+    return "https://www.onlinetoolsuat.ups.com";
+  return baseUrl;
+}
+
 export async function registerUpsTemplate(handler: RequestHandler) {
   await handler.registerClientTemplate("ups", (creds): CreateClientData[] => [
     {
       name: buildClientName("ups", creds),
-      // UNSOURCED, and deliberately labelled as such: UPS publishes no rate
-      // limit for its REST APIs, so 5/s is a placeholder to calibrate against
-      // your own 429s — see docs/ups-api.md#no-published-rate-limit
-      rateLimit: [
-        {
-          type: "requestLimit",
-          interval: 1000,
-          tokensToAdd: 5,
-          maxTokens: 5,
-        },
-      ],
+      rateLimit,
       requestOptions: {
         defaults: {
           baseURL: creds.baseUrl,
@@ -48,13 +69,15 @@ export async function registerUpsTemplate(handler: RequestHandler) {
         },
         // Required by Track, optional everywhere else, and worth sending
         // regardless: UPS support searches their logs by it. Hyphens come out
-        // to fit UPS's 32-character cap on a 36-character UUID — see
+        // to fit UPS's 32-character cap on a 36-character UUID. A request that
+        // sets its own wins, because Delivery Intercept caps it at 14 — see
         // docs/ups-api.md#the-transid-header
         requestInterceptor: (config) => ({
           ...config,
           headers: {
             ...config.headers,
-            transId: config.requestId?.replace(/-/g, ""),
+            transId:
+              config.headers?.transId ?? config.requestId?.replace(/-/g, ""),
           },
         }),
       },
@@ -74,6 +97,21 @@ export async function registerUpsTemplate(handler: RequestHandler) {
           data: { grant_type: "client_credentials" },
         },
       },
+      // The parent stays a request target for every API on `creds.baseUrl`.
+      // The sub-client inherits its auth (stored under the parent's name, so
+      // one token), `transactionSrc` and `transId`; it gets its own bucket.
+      subClients: [
+        {
+          name: "forwarding",
+          // The same placeholder as the parent, restated rather than left to
+          // inheritance so it reads as a decision: the spec states no limit
+          // for Forwarding either.
+          rateLimit,
+          requestOptions: {
+            defaults: { baseURL: forwardingBaseUrl(creds.baseUrl) },
+          },
+        },
+      ],
     },
   ]);
 }

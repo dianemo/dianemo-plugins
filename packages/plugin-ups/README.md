@@ -1,6 +1,6 @@
 # @dianemo/plugin-ups
 
-UPS plugin — rating, shipping, and tracking
+UPS plugin — shipping, rating, tracking, pickups, customs, delivery intercept and freight forwarding
 
 A plugin for [dianemo](https://github.com/dianemo/dianemo), which distributes one API rate limit
 across every process that draws on it.

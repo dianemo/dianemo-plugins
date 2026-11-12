@@ -1,7 +1,7 @@
 {
   "name": "@dianemo/plugin-smarty",
-  "version": "2.0.0",
-  "description": "Smarty plugin — US and international address validation",
+  "version": "3.0.0",
+  "description": "Smarty plugin — US and international address verification, autocomplete, ZIP Code lookup, extraction and reverse geocoding",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -18,9 +18,73 @@
       "types": "./dist/requests/index.d.ts",
       "default": "./dist/requests/index.js"
     },
+    "./requests/intlAutocomplete": {
+      "types": "./dist/requests/intlAutocomplete/index.d.ts",
+      "default": "./dist/requests/intlAutocomplete/index.js"
+    },
     "./requests/types": {
       "types": "./dist/requests/types.d.ts",
       "default": "./dist/requests/types.js"
+    },
+    "./requests/usAutocomplete": {
+      "types": "./dist/requests/usAutocomplete/index.d.ts",
+      "default": "./dist/requests/usAutocomplete/index.js"
+    },
+    "./requests/usExtract": {
+      "types": "./dist/requests/usExtract/index.d.ts",
+      "default": "./dist/requests/usExtract/index.js"
+    },
+    "./requests/usReverseGeo": {
+      "types": "./dist/requests/usReverseGeo/index.d.ts",
+      "default": "./dist/requests/usReverseGeo/index.js"
+    },
+    "./requests/usZipcode": {
+      "types": "./dist/requests/usZipcode/index.d.ts",
+      "default": "./dist/requests/usZipcode/index.js"
+    },
+    "./requests/utils": {
+      "types": "./dist/requests/utils.d.ts",
+      "default": "./dist/requests/utils.js"
+    },
+    "./requests/intlAutocomplete/index": {
+      "types": "./dist/requests/intlAutocomplete/index.d.ts",
+      "default": "./dist/requests/intlAutocomplete/index.js"
+    },
+    "./requests/intlAutocomplete/types": {
+      "types": "./dist/requests/intlAutocomplete/types.d.ts",
+      "default": "./dist/requests/intlAutocomplete/types.js"
+    },
+    "./requests/usAutocomplete/index": {
+      "types": "./dist/requests/usAutocomplete/index.d.ts",
+      "default": "./dist/requests/usAutocomplete/index.js"
+    },
+    "./requests/usAutocomplete/types": {
+      "types": "./dist/requests/usAutocomplete/types.d.ts",
+      "default": "./dist/requests/usAutocomplete/types.js"
+    },
+    "./requests/usExtract/index": {
+      "types": "./dist/requests/usExtract/index.d.ts",
+      "default": "./dist/requests/usExtract/index.js"
+    },
+    "./requests/usExtract/types": {
+      "types": "./dist/requests/usExtract/types.d.ts",
+      "default": "./dist/requests/usExtract/types.js"
+    },
+    "./requests/usReverseGeo/index": {
+      "types": "./dist/requests/usReverseGeo/index.d.ts",
+      "default": "./dist/requests/usReverseGeo/index.js"
+    },
+    "./requests/usReverseGeo/types": {
+      "types": "./dist/requests/usReverseGeo/types.d.ts",
+      "default": "./dist/requests/usReverseGeo/types.js"
+    },
+    "./requests/usZipcode/index": {
+      "types": "./dist/requests/usZipcode/index.d.ts",
+      "default": "./dist/requests/usZipcode/index.js"
+    },
+    "./requests/usZipcode/types": {
+      "types": "./dist/requests/usZipcode/types.d.ts",
+      "default": "./dist/requests/usZipcode/types.js"
     }
   },
   "files": [
