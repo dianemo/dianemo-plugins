@@ -2,7 +2,7 @@
   "name": "dianemo-plugins",
   "version": "0.0.0",
   "private": true,
-  "description": "Integration plugins for dianemo \u2014 one published package per external API",
+  "description": "Integration plugins for dianemo — one published package per external API",
   "type": "module",
   "workspaces": [
     "packages/*"
