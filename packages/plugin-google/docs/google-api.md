@@ -229,6 +229,12 @@ is not kept in the repository.
 <https://developers.google.com/discovery/v1/reference/apis>
 · <https://discovery.googleapis.com/discovery/v1/apis/sheets/v4/rest>
 
+Twenty request-only fields are required in the types (not optional) because Google's
+descriptions say so: three say "Required.", fifteen update-mask `fields` say "At least one
+field must be specified", and two comment `content` fields say they "cannot be empty". Only
+request-only types get required fields, because Google's JSON omits fields that hold their
+default value, so a response cannot be trusted to carry any field.
+
 ## Google Sheets API v4 quotas
 
 "Read requests: 300 per minute per project; 60 per minute per user per

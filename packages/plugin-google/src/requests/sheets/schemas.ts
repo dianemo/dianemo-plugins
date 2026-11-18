@@ -137,7 +137,7 @@ export interface AddSlicerResponse {
 /** Adds a new table to the spreadsheet. */
 export interface AddTableRequest {
   /** Required. The table to add. */
-  table?: Table;
+  table: Table;
 }
 
 /** The result of adding a table. */
@@ -149,7 +149,7 @@ export interface AddTableResponse {
 /** Adds new cells after the last row with data in a sheet, inserting new rows into the sheet if necessary. */
 export interface AppendCellsRequest {
   /** The fields of CellData that should be updated. At least one field must be specified. The root is the CellData; 'row.values.' should not be specified. A single `"*"` can be used as short-hand for listing every field. */
-  fields?: string;
+  fields: string;
   /** The data to append. */
   rows?: RowData[];
   /** The sheet ID to append the data to. */
@@ -1987,7 +1987,7 @@ export interface InsertCommentRequest {
   /** Optional. The email address of the assignee of the comment. Leave empty for a non-assigned comment. May not exceed 2048 UTF-8 code units. */
   assigneeEmailAddress?: string;
   /** The text of the comment, as plain text. This text content will be handled similarly to comments created in the Sheets editor. It will have similar behaviors for formatting, notifications, etc. This field cannot be empty, and must not exceed 2048 UTF-8 code units. */
-  content?: string;
+  content: string;
   /** The GridCoordinate in the sheet that is tied to this comment. */
   coordinate?: GridCoordinate;
 }
@@ -2545,7 +2545,7 @@ export interface RepeatCellRequest {
   /** The data to write. */
   cell?: CellData;
   /** The fields that should be updated. At least one field must be specified. The root `cell` is implied and should not be specified. A single `"*"` can be used as short-hand for listing every field. */
-  fields?: string;
+  fields: string;
   /** The range to repeat the cell in. */
   range?: GridRange;
 }
@@ -3268,7 +3268,7 @@ export interface UpdateBandingRequest {
   /** The banded range to update with the new properties. */
   bandedRange?: BandedRange;
   /** The fields that should be updated. At least one field must be specified. The root `bandedRange` is implied and should not be specified. A single `"*"` can be used as short-hand for listing every field. */
-  fields?: string;
+  fields: string;
 }
 
 /** Updates the borders of a range. If a field is not set in the request, that means the border remains as-is. For example, with two subsequent UpdateBordersRequest: 1. range: A1:A5 `{ top: RED, bottom: WHITE }` 2. range: A1:A5 `{ left: BLUE }` That would result in A1:A5 having a borders of `{ top: RED, bottom: WHITE, left: BLUE }`. If you want to clear a border, explicitly set the style to NONE. */
@@ -3292,7 +3292,7 @@ export interface UpdateBordersRequest {
 /** Updates all cells in a range with new data. */
 export interface UpdateCellsRequest {
   /** The fields of CellData that should be updated. At least one field must be specified. The root is the CellData; 'row.values.' should not be specified. A single `"*"` can be used as short-hand for listing every field. */
-  fields?: string;
+  fields: string;
   /** The range to write data to. If the data in rows does not cover the entire requested range, the fields matching those set in fields will be cleared. */
   range?: GridRange;
   /** The data to write. */
@@ -3314,7 +3314,7 @@ export interface UpdateCommentPostRequest {
   /** The ID of the CommentThread which the post belongs to. */
   commentId?: string;
   /** The new text of the comment, as plain text. This text content will be handled similarly to comments created in the Sheets editor. It will have similar behaviors for formatting, notifications, etc. This field cannot be empty, and must not exceed 2048 UTF-8 code units. */
-  content?: string;
+  content: string;
   /** The ID of the post being updated. */
   postId?: string;
 }
@@ -3348,7 +3348,7 @@ export interface UpdateDataSourceRequest {
   /** The data source to update. */
   dataSource?: DataSource;
   /** The fields that should be updated. At least one field must be specified. The root `dataSource` is implied and should not be specified. A single `"*"` can be used as short-hand for listing every field. */
-  fields?: string;
+  fields: string;
 }
 
 /** The response from updating data source. */
@@ -3366,7 +3366,7 @@ export interface UpdateDeveloperMetadataRequest {
   /** The value that all metadata matched by the data filters will be updated to. */
   developerMetadata?: DeveloperMetadata;
   /** The fields that should be updated. At least one field must be specified. The root `developerMetadata` is implied and should not be specified. A single `"*"` can be used as short-hand for listing every field. */
-  fields?: string;
+  fields: string;
 }
 
 /** The response from updating developer metadata. */
@@ -3380,7 +3380,7 @@ export interface UpdateDimensionGroupRequest {
   /** The group whose state should be updated. The range and depth of the group should specify a valid group on the sheet, and all other fields updated. */
   dimensionGroup?: DimensionGroup;
   /** The fields that should be updated. At least one field must be specified. The root `dimensionGroup` is implied and should not be specified. A single `"*"` can be used as short-hand for listing every field. */
-  fields?: string;
+  fields: string;
 }
 
 /** Updates properties of dimensions within the specified range. */
@@ -3388,7 +3388,7 @@ export interface UpdateDimensionPropertiesRequest {
   /** The columns on a data source sheet to update. */
   dataSourceSheetRange?: DataSourceSheetDimensionRange;
   /** The fields that should be updated. At least one field must be specified. The root `properties` is implied and should not be specified. A single `"*"` can be used as short-hand for listing every field. */
-  fields?: string;
+  fields: string;
   /** Properties to update. */
   properties?: DimensionProperties;
   /** The rows or columns to update. */
@@ -3400,7 +3400,7 @@ export interface UpdateEmbeddedObjectBorderRequest {
   /** The border that applies to the embedded object. */
   border?: EmbeddedObjectBorder;
   /** The fields that should be updated. At least one field must be specified. The root `border` is implied and should not be specified. A single `"*"` can be used as short-hand for listing every field. */
-  fields?: string;
+  fields: string;
   /** The ID of the embedded object to update. */
   objectId?: number;
 }
@@ -3424,7 +3424,7 @@ export interface UpdateEmbeddedObjectPositionResponse {
 /** Updates properties of the filter view. */
 export interface UpdateFilterViewRequest {
   /** The fields that should be updated. At least one field must be specified. The root `filter` is implied and should not be specified. A single `"*"` can be used as short-hand for listing every field. */
-  fields?: string;
+  fields: string;
   /** The new properties of the filter view. */
   filter?: FilterView;
 }
@@ -3432,7 +3432,7 @@ export interface UpdateFilterViewRequest {
 /** Updates properties of the named range with the specified namedRangeId. */
 export interface UpdateNamedRangeRequest {
   /** The fields that should be updated. At least one field must be specified. The root `namedRange` is implied and should not be specified. A single `"*"` can be used as short-hand for listing every field. */
-  fields?: string;
+  fields: string;
   /** The named range to update with the new properties. */
   namedRange?: NamedRange;
 }
@@ -3440,7 +3440,7 @@ export interface UpdateNamedRangeRequest {
 /** Updates an existing protected range with the specified protectedRangeId. */
 export interface UpdateProtectedRangeRequest {
   /** The fields that should be updated. At least one field must be specified. The root `protectedRange` is implied and should not be specified. A single `"*"` can be used as short-hand for listing every field. */
-  fields?: string;
+  fields: string;
   /** The protected range to update with the new properties. */
   protectedRange?: ProtectedRange;
 }
@@ -3448,7 +3448,7 @@ export interface UpdateProtectedRangeRequest {
 /** Updates properties of the sheet with the specified sheetId. */
 export interface UpdateSheetPropertiesRequest {
   /** The fields that should be updated. At least one field must be specified. The root `properties` is implied and should not be specified. A single `"*"` can be used as short-hand for listing every field. */
-  fields?: string;
+  fields: string;
   /** The properties to update. */
   properties?: SheetProperties;
 }
@@ -3456,7 +3456,7 @@ export interface UpdateSheetPropertiesRequest {
 /** Updates a slicer's specifications. (This does not move or resize a slicer. To move or resize a slicer use UpdateEmbeddedObjectPositionRequest. */
 export interface UpdateSlicerSpecRequest {
   /** The fields that should be updated. At least one field must be specified. The root `SlicerSpec` is implied and should not be specified. A single "*"` can be used as short-hand for listing every field. */
-  fields?: string;
+  fields: string;
   /** The id of the slicer to update. */
   slicerId?: number;
   /** The specification to apply to the slicer. */
@@ -3466,7 +3466,7 @@ export interface UpdateSlicerSpecRequest {
 /** Updates properties of a spreadsheet. */
 export interface UpdateSpreadsheetPropertiesRequest {
   /** The fields that should be updated. At least one field must be specified. The root 'properties' is implied and should not be specified. A single `"*"` can be used as short-hand for listing every field. */
-  fields?: string;
+  fields: string;
   /** The properties to update. */
   properties?: SpreadsheetProperties;
 }
@@ -3474,9 +3474,9 @@ export interface UpdateSpreadsheetPropertiesRequest {
 /** Updates a table in the spreadsheet. */
 export interface UpdateTableRequest {
   /** Required. The fields that should be updated. At least one field must be specified. The root `table` is implied and should not be specified. A single `"*"` can be used as short-hand for listing every field. */
-  fields?: string;
+  fields: string;
   /** Required. The table to update. */
-  table?: Table;
+  table: Table;
 }
 
 /** The response when updating a range of values by a data filter in a spreadsheet. */
