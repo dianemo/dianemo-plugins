@@ -1,6 +1,11 @@
 import { googleSubClient } from "../utils.js";
 import { sheetsRequest } from "./errors.js";
 import type {
+  DateTimeRenderOption,
+  MajorDimension,
+  ValueRenderOption,
+} from "./options.js";
+import type {
   BatchGetValuesByDataFilterRequest,
   BatchGetValuesByDataFilterResponse,
   BatchGetValuesResponse,
@@ -30,11 +35,6 @@ const repeatArrays = (params: Record<string, unknown>): string => {
 
 const spreadsheetPath = (spreadsheetId: string) =>
   `/v4/spreadsheets/${encodeURIComponent(spreadsheetId)}`;
-
-export type MajorDimension = "ROWS" | "COLUMNS";
-export type ValueRenderOption =
-  "FORMATTED_VALUE" | "UNFORMATTED_VALUE" | "FORMULA";
-export type DateTimeRenderOption = "SERIAL_NUMBER" | "FORMATTED_STRING";
 
 export interface GetSpreadsheetParams {
   /** A1 or R1C1 ranges, sent as repeated `ranges` params. */

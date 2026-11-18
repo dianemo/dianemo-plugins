@@ -257,12 +257,20 @@ Every Sheets call raises one of these, with the HTTP status as `statusCode` and
 in `metadata.status`, and Google's `error.status` string (for example
 `PERMISSION_DENIED`) in `metadata.googleStatus`:
 
-| Code       | When                                                                                                         | Status   |
-| ---------- | ------------------------------------------------------------------------------------------------------------ | -------- |
-| `GGL_0009` | spreadsheet not found, or not shared with the account; Google answers both alike, so neither can this plugin | 403, 404 |
-| `GGL_0010` | invalid request                                                                                              | 400      |
-| `GGL_0011` | quota exceeded, after core's retries                                                                         | 429      |
-| `GGL_0012` | any other failure, including one with no HTTP status                                                         | other    |
+| Code       | When                                                                                                                                                  | Status     |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| `GGL_0009` | spreadsheet not found, or not shared with the account; Google answers both alike, so neither can this plugin                                          | 404, 403   |
+| `GGL_0010` | invalid request                                                                                                                                       | 400        |
+| `GGL_0011` | quota exceeded, after core's retries; also a 403 whose reason is `rateLimitExceeded`, `userRateLimitExceeded` or `RATE_LIMIT_EXCEEDED`                | 429, 403   |
+| `GGL_0012` | any other failure, including one with no HTTP status; also a 403 whose reason is `SERVICE_DISABLED` or `accessNotConfigured` (Sheets API not enabled) | other, 403 |
+
+Google uses 403 for three different failures, so a 403 is told apart by the
+reasons in the body, read from `error.details[].reason` and the older
+`error.errors[].reason` (case-insensitive). A body that is missing, not an
+object, or has no string reasons leaves it `GGL_0009`. This mapping rests on the
+reason strings Google documents for 403 in its Sheets and Drive error guides and
+on the `google.rpc.ErrorInfo` convention, not on a captured response of every
+kind.
 
 Core logs a failure once, when `tryHandleRequest` first wraps it, so the log
 line says `GGL_0012` whatever the status; the error a caller catches carries the
@@ -270,3 +278,41 @@ mapped code.
 
 Array query parameters (`ranges`) are sent repeated (`ranges=A&ranges=B`), not
 as axios's default `ranges[]=A`, through a `paramsSerializer`.
+
+## Writes are not retried
+
+`sheetsWrite` does not retry a 5xx, a timeout or a dropped connection: its
+`retryOptions` set `retry5xxs: false` and a `classifyError` that fails any
+response of 500 or more, or none at all, at once. Each of those can arrive after
+Google applied the write, and repeating an `appendValues` adds its rows twice.
+The caller gets the error (`GGL_0012`) and decides, for example by re-reading the
+range before appending again. A 429 is still retried by core: Google rejects it
+before doing any work, so repeating it is safe. `sheetsRead` keeps core's
+defaults. `test/sheetsWrite.test.ts` proves it on a real socket: one hit for a
+500, one for a dropped connection, two for a read that fails once.
+
+## Creating a spreadsheet as a service account
+
+Checked 2026-11-18. `createSpreadsheet` calls `spreadsheets.create`, which takes
+no folder or parent and so cannot target a shared drive; the file is created in
+the caller's own Drive. Google's pages say:
+
+- The Sheets `spreadsheets.create` reference lists the scopes `drive`,
+  `drive.file` and `spreadsheets`, and says nothing about where the file lands,
+  who owns it, or service accounts
+  (<https://developers.google.com/workspace/sheets/api/reference/rest/v4/spreadsheets/create>).
+- The Drive shared-drives guide says service accounts "don't have storage
+  quota" and cannot own files, and that they must put files in shared drives or
+  use OAuth to act for a user
+  (<https://developers.google.com/workspace/drive/api/guides/about-shareddrives>).
+
+**Negative / uncertain result.** No official page says that
+`spreadsheets.create` as a service account succeeds or fails, or names the error.
+The Drive statement implies a service account with no storage cannot hold a new
+file in its own Drive, so a bare `createSpreadsheet` as a service account may be
+refused (Drive reports that class of failure as `storageQuotaExceeded`), but this
+was not tested against Google and is not claimed. Placing a new file in a shared
+drive needs the Drive API (`files.create` with `supportsAllDrives` and a
+`parents` entry), which this plugin does not call. Until verified against a real
+project, treat a service account as a writer to spreadsheets a person created and
+shared with its email, and use user OAuth for `createSpreadsheet`.

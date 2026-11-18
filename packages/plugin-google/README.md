@@ -98,6 +98,15 @@ await handler.addTemplateClient("google", {
 });
 ```
 
+Writing needs `https://www.googleapis.com/auth/spreadsheets` (or `drive.file`,
+for files the app created or the user opened with it) in `scopes`; the read-only
+scope above only covers the read calls. Write calls are not retried on a 5xx,
+timeout or dropped connection, so a repeated call cannot append twice
+([details](docs/google-api.md#writes-are-not-retried)). A service account owns no
+Drive storage, so share an existing spreadsheet with its email rather than
+relying on `createSpreadsheet`
+([details](docs/google-api.md#creating-a-spreadsheet-as-a-service-account)).
+
 ## Calling as a signed-in user
 
 `getGoogleProfile` reads the OpenID Connect userinfo endpoint, which only accepts a user's token.

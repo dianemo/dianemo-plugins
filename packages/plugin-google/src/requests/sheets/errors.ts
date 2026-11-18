@@ -7,12 +7,14 @@ import { getOriginalStatus } from "@dianemo/core";
  * One code per distinct failure, shared by every Sheets call
  * (docs/google-api.md#google-sheets-api-v4-errors):
  *
- * - `GGL_0009` not found or no access (403 and 404). Google answers a sheet the
- *   caller cannot see the same way as one that does not exist, so neither can
- *   this plugin tell them apart.
+ * - `GGL_0009` not found or no access (404, and 403 that is neither of the two
+ *   below). Google answers a sheet the caller cannot see the same way as one
+ *   that does not exist, so neither can this plugin tell them apart.
  * - `GGL_0010` invalid request (400).
- * - `GGL_0011` quota exceeded (429), raised after core's own retries.
- * - `GGL_0012` any other failure, including one with no HTTP status.
+ * - `GGL_0011` quota exceeded (429, and a 403 whose reason is a rate limit),
+ *   raised after core's own retries.
+ * - `GGL_0012` any other failure, including one with no HTTP status and a 403
+ *   because the Sheets API is not enabled for the project.
  */
 const CODE_BY_STATUS: Record<number, string> = {
   400: "GGL_0010",
@@ -37,6 +39,50 @@ function googleStatusOf(err: unknown): string | undefined {
   return typeof status === "string" ? status : undefined;
 }
 
+const RATE_LIMIT_REASONS = new Set([
+  "ratelimitexceeded",
+  "userratelimitexceeded",
+  "rate_limit_exceeded",
+]);
+const API_DISABLED_REASONS = new Set([
+  "service_disabled",
+  "accessnotconfigured",
+]);
+
+/**
+ * Every machine-readable reason in Google's error body, lower-cased: the new
+ * style `error.details[].reason` and the older `error.errors[].reason`. Any of
+ * it may be missing, so nothing here throws.
+ */
+function reasonsOf(err: unknown): Set<string> {
+  const reasons = new Set<string>();
+  const body = getOriginalResponseData(err);
+  if (!body || typeof body !== "object") return reasons;
+  const error = (body as { error?: unknown }).error;
+  if (!error || typeof error !== "object") return reasons;
+  const { details, errors } = error as { details?: unknown; errors?: unknown };
+  for (const list of [details, errors]) {
+    if (!Array.isArray(list)) continue;
+    for (const item of list) {
+      const reason = (item as { reason?: unknown } | null)?.reason;
+      if (typeof reason === "string") reasons.add(reason.toLowerCase());
+    }
+  }
+  return reasons;
+}
+
+/** A 403 is three different failures; the body says which. */
+function codeFor(status: number | undefined, err: unknown): string {
+  if (status === 403) {
+    const reasons = reasonsOf(err);
+    if ([...reasons].some((r) => RATE_LIMIT_REASONS.has(r))) return "GGL_0011";
+    if ([...reasons].some((r) => API_DISABLED_REASONS.has(r))) {
+      return "GGL_0012";
+    }
+  }
+  return (status && CODE_BY_STATUS[status]) || "GGL_0012";
+}
+
 /**
  * Runs a Sheets request and re-raises its failure under the code its HTTP
  * status maps to, keeping that status as `statusCode` and under
@@ -58,7 +104,7 @@ export async function sheetsRequest<T>(config: RequestConfig): Promise<T> {
   } catch (err) {
     if (!(err instanceof RequestError)) throw err;
     const status = getOriginalStatus(err);
-    const code = (status && CODE_BY_STATUS[status]) || "GGL_0012";
+    const code = codeFor(status, err);
     throw new RequestError(code, MESSAGES[code], {
       statusCode: status ?? err.statusCode,
       metadata: {

@@ -161,6 +161,20 @@ function buildAddressValidationSubClient(
  * per project for each (and 300 per project) — docs/google-api.md#google-sheets-api-v4-quotas.
  * One sub-client each, so a burst of reads cannot starve the writes.
  */
+/**
+ * A write is not retried when its outcome is unknown: a 5xx, a timeout or a
+ * dropped connection may arrive after Google applied it, and repeating an
+ * `append` would add the rows twice. A 429 is still retried, since Google
+ * rejects it before doing any work (docs/google-api.md#writes-are-not-retried).
+ */
+const WRITE_RETRY_OPTIONS: NonNullable<CreateClientData["retryOptions"]> = {
+  retry5xxs: false,
+  classifyError: (error) =>
+    !error.response || error.response.status >= 500
+      ? { action: "fail" }
+      : undefined,
+};
+
 function buildSheetsSubClient(
   creds: GoogleCredentials,
   name: "sheetsRead" | "sheetsWrite"
@@ -178,6 +192,7 @@ function buildSheetsSubClient(
     requestOptions: {
       defaults: { baseURL: creds.sheetsBaseUrl ?? DEFAULT_SHEETS_BASE_URL },
     },
+    ...(name === "sheetsWrite" ? { retryOptions: WRITE_RETRY_OPTIONS } : {}),
   };
 }
 

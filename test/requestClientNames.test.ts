@@ -76,6 +76,9 @@ const CASES: Case[] = [
         r.validateAddress(c, { address: { addressLines: ["1 Main St"] } })
       );
       await probe(r.getSpreadsheet(c, "sheet-id"));
+      await probe(
+        r.appendValues(c, "sheet-id", "A1", {}, { valueInputOption: "RAW" })
+      );
     },
   },
   {
