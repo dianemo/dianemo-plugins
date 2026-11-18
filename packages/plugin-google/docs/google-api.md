@@ -50,8 +50,8 @@ behaviour, not Google's — see
 
 ## Service-account (JWT-bearer) flow
 
-The service account is the credential this flow rests on, and
-`plugin-google-vertex-ai` is the package that ships it.
+The service account is the credential this flow rests on; `plugin-google` and
+`plugin-google-vertex-ai` both ship it.
 `serviceAccountEmail` is the `client_email` from the service-account JSON key and
 `privateKey` its `private_key`. The IAM roles the engine needs are in
 [that package's doc](../../plugin-google-vertex-ai/docs/vertex-ai-api.md#authentication).
@@ -81,24 +81,26 @@ Three things about it are not visible from the code:
   same way.
 
 **The assertion has to be minted per refresh** — it lives an hour, so a client
-that outlives it would otherwise send an expired one forever. The only hook that
-runs per refresh is `refreshConfig.requestInterceptor`, which core 1.0.0 cannot
-carry as an ordinary property: it `structuredClone`s the config that holds it and
-throws `DataCloneError`
-([`/docs/core-behaviour.md`](../../../docs/core-behaviour.md#refreshconfig-is-deep-copied-so-it-cannot-hold-a-function)).
-`plugin-google-vertex-ai` defines the interceptor **non-enumerable**, which
-sidesteps the clone without a change in core — `structuredClone` walks own
-_enumerable_ keys only, so the copy comes out clean while
-`baseConfig.requestInterceptor` stays readable, and the config stays safe to
-`JSON.stringify` as a bonus.
+that outlives it would otherwise send an expired one forever. The hook that runs
+per refresh is `refreshConfig.requestInterceptor`. On `@dianemo/core` 2.1.1 it is
+an ordinary **enumerable** function property: core deep-copies the config with
+`deepCloneWithFunctions` (`dist/utils/deepClone.js`, a `for…in` copy, so it keeps
+enumerable keys and drops non-enumerable ones) and calls the interceptor on the
+copy in `handleRefreshMethod` (`dist/client/methods/authenticate.js`). That is why
+`plugin-google` raised its `@dianemo/core` peer to `^2.1.1`.
+`plugin-google-vertex-ai` still defines its interceptor non-enumerable, a trick
+from core 1.0.0, where `structuredClone` threw `DataCloneError` on a function
+([`/docs/core-behaviour.md`](../../../docs/core-behaviour.md#refreshconfig-is-deep-copied-so-it-cannot-hold-a-function));
+under 2.1.1 the clone drops that key, so its interceptor does not run. Do not copy
+it. `test/realHandler.test.ts` proves the enumerable form runs, by reading the
+assertion off a real token request.
 
-`plugin-google` has the same option open for Address Validation, whose docs say
-to "configure an API key or OAuth to make an authenticated API request" — the
-OAuth option there meaning a token minted for a Cloud project's service account.
-It ships the API-key path instead, because that is the one a host can supply with
-no user in the loop; adding the service-account path would mean minting tokens in
-a `requestOptions.requestInterceptor` the way `plugin-usps` mints its payment
-token, which is separate work.
+`plugin-google` ships this for its own template: give the account
+`serviceAccountEmail`, `privateKey` and `scopes` (and `tokenUrl`, an override for
+tests) in place of an OAuth pair. The block is `{ type: "oauth2", clientId:
+serviceAccountEmail, clientSecret: "", refreshConfig }` with no
+`grantRefreshConfig`, and sub-clients inherit it from the account client. Address
+Validation still takes the API-key path, which needs no scopes.
 
 <https://developers.google.com/maps/documentation/address-validation/get-api-key>
 

@@ -60,23 +60,41 @@ the account name is always right.
 
 ## Credentials
 
-Give the account an `apiKey`, a `clientId`/`clientSecret` pair, or both. A registration carrying
-neither is refused, because every request on it would come back 401.
+Give the account exactly one of an `apiKey`, a `clientId`/`clientSecret` pair, or a service account
+(`serviceAccountEmail` + `privateKey`). A registration carrying none is refused, because every
+request on it would come back 401, and so is a service account combined with an OAuth pair.
 
-| Credential                  | Serves                                                                  |
-| --------------------------- | ----------------------------------------------------------------------- |
-| `apiKey`                    | Address Validation, with no user in the loop.                           |
-| `clientId` + `clientSecret` | `getGoogleProfile`, and Address Validation on a signed-in user's token. |
+| Credential                           | Serves                                                                  |
+| ------------------------------------ | ----------------------------------------------------------------------- |
+| `apiKey`                             | Address Validation, with no user in the loop.                           |
+| `clientId` + `clientSecret`          | `getGoogleProfile`, and Address Validation on a signed-in user's token. |
+| `serviceAccountEmail` + `privateKey` | Server-to-server calls signed as a service account, with `scopes`.      |
 
 There is no client-credentials path.
 [Google's discovery document](https://accounts.google.com/.well-known/openid-configuration) lists
 four grant types — `authorization_code`, `refresh_token`, `device_code` and `jwt-bearer` — so the
-token endpoint answers `unsupported_grant_type` before it looks at the credentials, and a client
-built on that grant can never authenticate. Google's own server-to-server credential is a
+token endpoint answers `unsupported_grant_type` before it looks at the credentials. Google's own
+server-to-server credential is a
 [service account](https://developers.google.com/identity/protocols/oauth2/service-account), whose
-JWT assertion expires "a maximum of 1 hour after the issued time" and so has to be re-signed for
-every refresh; dianemo 1.0.0 has no working hook for that, which leaves an API key as the
-key-in-hand path today.
+JWT assertion expires "a maximum of 1 hour after the issued time" and so is re-signed for every
+refresh by an interceptor on the client's refresh config. That needs `@dianemo/core` 2.1.1 or later.
+
+## Calling as a service account
+
+`serviceAccountEmail` and `privateKey` are the `client_email` and `private_key` of the service
+account's JSON key; `scopes` lists the OAuth scopes to request. No grant is seeded. The first call
+signs an assertion and exchanges it for a token, and later calls refresh it the same way. A
+service-account account has no `profile` sub-client, since userinfo needs a signed-in user.
+
+```ts
+await handler.addTemplateClient("google", {
+  instanceId: "main",
+  serviceAccountEmail: process.env.GOOGLE_SA_EMAIL!,
+  privateKey: process.env.GOOGLE_SA_PRIVATE_KEY!,
+  scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"],
+  baseUrl: "https://sheets.googleapis.com",
+});
+```
 
 ## Calling as a signed-in user
 

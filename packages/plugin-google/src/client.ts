@@ -1,3 +1,4 @@
+import { serviceAccountRefreshConfig } from "./serviceAccount.js";
 import RequestHandler, { buildClientName } from "@dianemo/core";
 import {
   AuthDataOAuth2,
@@ -19,12 +20,22 @@ import {
  * — which is also why Address Validation gets the API-key path rather than the
  * service-account one (docs/google-api.md#service-account-jwt-bearer-flow).
  *
+ * `serviceAccountEmail`/`privateKey` (the `client_email` and `private_key` of a
+ * service-account JSON key) sign a JWT-bearer assertion per refresh, with
+ * `scopes` the OAuth scopes requested and `tokenUrl` an override of Google's
+ * token endpoint for tests. Exactly one of an OAuth pair, a service account or
+ * an API key alone is accepted (docs/google-api.md#service-account-jwt-bearer-flow).
+ *
  * `baseUrl` serves the profile sub-client; Address Validation has its own host.
  */
 export interface GoogleCredentials extends BaseCredentialsData {
   clientId?: string;
   clientSecret?: string;
   apiKey?: string;
+  serviceAccountEmail?: string;
+  privateKey?: string;
+  scopes?: string[];
+  tokenUrl?: string;
   addressValidationBaseUrl?: string;
 }
 
@@ -84,6 +95,20 @@ function buildOAuth2Auth(creds: GoogleCredentials): AuthDataOAuth2 | undefined {
 }
 
 /**
+ * The OAuth block for a service account. There is no grant to seed: the
+ * client-level refresh signs its own assertion, so no `grantRefreshConfig`.
+ * Sub-clients inherit it from the parent.
+ */
+function buildServiceAccountAuth(creds: GoogleCredentials): AuthDataOAuth2 {
+  return {
+    type: "oauth2",
+    clientId: creds.serviceAccountEmail ?? "",
+    clientSecret: "",
+    refreshConfig: serviceAccountRefreshConfig(creds, TOKEN_URL),
+  };
+}
+
+/**
  * With an API key the credential rides in the query string, so the inherited
  * OAuth block is cleared: leaving it would have every call refresh a token it
  * does not send. The key goes on `config.params` and not `config.url` because
@@ -130,12 +155,23 @@ export async function registerGoogleTemplate(handler: RequestHandler) {
   await handler.registerClientTemplate(
     "google",
     (creds): CreateClientData[] => {
-      const authentication = buildOAuth2Auth(creds);
-      if (!authentication && !creds.apiKey) {
+      const oauth = buildOAuth2Auth(creds);
+      const serviceAccount = Boolean(
+        creds.serviceAccountEmail && creds.privateKey
+      );
+      if (serviceAccount && oauth) {
         throw new Error(
-          "Google credentials need an apiKey, a clientId/clientSecret pair, or both — an account with neither cannot authenticate against either API"
+          "Google credentials take a service account or a clientId/clientSecret pair, not both — they sign in differently"
         );
       }
+      if (!oauth && !serviceAccount && !creds.apiKey) {
+        throw new Error(
+          "Google credentials need an apiKey, a clientId/clientSecret pair, or a service account (serviceAccountEmail and privateKey) — an account with none cannot authenticate against either API"
+        );
+      }
+      const authentication = serviceAccount
+        ? buildServiceAccountAuth(creds)
+        : oauth;
       const parentName = buildClientName("google", creds);
 
       return [
@@ -161,7 +197,7 @@ export async function registerGoogleTemplate(handler: RequestHandler) {
             // Registered only with an OAuth client, so an API-key-only account
             // calling `getGoogleProfile` is told the client does not exist
             // rather than getting a bare 401 back from Google.
-            ...(authentication
+            ...(oauth
               ? [
                   {
                     name: "profile",
