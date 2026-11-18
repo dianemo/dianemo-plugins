@@ -26,7 +26,8 @@ import {
  * token endpoint for tests. A service account and an OAuth pair are mutually
  * exclusive; an API key may accompany either or stand alone (docs/google-api.md#service-account-jwt-bearer-flow).
  *
- * `baseUrl` serves the profile sub-client; Address Validation has its own host.
+ * `baseUrl` serves the profile sub-client; Address Validation and Sheets have
+ * their own hosts (`addressValidationBaseUrl`, `sheetsBaseUrl`).
  */
 export interface GoogleCredentials extends BaseCredentialsData {
   clientId?: string;
@@ -37,6 +38,8 @@ export interface GoogleCredentials extends BaseCredentialsData {
   scopes?: string[];
   tokenUrl?: string;
   addressValidationBaseUrl?: string;
+  /** Override of Google's Sheets host, for tests. Default `https://sheets.googleapis.com`. */
+  sheetsBaseUrl?: string;
 }
 
 declare module "@dianemo/core" {
@@ -47,6 +50,8 @@ declare module "@dianemo/core" {
 
 const DEFAULT_ADDRESS_VALIDATION_BASE_URL =
   "https://addressvalidation.googleapis.com";
+
+const DEFAULT_SHEETS_BASE_URL = "https://sheets.googleapis.com";
 
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
 
@@ -151,6 +156,31 @@ function buildAddressValidationSubClient(
   };
 }
 
+/**
+ * Google meters Sheets reads and writes apart, 60 requests per minute per user
+ * per project for each (and 300 per project) — docs/google-api.md#google-sheets-api-v4-quotas.
+ * One sub-client each, so a burst of reads cannot starve the writes.
+ */
+function buildSheetsSubClient(
+  creds: GoogleCredentials,
+  name: "sheetsRead" | "sheetsWrite"
+): CreateClientData {
+  return {
+    name,
+    rateLimit: [
+      {
+        type: "requestLimit",
+        interval: 60_000,
+        tokensToAdd: 60,
+        maxTokens: 60,
+      },
+    ],
+    requestOptions: {
+      defaults: { baseURL: creds.sheetsBaseUrl ?? DEFAULT_SHEETS_BASE_URL },
+    },
+  };
+}
+
 export async function registerGoogleTemplate(handler: RequestHandler) {
   await handler.registerClientTemplate(
     "google",
@@ -219,6 +249,8 @@ export async function registerGoogleTemplate(handler: RequestHandler) {
                 ]
               : []),
             buildAddressValidationSubClient(creds),
+            buildSheetsSubClient(creds, "sheetsRead"),
+            buildSheetsSubClient(creds, "sheetsWrite"),
           ],
         },
       ];

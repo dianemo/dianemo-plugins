@@ -6,5 +6,5 @@
  */
 export const googleSubClient = (
   clientName: string,
-  sub: "profile" | "addressValidation"
+  sub: "profile" | "addressValidation" | "sheetsRead" | "sheetsWrite"
 ) => `${clientName}:${sub}`;

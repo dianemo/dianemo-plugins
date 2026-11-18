@@ -228,3 +228,39 @@ is not kept in the repository.
 
 <https://developers.google.com/discovery/v1/reference/apis>
 · <https://discovery.googleapis.com/discovery/v1/apis/sheets/v4/rest>
+
+## Google Sheets API v4 quotas
+
+"Read requests: 300 per minute per project; 60 per minute per user per
+project. Write requests: 300 per minute per project; 60 per minute per user per
+project." Reads and writes are metered apart.
+
+<https://developers.google.com/sheets/api/limits> (fetched 2026-11-18)
+
+The plugin declares one `requestLimit` of 60 per 60 s on each of the
+`sheetsRead` and `sheetsWrite` sub-clients — the per-user figure, since a
+registered account is one service account or one user. The 300 per project
+figure is not enforced: two accounts registered against one Cloud project can
+overrun it together, the same shape as the trap under
+[Address Validation quotas](#address-validation-quotas). The parent's 600 per
+60 s backstop is unchanged.
+
+## Google Sheets API v4 errors
+
+Every Sheets call raises one of these, with the HTTP status as `statusCode` and
+in `metadata.status`, and Google's `error.status` string (for example
+`PERMISSION_DENIED`) in `metadata.googleStatus`:
+
+| Code       | When                                                                                                         | Status   |
+| ---------- | ------------------------------------------------------------------------------------------------------------ | -------- |
+| `GGL_0009` | spreadsheet not found, or not shared with the account; Google answers both alike, so neither can this plugin | 403, 404 |
+| `GGL_0010` | invalid request                                                                                              | 400      |
+| `GGL_0011` | quota exceeded, after core's retries                                                                         | 429      |
+| `GGL_0012` | any other failure, including one with no HTTP status                                                         | other    |
+
+Core logs a failure once, when `tryHandleRequest` first wraps it, so the log
+line says `GGL_0012` whatever the status; the error a caller catches carries the
+mapped code.
+
+Array query parameters (`ranges`) are sent repeated (`ranges=A&ranges=B`), not
+as axios's default `ranges[]=A`, through a `paramsSerializer`.
