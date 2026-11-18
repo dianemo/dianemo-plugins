@@ -1,15 +1,16 @@
 # Google APIs
 
 Findings behind `@dianemo/plugin-google` — OpenID Connect userinfo, Address
-Validation, and the Maps quotas that shape how one client spans several Google
-APIs.
+Validation, Google Sheets API v4, service-account sign-in, and the Maps quotas
+that shape how one client spans several Google APIs.
 
 **The OAuth model below is common to both Google packages.**
 `@dianemo/plugin-google-vertex-ai` is built on the same service-account flow and
 cites the two sections that follow rather than restating them — see
 [`plugin-google-vertex-ai/docs/vertex-ai-api.md`](../../plugin-google-vertex-ai/docs/vertex-ai-api.md).
 
-Every URL below was checked on 2026-08-25.
+Every URL below was checked on 2026-08-25, except those in the Google Sheets
+sections, which were checked on 2026-11-18.
 
 ## No grant bootstraps from a client id and secret
 
@@ -217,6 +218,42 @@ Assigning on the params object is idempotent and immune to all four.
 Where the key is used, the inherited OAuth block must also be cleared
 (`authentication: undefined`). Leaving it in place has every call refresh a token
 it does not send.
+
+## Google Sheets API v4 calls
+
+All 17 methods of the Sheets v4 REST API, on the Sheets host
+(`sheetsBaseUrl`, default `https://sheets.googleapis.com`).
+
+| Group       | Sub-client    | Calls                                                                                                                                                                                                                 |
+| ----------- | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Reads (7)   | `sheetsRead`  | `getSpreadsheet`, `getSpreadsheetByDataFilter`, `getValues`, `batchGetValues`, `batchGetValuesByDataFilter`, `getDeveloperMetadata`, `searchDeveloperMetadata`                                                        |
+| Writes (10) | `sheetsWrite` | `createSpreadsheet`, `batchUpdateSpreadsheet`, `updateValues`, `appendValues`, `batchUpdateValues`, `batchUpdateValuesByDataFilter`, `clearValues`, `batchClearValues`, `batchClearValuesByDataFilter`, `copySheetTo` |
+
+The option unions the calls share (`MajorDimension`, `ValueRenderOption`,
+`DateTimeRenderOption`, `ValueInputOption`, `InsertDataOption`) live in
+`src/requests/sheets/options.ts` and are exported.
+
+**Scopes.** Reads need `https://www.googleapis.com/auth/spreadsheets.readonly`
+(or `spreadsheets`, `drive.readonly`, `drive`); writes need
+`https://www.googleapis.com/auth/spreadsheets` (or `drive`, or `drive.file` for
+files the app created or the user opened with it). A service account's `scopes`
+must name one that covers the calls it makes.
+
+<https://developers.google.com/workspace/sheets/api/scopes>
+
+**Dates come back as serial numbers, not text.** In a cell's `effectiveValue`,
+a `DATE` or `DATE_TIME` cell (`effectiveFormat.numberFormat.type`, or
+`userEnteredFormat.numberFormat.type`) holds a `numberValue`: a serial number of
+days since 1899-12-30, with the time of day as the fraction, in the
+**spreadsheet's own time zone** (`properties.timeZone`), not UTC. Convert with
+that time zone before treating it as an instant. `formattedValue` is the
+display text and depends on the cell's format and locale. Through the values
+calls the same cell is a string or a number depending on
+`valueRenderOption` (`FORMATTED_VALUE`, `UNFORMATTED_VALUE`, `FORMULA`) and
+`dateTimeRenderOption` (`SERIAL_NUMBER`, `FORMATTED_STRING`).
+
+<https://developers.google.com/workspace/sheets/api/reference/rest/v4/spreadsheets/cells>
+· <https://developers.google.com/workspace/sheets/api/reference/rest/v4/DateTimeRenderOption>
 
 ## Google Sheets API v4 types
 
