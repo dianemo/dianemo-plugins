@@ -1,15 +1,16 @@
 # Google APIs
 
 Findings behind `@dianemo/plugin-google` — OpenID Connect userinfo, Address
-Validation, and the Maps quotas that shape how one client spans several Google
-APIs.
+Validation, Google Sheets API v4, service-account sign-in, and the Maps quotas
+that shape how one client spans several Google APIs.
 
 **The OAuth model below is common to both Google packages.**
 `@dianemo/plugin-google-vertex-ai` is built on the same service-account flow and
 cites the two sections that follow rather than restating them — see
 [`plugin-google-vertex-ai/docs/vertex-ai-api.md`](../../plugin-google-vertex-ai/docs/vertex-ai-api.md).
 
-Every URL below was checked on 2026-08-25.
+Every URL below was checked on 2026-08-25, except those in the Google Sheets
+sections, which were checked on 2026-11-18.
 
 ## No grant bootstraps from a client id and secret
 
@@ -50,8 +51,8 @@ behaviour, not Google's — see
 
 ## Service-account (JWT-bearer) flow
 
-The service account is the credential this flow rests on, and
-`plugin-google-vertex-ai` is the package that ships it.
+The service account is the credential this flow rests on; `plugin-google` and
+`plugin-google-vertex-ai` both ship it.
 `serviceAccountEmail` is the `client_email` from the service-account JSON key and
 `privateKey` its `private_key`. The IAM roles the engine needs are in
 [that package's doc](../../plugin-google-vertex-ai/docs/vertex-ai-api.md#authentication).
@@ -81,24 +82,26 @@ Three things about it are not visible from the code:
   same way.
 
 **The assertion has to be minted per refresh** — it lives an hour, so a client
-that outlives it would otherwise send an expired one forever. The only hook that
-runs per refresh is `refreshConfig.requestInterceptor`, which core 1.0.0 cannot
-carry as an ordinary property: it `structuredClone`s the config that holds it and
-throws `DataCloneError`
-([`/docs/core-behaviour.md`](../../../docs/core-behaviour.md#refreshconfig-is-deep-copied-so-it-cannot-hold-a-function)).
-`plugin-google-vertex-ai` defines the interceptor **non-enumerable**, which
-sidesteps the clone without a change in core — `structuredClone` walks own
-_enumerable_ keys only, so the copy comes out clean while
-`baseConfig.requestInterceptor` stays readable, and the config stays safe to
-`JSON.stringify` as a bonus.
+that outlives it would otherwise send an expired one forever. The hook that runs
+per refresh is `refreshConfig.requestInterceptor`. On `@dianemo/core` 2.1.1 it is
+an ordinary **enumerable** function property: core deep-copies the config with
+`deepCloneWithFunctions` (`dist/utils/deepClone.js`, a `for…in` copy, so it keeps
+enumerable keys and drops non-enumerable ones) and calls the interceptor on the
+copy in `handleRefreshMethod` (`dist/client/methods/authenticate.js`). That is why
+`plugin-google` raised its `@dianemo/core` peer to `^2.1.1`.
+`plugin-google-vertex-ai` still defines its interceptor non-enumerable, a trick
+from core 1.0.0, where `structuredClone` threw `DataCloneError` on a function
+([`/docs/core-behaviour.md`](../../../docs/core-behaviour.md#refreshconfig-is-deep-copied-so-it-cannot-hold-a-function));
+under 2.1.1 the clone drops that key, so its interceptor does not run. Do not copy
+it. `test/realHandler.test.ts` proves the enumerable form runs, by reading the
+assertion off a real token request.
 
-`plugin-google` has the same option open for Address Validation, whose docs say
-to "configure an API key or OAuth to make an authenticated API request" — the
-OAuth option there meaning a token minted for a Cloud project's service account.
-It ships the API-key path instead, because that is the one a host can supply with
-no user in the loop; adding the service-account path would mean minting tokens in
-a `requestOptions.requestInterceptor` the way `plugin-usps` mints its payment
-token, which is separate work.
+`plugin-google` ships this for its own template: give the account
+`serviceAccountEmail`, `privateKey` and `scopes` (and `tokenUrl`, an override for
+tests) in place of an OAuth pair. The block is `{ type: "oauth2", clientId:
+serviceAccountEmail, clientSecret: "", refreshConfig }` with no
+`grantRefreshConfig`, and sub-clients inherit it from the account client. Address
+Validation still takes the API-key path, which needs no scopes.
 
 <https://developers.google.com/maps/documentation/address-validation/get-api-key>
 
@@ -215,3 +218,144 @@ Assigning on the params object is idempotent and immune to all four.
 Where the key is used, the inherited OAuth block must also be cleared
 (`authentication: undefined`). Leaving it in place has every call refresh a token
 it does not send.
+
+## Google Sheets API v4 calls
+
+All 17 methods of the Sheets v4 REST API, on the Sheets host
+(`sheetsBaseUrl`, default `https://sheets.googleapis.com`).
+
+| Group       | Sub-client    | Calls                                                                                                                                                                                                                 |
+| ----------- | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Reads (7)   | `sheetsRead`  | `getSpreadsheet`, `getSpreadsheetByDataFilter`, `getValues`, `batchGetValues`, `batchGetValuesByDataFilter`, `getDeveloperMetadata`, `searchDeveloperMetadata`                                                        |
+| Writes (10) | `sheetsWrite` | `createSpreadsheet`, `batchUpdateSpreadsheet`, `updateValues`, `appendValues`, `batchUpdateValues`, `batchUpdateValuesByDataFilter`, `clearValues`, `batchClearValues`, `batchClearValuesByDataFilter`, `copySheetTo` |
+
+The option unions the calls share (`MajorDimension`, `ValueRenderOption`,
+`DateTimeRenderOption`, `ValueInputOption`, `InsertDataOption`) live in
+`src/requests/sheets/options.ts` and are exported.
+
+**Scopes.** Reads need `https://www.googleapis.com/auth/spreadsheets.readonly`
+(or `spreadsheets`, `drive.readonly`, `drive`); writes need
+`https://www.googleapis.com/auth/spreadsheets` (or `drive`, or `drive.file` for
+files the app created or the user opened with it). A service account's `scopes`
+must name one that covers the calls it makes.
+
+<https://developers.google.com/workspace/sheets/api/scopes>
+
+**Dates come back as serial numbers, not text.** In a cell's `effectiveValue`,
+a `DATE` or `DATE_TIME` cell (`effectiveFormat.numberFormat.type`, or
+`userEnteredFormat.numberFormat.type`) holds a `numberValue`: a serial number of
+days since 1899-12-30, with the time of day as the fraction, in the
+**spreadsheet's own time zone** (`properties.timeZone`), not UTC. Convert with
+that time zone before treating it as an instant. `formattedValue` is the
+display text and depends on the cell's format and locale. Through the values
+calls the same cell is a string or a number depending on
+`valueRenderOption` (`FORMATTED_VALUE`, `UNFORMATTED_VALUE`, `FORMULA`) and
+`dateTimeRenderOption` (`SERIAL_NUMBER`, `FORMATTED_STRING`).
+
+<https://developers.google.com/workspace/sheets/api/reference/rest/v4/spreadsheets/cells>
+· <https://developers.google.com/workspace/sheets/api/reference/rest/v4/DateTimeRenderOption>
+
+## Google Sheets API v4 types
+
+`src/requests/sheets/schemas.ts` was produced once from Google's Discovery
+document for Sheets v4 (`apis.getRest`, revision `20261111`; the response has no
+`etag`) and is maintained by hand from here. Its type names match the discovery
+`schemas`, so Google's reference pages map onto it directly. The document itself
+is not kept in the repository.
+
+<https://developers.google.com/discovery/v1/reference/apis>
+· <https://discovery.googleapis.com/discovery/v1/apis/sheets/v4/rest>
+
+Twenty request-only fields are required in the types (not optional) because Google's
+descriptions say so: three say "Required.", fifteen update-mask `fields` say "At least one
+field must be specified", and two comment `content` fields say they "cannot be empty". Only
+request-only types get required fields, because Google's JSON omits fields that hold their
+default value, so a response cannot be trusted to carry any field.
+
+## Google Sheets API v4 quotas
+
+"Read requests: 300 per minute per project; 60 per minute per user per
+project. Write requests: 300 per minute per project; 60 per minute per user per
+project." Reads and writes are metered apart.
+
+<https://developers.google.com/sheets/api/limits> (fetched 2026-11-18)
+
+The plugin declares one `requestLimit` of 60 per 60 s on each of the
+`sheetsRead` and `sheetsWrite` sub-clients — the per-user figure, since a
+registered account is one service account or one user. The 300 per project
+figure is not enforced: two accounts registered against one Cloud project can
+overrun it together, the same shape as the trap under
+[Address Validation quotas](#address-validation-quotas). The parent's 600 per
+60 s backstop is unchanged.
+
+## Google Sheets API v4 errors
+
+Every Sheets call raises one of these, with the HTTP status as `statusCode` and
+in `metadata.status`, and Google's `error.status` string (for example
+`PERMISSION_DENIED`) in `metadata.googleStatus`:
+
+| Code       | When                                                                                                                                                                                                                                                                                                                          | Status     |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| `GGL_0009` | spreadsheet not found, or not shared with the account; Google answers both alike, so neither can this plugin                                                                                                                                                                                                                  | 404, 403   |
+| `GGL_0010` | invalid request                                                                                                                                                                                                                                                                                                               | 400        |
+| `GGL_0011` | quota exceeded, after core's retries; also a 403 whose reason is `rateLimitExceeded`, `userRateLimitExceeded` or `RATE_LIMIT_EXCEEDED`                                                                                                                                                                                        | 429, 403   |
+| `GGL_0012` | any other failure, including one with no HTTP status; also a 403 whose reason is `SERVICE_DISABLED` or `accessNotConfigured` (Sheets API not enabled), and one whose reason is `ACCESS_TOKEN_SCOPE_INSUFFICIENT` or `insufficientPermissions` (the token lacks `spreadsheets` / `spreadsheets.readonly`; the message says so) | other, 403 |
+| `GGL_0013` | Google sign-in failed: the token endpoint refused the account's credentials (`invalid_grant`, `invalid_client`, ...), whatever its HTTP status. `metadata.oauthError` is the `error` string and `metadata.oauthErrorDescription` the `error_description` when present; never the assertion or the key                         | 400, 401   |
+
+Google uses 403 for three different failures, so a 403 is told apart by the
+reasons in the body, read from `error.details[].reason` and the older
+`error.errors[].reason` (case-insensitive). A body that is missing, not an
+object, or has no string reasons leaves it `GGL_0009`.
+
+A failed sign-in is told apart from a Sheets failure by the body's shape, not its
+status: the token endpoint answers `{"error":"invalid_grant","error_description":"..."}`
+with `error` a string, where a Sheets error carries `error` as an object. Without
+that, a token 400 would read as "Google Sheets rejected the request as invalid". This mapping rests on the
+reason strings Google documents for 403 in its Sheets and Drive error guides and
+on the `google.rpc.ErrorInfo` convention, not on a captured response of every
+kind.
+
+Core logs a failure once, when `tryHandleRequest` first wraps it, so the log
+line says `GGL_0012` whatever the status; the error a caller catches carries the
+mapped code.
+
+Array query parameters (`ranges`) are sent repeated (`ranges=A&ranges=B`), not
+as axios's default `ranges[]=A`, through a `paramsSerializer`.
+
+## Writes are not retried
+
+`sheetsWrite` does not retry a 5xx, a timeout or a dropped connection: its
+`retryOptions` set `retry5xxs: false` and a `classifyError` that fails any
+response of 500 or more, or none at all, at once. Each of those can arrive after
+Google applied the write, and repeating an `appendValues` adds its rows twice.
+The caller gets the error (`GGL_0012`) and decides, for example by re-reading the
+range before appending again. A 429 is still retried by core: Google rejects it
+before doing any work, so repeating it is safe. `sheetsRead` keeps core's
+defaults. `test/sheetsWrite.test.ts` proves it on a real socket: one hit for a
+500, one for a dropped connection, two for a read that fails once.
+
+## Creating a spreadsheet as a service account
+
+Checked 2026-11-18. `createSpreadsheet` calls `spreadsheets.create`, which takes
+no folder or parent and so cannot target a shared drive; the file is created in
+the caller's own Drive. Google's pages say:
+
+- The Sheets `spreadsheets.create` reference lists the scopes `drive`,
+  `drive.file` and `spreadsheets`, and says nothing about where the file lands,
+  who owns it, or service accounts
+  (<https://developers.google.com/workspace/sheets/api/reference/rest/v4/spreadsheets/create>).
+- The Drive shared-drives guide says service accounts "don't have storage
+  quota" and cannot own files, and that they must put files in shared drives or
+  use OAuth to act for a user
+  (<https://developers.google.com/workspace/drive/api/guides/about-shareddrives>).
+
+**Negative / uncertain result.** No official page says that
+`spreadsheets.create` as a service account succeeds or fails, or names the error.
+The Drive statement implies a service account with no storage cannot hold a new
+file in its own Drive, so a bare `createSpreadsheet` as a service account may be
+refused (Drive reports that class of failure as `storageQuotaExceeded`), but this
+was not tested against Google and is not claimed. Placing a new file in a shared
+drive needs the Drive API (`files.create` with `supportsAllDrives` and a
+`parents` entry), which this plugin does not call. Until verified against a real
+project, treat a service account as a writer to spreadsheets a person created and
+shared with its email, and use user OAuth for `createSpreadsheet`.

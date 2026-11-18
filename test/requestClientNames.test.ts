@@ -68,8 +68,18 @@ const CASES: Case[] = [
     dir: "plugin-google",
     template: "google",
     credentials: oauth,
-    call: (r, c) =>
-      r.validateAddress(c, { address: { addressLines: ["1 Main St"] } }),
+    // Each call reaches a different sub-client; the stub throws on every one,
+    // so swallow each and let the loop record all the names it asked for.
+    call: async (r, c) => {
+      const probe = (p: Promise<unknown>) => p.catch(() => undefined);
+      await probe(
+        r.validateAddress(c, { address: { addressLines: ["1 Main St"] } })
+      );
+      await probe(r.getSpreadsheet(c, "sheet-id"));
+      await probe(
+        r.appendValues(c, "sheet-id", "A1", {}, { valueInputOption: "RAW" })
+      );
+    },
   },
   {
     dir: "plugin-google-vertex-ai",

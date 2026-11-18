@@ -30,6 +30,10 @@
       "types": "./dist/requests/profile.d.ts",
       "default": "./dist/requests/profile.js"
     },
+    "./requests/sheets": {
+      "types": "./dist/requests/sheets/index.d.ts",
+      "default": "./dist/requests/sheets/index.js"
+    },
     "./requests/types": {
       "types": "./dist/requests/types.d.ts",
       "default": "./dist/requests/types.js"
@@ -37,6 +41,30 @@
     "./requests/utils": {
       "types": "./dist/requests/utils.d.ts",
       "default": "./dist/requests/utils.js"
+    },
+    "./requests/sheets/errors": {
+      "types": "./dist/requests/sheets/errors.d.ts",
+      "default": "./dist/requests/sheets/errors.js"
+    },
+    "./requests/sheets/index": {
+      "types": "./dist/requests/sheets/index.d.ts",
+      "default": "./dist/requests/sheets/index.js"
+    },
+    "./requests/sheets/options": {
+      "types": "./dist/requests/sheets/options.d.ts",
+      "default": "./dist/requests/sheets/options.js"
+    },
+    "./requests/sheets/read": {
+      "types": "./dist/requests/sheets/read.d.ts",
+      "default": "./dist/requests/sheets/read.js"
+    },
+    "./requests/sheets/schemas": {
+      "types": "./dist/requests/sheets/schemas.d.ts",
+      "default": "./dist/requests/sheets/schemas.js"
+    },
+    "./requests/sheets/write": {
+      "types": "./dist/requests/sheets/write.d.ts",
+      "default": "./dist/requests/sheets/write.js"
     }
   },
   "files": [
@@ -66,7 +94,7 @@
   "author": "Aaron Leman",
   "license": "Apache-2.0",
   "peerDependencies": {
-    "@dianemo/core": "^2.0.0",
+    "@dianemo/core": "^2.1.1",
     "@dianemo/plugin-kit": "^2.0.0"
   },
   "repository": {

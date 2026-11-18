@@ -1,4 +1,6 @@
+import { serviceAccountRefreshConfig } from "./serviceAccount.js";
 import RequestHandler, { buildClientName } from "@dianemo/core";
+import { createPrivateKey } from "node:crypto";
 import {
   AuthDataOAuth2,
   BaseCredentialsData,
@@ -19,13 +21,26 @@ import {
  * — which is also why Address Validation gets the API-key path rather than the
  * service-account one (docs/google-api.md#service-account-jwt-bearer-flow).
  *
- * `baseUrl` serves the profile sub-client; Address Validation has its own host.
+ * `serviceAccountEmail`/`privateKey` (the `client_email` and `private_key` of a
+ * service-account JSON key) sign a JWT-bearer assertion per refresh, with
+ * `scopes` the OAuth scopes requested and `tokenUrl` an override of Google's
+ * token endpoint for tests. A service account and an OAuth pair are mutually
+ * exclusive; an API key may accompany either or stand alone (docs/google-api.md#service-account-jwt-bearer-flow).
+ *
+ * `baseUrl` serves the profile sub-client; Address Validation and Sheets have
+ * their own hosts (`addressValidationBaseUrl`, `sheetsBaseUrl`).
  */
 export interface GoogleCredentials extends BaseCredentialsData {
   clientId?: string;
   clientSecret?: string;
   apiKey?: string;
+  serviceAccountEmail?: string;
+  privateKey?: string;
+  scopes?: string[];
+  tokenUrl?: string;
   addressValidationBaseUrl?: string;
+  /** Override of Google's Sheets host, for tests. Default `https://sheets.googleapis.com`. */
+  sheetsBaseUrl?: string;
 }
 
 declare module "@dianemo/core" {
@@ -36,6 +51,8 @@ declare module "@dianemo/core" {
 
 const DEFAULT_ADDRESS_VALIDATION_BASE_URL =
   "https://addressvalidation.googleapis.com";
+
+const DEFAULT_SHEETS_BASE_URL = "https://sheets.googleapis.com";
 
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
 
@@ -84,6 +101,20 @@ function buildOAuth2Auth(creds: GoogleCredentials): AuthDataOAuth2 | undefined {
 }
 
 /**
+ * The OAuth block for a service account. There is no grant to seed: the
+ * client-level refresh signs its own assertion, so no `grantRefreshConfig`.
+ * Sub-clients inherit it from the parent.
+ */
+function buildServiceAccountAuth(creds: GoogleCredentials): AuthDataOAuth2 {
+  return {
+    type: "oauth2",
+    clientId: creds.serviceAccountEmail as string,
+    clientSecret: "",
+    refreshConfig: serviceAccountRefreshConfig(creds, TOKEN_URL),
+  };
+}
+
+/**
  * With an API key the credential rides in the query string, so the inherited
  * OAuth block is cleared: leaving it would have every call refresh a token it
  * does not send. The key goes on `config.params` and not `config.url` because
@@ -126,16 +157,83 @@ function buildAddressValidationSubClient(
   };
 }
 
+/**
+ * A write is not retried when its outcome is unknown: a 5xx, a timeout or a
+ * dropped connection may arrive after Google applied it, and repeating an
+ * `append` would add the rows twice. A 429 is still retried, since Google
+ * rejects it before doing any work (docs/google-api.md#writes-are-not-retried).
+ */
+const WRITE_RETRY_OPTIONS: NonNullable<CreateClientData["retryOptions"]> = {
+  retry5xxs: false,
+  classifyError: (error) =>
+    !error.response || error.response.status >= 500
+      ? { action: "fail" }
+      : undefined,
+};
+
+/**
+ * Google meters Sheets reads and writes apart, 60 requests per minute per user
+ * per project for each (and 300 per project) — docs/google-api.md#google-sheets-api-v4-quotas.
+ * One sub-client each, so a burst of reads cannot starve the writes.
+ */
+function buildSheetsSubClient(
+  creds: GoogleCredentials,
+  name: "sheetsRead" | "sheetsWrite"
+): CreateClientData {
+  return {
+    name,
+    rateLimit: [
+      {
+        type: "requestLimit",
+        interval: 60_000,
+        tokensToAdd: 60,
+        maxTokens: 60,
+      },
+    ],
+    requestOptions: {
+      defaults: { baseURL: creds.sheetsBaseUrl ?? DEFAULT_SHEETS_BASE_URL },
+    },
+    ...(name === "sheetsWrite" ? { retryOptions: WRITE_RETRY_OPTIONS } : {}),
+  };
+}
+
+/** Fails at registration, not on the first call, and never echoes the key. */
+function assertPrivateKey(key: string): void {
+  try {
+    createPrivateKey(key.replace(/\\n/g, "\n"));
+  } catch {
+    throw new Error("privateKey is not a valid PEM private key");
+  }
+}
+
 export async function registerGoogleTemplate(handler: RequestHandler) {
   await handler.registerClientTemplate(
     "google",
     (creds): CreateClientData[] => {
-      const authentication = buildOAuth2Auth(creds);
-      if (!authentication && !creds.apiKey) {
+      const oauth = buildOAuth2Auth(creds);
+      if (Boolean(creds.serviceAccountEmail) !== Boolean(creds.privateKey)) {
         throw new Error(
-          "Google credentials need an apiKey, a clientId/clientSecret pair, or both — an account with neither cannot authenticate against either API"
+          "serviceAccountEmail and privateKey must be given together"
         );
       }
+      const serviceAccount = Boolean(creds.serviceAccountEmail);
+      if (serviceAccount && oauth) {
+        throw new Error(
+          "Google credentials take a service account or a clientId/clientSecret pair, not both — they sign in differently"
+        );
+      }
+      if (serviceAccount) assertPrivateKey(creds.privateKey ?? "");
+      if (serviceAccount && !creds.scopes?.length) {
+        throw new Error("a service account needs at least one scope");
+      }
+      if (!oauth && !serviceAccount && !creds.apiKey) {
+        throw new Error(
+          "Google credentials need an apiKey, a clientId/clientSecret pair, or a service account (serviceAccountEmail and privateKey) — an account with none cannot authenticate against either API"
+        );
+      }
+      const authentication = serviceAccount
+        ? buildServiceAccountAuth(creds)
+        : oauth;
       const parentName = buildClientName("google", creds);
 
       return [
@@ -161,7 +259,7 @@ export async function registerGoogleTemplate(handler: RequestHandler) {
             // Registered only with an OAuth client, so an API-key-only account
             // calling `getGoogleProfile` is told the client does not exist
             // rather than getting a bare 401 back from Google.
-            ...(authentication
+            ...(oauth
               ? [
                   {
                     name: "profile",
@@ -177,6 +275,15 @@ export async function registerGoogleTemplate(handler: RequestHandler) {
                 ]
               : []),
             buildAddressValidationSubClient(creds),
+            // Sheets takes no API key, so an API-key-only account has no way
+            // to reach it: leave the sub-clients out, and a call is told the
+            // client does not exist rather than getting a bare 401.
+            ...(oauth || serviceAccount
+              ? [
+                  buildSheetsSubClient(creds, "sheetsRead"),
+                  buildSheetsSubClient(creds, "sheetsWrite"),
+                ]
+              : []),
           ],
         },
       ];
