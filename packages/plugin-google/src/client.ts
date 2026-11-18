@@ -157,11 +157,6 @@ function buildAddressValidationSubClient(
 }
 
 /**
- * Google meters Sheets reads and writes apart, 60 requests per minute per user
- * per project for each (and 300 per project) — docs/google-api.md#google-sheets-api-v4-quotas.
- * One sub-client each, so a burst of reads cannot starve the writes.
- */
-/**
  * A write is not retried when its outcome is unknown: a 5xx, a timeout or a
  * dropped connection may arrive after Google applied it, and repeating an
  * `append` would add the rows twice. A 429 is still retried, since Google
@@ -175,6 +170,11 @@ const WRITE_RETRY_OPTIONS: NonNullable<CreateClientData["retryOptions"]> = {
       : undefined,
 };
 
+/**
+ * Google meters Sheets reads and writes apart, 60 requests per minute per user
+ * per project for each (and 300 per project) — docs/google-api.md#google-sheets-api-v4-quotas.
+ * One sub-client each, so a burst of reads cannot starve the writes.
+ */
 function buildSheetsSubClient(
   creds: GoogleCredentials,
   name: "sheetsRead" | "sheetsWrite"
