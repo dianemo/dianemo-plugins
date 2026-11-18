@@ -159,7 +159,6 @@ claims to compile, so it has to.
 
 ```bash
 npm run lint
-npm run generate:google-types -- --check   # generated.ts matches vendor-specs/google
 ```
 
 ## 9. Check what you are actually committing
@@ -213,10 +212,10 @@ red pipeline on a fresh PR as a step you skipped, not as CI finding something cl
 
 Two jobs, both on a clean checkout with `npm ci`:
 
-| job       | runs                                                                                                      |
-| --------- | --------------------------------------------------------------------------------------------------------- |
-| `verify`  | `build`, then `sort-imports:check`, `format`, `lint`, `generate:google-types -- --check`, `check`, `test` |
-| `package` | `build`, then `verify:pack`, `verify:readme`                                                              |
+| job       | runs                                                                  |
+| --------- | --------------------------------------------------------------------- |
+| `verify`  | `build`, then `sort-imports:check`, `format`, `lint`, `check`, `test` |
+| `package` | `build`, then `verify:pack`, `verify:readme`                          |
 
 `.github/workflows/version-plan-check.yml` adds a third on pull requests only:
 `nx release plan:check` against `origin/master`. It skips a release PR, whose branch

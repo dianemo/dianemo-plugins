@@ -215,3 +215,14 @@ Assigning on the params object is idempotent and immune to all four.
 Where the key is used, the inherited OAuth block must also be cleared
 (`authentication: undefined`). Leaving it in place has every call refresh a token
 it does not send.
+
+## Google Sheets API v4 types
+
+`src/requests/sheets/schemas.ts` was produced once from Google's Discovery
+document for Sheets v4 (`apis.getRest`, revision `20261111`; the response has no
+`etag`) and is maintained by hand from here. Its type names match the discovery
+`schemas`, so Google's reference pages map onto it directly. The document itself
+is not kept in the repository.
+
+<https://developers.google.com/discovery/v1/reference/apis>
+· <https://discovery.googleapis.com/discovery/v1/apis/sheets/v4/rest>

@@ -1,6 +1,6 @@
-// Generated — do not edit.
-// Source: Google Sheets API v4, revision 20261111.
-// Regenerate with `npm run generate:google-types`.
+// Produced once from Google's Sheets API v4 Discovery document (revision
+// 20261111) and maintained by hand from here. Names match the discovery
+// `schemas`.
 
 /** Adds a new banded range to the spreadsheet. */
 export interface AddBandingRequest {

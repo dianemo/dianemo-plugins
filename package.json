@@ -2,7 +2,7 @@
   "name": "dianemo-plugins",
   "version": "0.0.0",
   "private": true,
-  "description": "Integration plugins for dianemo — one published package per external API",
+  "description": "Integration plugins for dianemo \u2014 one published package per external API",
   "type": "module",
   "workspaces": [
     "packages/*"
@@ -23,8 +23,6 @@
     "sort-imports:check": "node scripts/sort-imports.mjs --check --dir packages && node scripts/sort-imports.mjs --check --dir test",
     "exports": "node scripts/generate-exports.mjs",
     "exports:check": "node scripts/generate-exports.mjs --check",
-    "fetch:google-discovery": "node scripts/fetch-google-discovery.mjs",
-    "generate:google-types": "node scripts/generate-google-discovery-types.mjs vendor-specs/google/sheets-v4.discovery.json packages/plugin-google/src/requests/sheets/generated.ts",
     "verify:pack": "node scripts/verify-package.mjs",
     "verify:readme": "node scripts/verify-readme-examples.mjs",
     "version-plan": "nx release plan",

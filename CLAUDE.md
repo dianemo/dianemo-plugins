@@ -43,8 +43,6 @@ npm run lint
 npm run format:fix     # then sort-imports — order matters
 npm run sort-imports
 npm run exports        # regenerate exports maps from files on disk
-npm run generate:google-types  # regenerate Sheets types from vendor-specs/google (add -- --check to verify)
-npm run fetch:google-discovery -- sheets v4 vendor-specs/google/sheets-v4.discovery.json  # by hand only; updates the spec
 npm run version-plan   # declare a bump for a changed package; never edit `version`
 npm run verify:pack    # packs and installs tarballs; needs a fresh build
 npm run verify:readme  # compiles every README example; needs a fresh build
