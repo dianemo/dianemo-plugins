@@ -1,5 +1,6 @@
 import type { BatchUpdateSpreadsheetRequest } from "../src/requests/sheets/schemas.js";
 import { afterEach, describe, expect, expectTypeOf, it, vi } from "vitest";
+import { serviceAccountCreds } from "./support/serviceAccountServer.js";
 import { resetBinding } from "@dianemo/plugin-kit/testing";
 import { TEST_KEY } from "../../../test/fixtures/key.js";
 import { createServer, type Server } from "node:http";
@@ -228,7 +229,8 @@ describe("Sheets write errors", () => {
   const cases: [string, number, unknown, string][] = [
     ["no access", 403, status("PERMISSION_DENIED"), "GGL_0009"],
     ["a 403 with no body", 403, undefined, "GGL_0009"],
-    ["a 403 with a non-object error", 403, { error: "x" }, "GGL_0009"],
+    ["a 403 with a non-object error", 403, { error: 5 }, "GGL_0009"],
+    ["a 403 with an OAuth-shaped error", 403, { error: "x" }, "GGL_0013"],
     ["not found", 404, status("NOT_FOUND"), "GGL_0009"],
     ["invalid", 400, status("INVALID_ARGUMENT"), "GGL_0010"],
     ["quota", 429, status("RESOURCE_EXHAUSTED"), "GGL_0011"],
@@ -313,16 +315,21 @@ describe("over the wire", () => {
   });
 
   const start = async (onRequest: Parameters<typeof createServer>[1]) => {
-    server = createServer(onRequest);
+    server = createServer((req, res) => {
+      // The service account signs in at /token before any Sheets call.
+      if (req.url === "/token") {
+        res.setHeader("content-type", "application/json");
+        res.end(JSON.stringify({ access_token: "sa-token", expires_in: 3600 }));
+        return;
+      }
+      onRequest?.(req, res);
+    });
     await new Promise<void>((r) => server?.listen(0, "127.0.0.1", r));
     const sheetsBaseUrl = `http://127.0.0.1:${(server?.address() as AddressInfo).port}`;
     handler = new RequestHandler({ key: TEST_KEY, backend: memoryBackend() });
     const { google: requests } = handler.use(google);
     const creds = {
-      instanceId: "main",
-      baseUrl: sheetsBaseUrl,
-      apiKey: "k",
-      sheetsBaseUrl,
+      ...serviceAccountCreds(sheetsBaseUrl, "main"),
     };
     await handler.addTemplateClient("google", creds);
     return { requests, client: buildClientName("google", creds) };

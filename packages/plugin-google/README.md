@@ -37,8 +37,9 @@ await handler.addTemplateClient("google", {
   // The `client_email` and `private_key` of the service account's JSON key.
   serviceAccountEmail: process.env.GOOGLE_SA_EMAIL!,
   privateKey: process.env.GOOGLE_SA_PRIVATE_KEY!,
-  // Read-only. Writing needs "https://www.googleapis.com/auth/spreadsheets".
-  scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"],
+  // Read and write. Reading alone needs only
+  // "https://www.googleapis.com/auth/spreadsheets.readonly".
+  scopes: ["https://www.googleapis.com/auth/spreadsheets"],
 });
 
 // "google:_:main" — <template>:<organizationId | "_">:<instanceId>. Pass the
@@ -57,8 +58,8 @@ const spreadsheet = await requests.google.getSpreadsheet(
   }
 );
 
-// Write (an account whose scopes include ".../auth/spreadsheets"): append two
-// rows below the table in A1:C. Google requires `valueInputOption`.
+// Write: append two rows below the table in A1:C. Google requires
+// `valueInputOption`.
 await requests.google.appendValues(
   client,
   spreadsheetId,
@@ -74,7 +75,8 @@ await requests.google.appendValues(
 ```
 
 Beneath the account client the template registers a sub-client per host and quota —
-`addressValidation`, `sheetsRead`, `sheetsWrite` and `profile` (OAuth accounts only). You never name
+`addressValidation`, `sheetsRead` and `sheetsWrite` (service-account and OAuth accounts; Sheets takes no
+API key) and `profile` (OAuth accounts only). You never name
 one: every request appends its own segment, so passing the account name is always right.
 
 The Sheets calls are the whole of Google's Sheets API v4: seven reads on `sheetsRead`
@@ -83,10 +85,14 @@ The Sheets calls are the whole of Google's Sheets API v4: seven reads on `sheets
 `sheetsWrite` (`createSpreadsheet`, `batchUpdateSpreadsheet`, `updateValues`, `appendValues`,
 `batchUpdateValues`, `batchUpdateValuesByDataFilter`, `clearValues`, `batchClearValues`,
 `batchClearValuesByDataFilter`, `copySheetTo`). Request and response types are exported with
-Google's own names (`Spreadsheet`, `ValueRange`, `BatchUpdateSpreadsheetRequest`, and so on).
+Google's own names (`Spreadsheet`, `ValueRange`, `CellData`, `BatchUpdateSpreadsheetRequest`, and so
+on), importable from `@dianemo/plugin-google` as types; they are generated from Google's discovery
+document in `src/requests/sheets/schemas.ts`. Every call takes an
+optional `fields` mask, and `getSpreadsheet` also takes `commentsViewMode`.
 Each is metered at Google's 60 requests per minute per user per project, reads and writes apart.
 Failures raise `GGL_0009` (not found or not shared, 403 and 404), `GGL_0010` (400), `GGL_0011`
-(quota, 429) or `GGL_0012` (anything else); see [the error table](docs/google-api.md#google-sheets-api-v4-errors).
+(quota, 429), `GGL_0012` (anything else, including a token missing the needed scope) or `GGL_0013`
+(Google sign-in failed: the token endpoint refused the credentials); see [the error table](docs/google-api.md#google-sheets-api-v4-errors).
 
 ### Address Validation with an API key
 

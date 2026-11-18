@@ -294,17 +294,23 @@ Every Sheets call raises one of these, with the HTTP status as `statusCode` and
 in `metadata.status`, and Google's `error.status` string (for example
 `PERMISSION_DENIED`) in `metadata.googleStatus`:
 
-| Code       | When                                                                                                                                                  | Status     |
-| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| `GGL_0009` | spreadsheet not found, or not shared with the account; Google answers both alike, so neither can this plugin                                          | 404, 403   |
-| `GGL_0010` | invalid request                                                                                                                                       | 400        |
-| `GGL_0011` | quota exceeded, after core's retries; also a 403 whose reason is `rateLimitExceeded`, `userRateLimitExceeded` or `RATE_LIMIT_EXCEEDED`                | 429, 403   |
-| `GGL_0012` | any other failure, including one with no HTTP status; also a 403 whose reason is `SERVICE_DISABLED` or `accessNotConfigured` (Sheets API not enabled) | other, 403 |
+| Code       | When                                                                                                                                                                                                                                                                                                                          | Status     |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| `GGL_0009` | spreadsheet not found, or not shared with the account; Google answers both alike, so neither can this plugin                                                                                                                                                                                                                  | 404, 403   |
+| `GGL_0010` | invalid request                                                                                                                                                                                                                                                                                                               | 400        |
+| `GGL_0011` | quota exceeded, after core's retries; also a 403 whose reason is `rateLimitExceeded`, `userRateLimitExceeded` or `RATE_LIMIT_EXCEEDED`                                                                                                                                                                                        | 429, 403   |
+| `GGL_0012` | any other failure, including one with no HTTP status; also a 403 whose reason is `SERVICE_DISABLED` or `accessNotConfigured` (Sheets API not enabled), and one whose reason is `ACCESS_TOKEN_SCOPE_INSUFFICIENT` or `insufficientPermissions` (the token lacks `spreadsheets` / `spreadsheets.readonly`; the message says so) | other, 403 |
+| `GGL_0013` | Google sign-in failed: the token endpoint refused the account's credentials (`invalid_grant`, `invalid_client`, ...), whatever its HTTP status. `metadata.oauthError` is the `error` string and `metadata.oauthErrorDescription` the `error_description` when present; never the assertion or the key                         | 400, 401   |
 
 Google uses 403 for three different failures, so a 403 is told apart by the
 reasons in the body, read from `error.details[].reason` and the older
 `error.errors[].reason` (case-insensitive). A body that is missing, not an
-object, or has no string reasons leaves it `GGL_0009`. This mapping rests on the
+object, or has no string reasons leaves it `GGL_0009`.
+
+A failed sign-in is told apart from a Sheets failure by the body's shape, not its
+status: the token endpoint answers `{"error":"invalid_grant","error_description":"..."}`
+with `error` a string, where a Sheets error carries `error` as an object. Without
+that, a token 400 would read as "Google Sheets rejected the request as invalid". This mapping rests on the
 reason strings Google documents for 403 in its Sheets and Drive error guides and
 on the `google.rpc.ErrorInfo` convention, not on a captured response of every
 kind.

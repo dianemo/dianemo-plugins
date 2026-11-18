@@ -84,14 +84,16 @@ export const createSpreadsheet = (
 export const batchUpdateSpreadsheet = (
   clientName: string,
   spreadsheetId: string,
-  body: BatchUpdateSpreadsheetRequest
+  body: BatchUpdateSpreadsheetRequest,
+  params?: { fields?: string }
 ): Promise<BatchUpdateSpreadsheetResponse> =>
   write(
     clientName,
     "batchUpdateSpreadsheet",
     "POST",
     `${spreadsheetPath(spreadsheetId)}:batchUpdate`,
-    body
+    body,
+    params
   );
 
 export const updateValues = (
@@ -129,78 +131,90 @@ export const appendValues = (
 export const batchUpdateValues = (
   clientName: string,
   spreadsheetId: string,
-  body: BatchUpdateValuesRequest
+  body: BatchUpdateValuesRequest,
+  params?: { fields?: string }
 ): Promise<BatchUpdateValuesResponse> =>
   write(
     clientName,
     "batchUpdateValues",
     "POST",
     `${spreadsheetPath(spreadsheetId)}/values:batchUpdate`,
-    body
+    body,
+    params
   );
 
 export const batchUpdateValuesByDataFilter = (
   clientName: string,
   spreadsheetId: string,
-  body: BatchUpdateValuesByDataFilterRequest
+  body: BatchUpdateValuesByDataFilterRequest,
+  params?: { fields?: string }
 ): Promise<BatchUpdateValuesByDataFilterResponse> =>
   write(
     clientName,
     "batchUpdateValuesByDataFilter",
     "POST",
     `${spreadsheetPath(spreadsheetId)}/values:batchUpdateByDataFilter`,
-    body
+    body,
+    params
   );
 
 export const clearValues = (
   clientName: string,
   spreadsheetId: string,
-  range: string
+  range: string,
+  params?: { fields?: string }
 ): Promise<ClearValuesResponse> =>
   write(
     clientName,
     "clearValues",
     "POST",
     `${valuesPath(spreadsheetId, range)}:clear`,
-    {}
+    {},
+    params
   );
 
 export const batchClearValues = (
   clientName: string,
   spreadsheetId: string,
-  body: BatchClearValuesRequest
+  body: BatchClearValuesRequest,
+  params?: { fields?: string }
 ): Promise<BatchClearValuesResponse> =>
   write(
     clientName,
     "batchClearValues",
     "POST",
     `${spreadsheetPath(spreadsheetId)}/values:batchClear`,
-    body
+    body,
+    params
   );
 
 export const batchClearValuesByDataFilter = (
   clientName: string,
   spreadsheetId: string,
-  body: BatchClearValuesByDataFilterRequest
+  body: BatchClearValuesByDataFilterRequest,
+  params?: { fields?: string }
 ): Promise<BatchClearValuesByDataFilterResponse> =>
   write(
     clientName,
     "batchClearValuesByDataFilter",
     "POST",
     `${spreadsheetPath(spreadsheetId)}/values:batchClearByDataFilter`,
-    body
+    body,
+    params
   );
 
 export const copySheetTo = (
   clientName: string,
   spreadsheetId: string,
   sheetId: number,
-  body: CopySheetToAnotherSpreadsheetRequest
+  body: CopySheetToAnotherSpreadsheetRequest,
+  params?: { fields?: string }
 ): Promise<SheetProperties> =>
   write(
     clientName,
     "copySheetTo",
     "POST",
     `${spreadsheetPath(spreadsheetId)}/sheets/${encodeURIComponent(String(sheetId))}:copyTo`,
-    body
+    body,
+    params
   );

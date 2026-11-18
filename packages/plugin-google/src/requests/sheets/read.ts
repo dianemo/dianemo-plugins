@@ -1,6 +1,7 @@
 import { googleSubClient } from "../utils.js";
 import { sheetsRequest } from "./errors.js";
 import type {
+  CommentsViewMode,
   DateTimeRenderOption,
   MajorDimension,
   ValueRenderOption,
@@ -41,6 +42,7 @@ export interface GetSpreadsheetParams {
   ranges?: string[];
   includeGridData?: boolean;
   excludeTablesInBandedRanges?: boolean;
+  commentsViewMode?: CommentsViewMode;
   /** Google's partial-response field mask. */
   fields?: string;
 }
@@ -116,37 +118,43 @@ export const batchGetValues = (
 export const batchGetValuesByDataFilter = (
   clientName: string,
   spreadsheetId: string,
-  body: BatchGetValuesByDataFilterRequest
+  body: BatchGetValuesByDataFilterRequest,
+  params?: { fields?: string }
 ): Promise<BatchGetValuesByDataFilterResponse> =>
   sheetsRequest<BatchGetValuesByDataFilterResponse>({
     clientName: googleSubClient(clientName, "sheetsRead"),
     requestName: "google.sheets.batchGetValuesByDataFilter",
     method: "POST",
     url: `${spreadsheetPath(spreadsheetId)}/values:batchGetByDataFilter`,
+    params,
     data: body,
   });
 
 export const getDeveloperMetadata = (
   clientName: string,
   spreadsheetId: string,
-  metadataId: number
+  metadataId: number,
+  params?: { fields?: string }
 ): Promise<DeveloperMetadata> =>
   sheetsRequest<DeveloperMetadata>({
     clientName: googleSubClient(clientName, "sheetsRead"),
     requestName: "google.sheets.getDeveloperMetadata",
     method: "GET",
     url: `${spreadsheetPath(spreadsheetId)}/developerMetadata/${encodeURIComponent(String(metadataId))}`,
+    params,
   });
 
 export const searchDeveloperMetadata = (
   clientName: string,
   spreadsheetId: string,
-  body: SearchDeveloperMetadataRequest
+  body: SearchDeveloperMetadataRequest,
+  params?: { fields?: string }
 ): Promise<SearchDeveloperMetadataResponse> =>
   sheetsRequest<SearchDeveloperMetadataResponse>({
     clientName: googleSubClient(clientName, "sheetsRead"),
     requestName: "google.sheets.searchDeveloperMetadata",
     method: "POST",
     url: `${spreadsheetPath(spreadsheetId)}/developerMetadata:search`,
+    params,
     data: body,
   });

@@ -1,5 +1,6 @@
 import { serviceAccountRefreshConfig } from "./serviceAccount.js";
 import RequestHandler, { buildClientName } from "@dianemo/core";
+import { createPrivateKey } from "node:crypto";
 import {
   AuthDataOAuth2,
   BaseCredentialsData,
@@ -196,6 +197,15 @@ function buildSheetsSubClient(
   };
 }
 
+/** Fails at registration, not on the first call, and never echoes the key. */
+function assertPrivateKey(key: string): void {
+  try {
+    createPrivateKey(key.replace(/\\n/g, "\n"));
+  } catch {
+    throw new Error("privateKey is not a valid PEM private key");
+  }
+}
+
 export async function registerGoogleTemplate(handler: RequestHandler) {
   await handler.registerClientTemplate(
     "google",
@@ -212,6 +222,7 @@ export async function registerGoogleTemplate(handler: RequestHandler) {
           "Google credentials take a service account or a clientId/clientSecret pair, not both — they sign in differently"
         );
       }
+      if (serviceAccount) assertPrivateKey(creds.privateKey ?? "");
       if (serviceAccount && !creds.scopes?.length) {
         throw new Error("a service account needs at least one scope");
       }
@@ -264,8 +275,15 @@ export async function registerGoogleTemplate(handler: RequestHandler) {
                 ]
               : []),
             buildAddressValidationSubClient(creds),
-            buildSheetsSubClient(creds, "sheetsRead"),
-            buildSheetsSubClient(creds, "sheetsWrite"),
+            // Sheets takes no API key, so an API-key-only account has no way
+            // to reach it: leave the sub-clients out, and a call is told the
+            // client does not exist rather than getting a bare 401.
+            ...(oauth || serviceAccount
+              ? [
+                  buildSheetsSubClient(creds, "sheetsRead"),
+                  buildSheetsSubClient(creds, "sheetsWrite"),
+                ]
+              : []),
           ],
         },
       ];

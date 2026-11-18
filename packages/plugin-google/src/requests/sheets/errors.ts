@@ -16,8 +16,13 @@ import {
  * - `GGL_0010` invalid request (400).
  * - `GGL_0011` quota exceeded (429, and a 403 whose reason is a rate limit),
  *   raised after core's own retries.
- * - `GGL_0012` any other failure, including one with no HTTP status and a 403
- *   because the Sheets API is not enabled for the project.
+ * - `GGL_0012` any other failure, including one with no HTTP status, a 403
+ *   because the Sheets API is not enabled for the project, and a 403 because
+ *   the token lacks the scope the call needs.
+ * - `GGL_0013` sign-in failed: the token endpoint refused the account's
+ *   credentials. Told apart by the body, because OAuth's token errors carry
+ *   `error` as a string (`{"error":"invalid_grant"}`) where Sheets' carry an
+ *   object, so the same 400 or 401 status means something else.
  */
 const CODE_BY_STATUS: Record<number, string> = {
   400: "GGL_0010",
@@ -32,7 +37,32 @@ const MESSAGES: Record<string, string> = {
   GGL_0010: "Google Sheets rejected the request as invalid",
   GGL_0011: "Google Sheets quota exceeded",
   GGL_0012: "Google Sheets request failed",
+  GGL_0013: "Google sign-in failed",
 };
+
+const SCOPE_MESSAGE =
+  "Google Sheets rejected the token's scopes: it lacks the scope this call needs (https://www.googleapis.com/auth/spreadsheets, or https://www.googleapis.com/auth/spreadsheets.readonly for reads)";
+
+/**
+ * A token-endpoint failure: `error` is a string, with an optional
+ * `error_description`. Only those two fields are read, so nothing of the
+ * request (the assertion, the key) can reach the error.
+ */
+function oauthErrorOf(
+  err: unknown
+): { error: string; description?: string } | undefined {
+  const body = getOriginalResponseData(err);
+  if (!body || typeof body !== "object") return undefined;
+  const { error, error_description: description } = body as {
+    error?: unknown;
+    error_description?: unknown;
+  };
+  if (typeof error !== "string") return undefined;
+  return {
+    error,
+    description: typeof description === "string" ? description : undefined,
+  };
+}
 
 /** The `error.status` string of Google's error body, e.g. `PERMISSION_DENIED`. */
 function googleStatusOf(err: unknown): string | undefined {
@@ -46,6 +76,10 @@ const RATE_LIMIT_REASONS = new Set([
   "ratelimitexceeded",
   "userratelimitexceeded",
   "rate_limit_exceeded",
+]);
+const INSUFFICIENT_SCOPE_REASONS = new Set([
+  "access_token_scope_insufficient",
+  "insufficientpermissions",
 ]);
 const API_DISABLED_REASONS = new Set([
   "service_disabled",
@@ -82,6 +116,9 @@ function codeFor(status: number | undefined, err: unknown): string {
     if ([...reasons].some((r) => API_DISABLED_REASONS.has(r))) {
       return "GGL_0012";
     }
+    if ([...reasons].some((r) => INSUFFICIENT_SCOPE_REASONS.has(r))) {
+      return "GGL_0012";
+    }
   }
   return (status && CODE_BY_STATUS[status]) || "GGL_0012";
 }
@@ -107,16 +144,33 @@ export async function sheetsRequest<T>(config: RequestConfig): Promise<T> {
   } catch (err) {
     if (!(err instanceof RequestError)) throw err;
     const status = getOriginalStatus(err);
-    const code = codeFor(status, err);
-    throw new RequestError(code, MESSAGES[code], {
-      statusCode: status ?? err.statusCode,
-      metadata: {
-        ...err.metadata,
-        status,
-        googleStatus: googleStatusOf(err),
-      },
-      cause: err.cause instanceof Error ? err.cause : undefined,
-      errorId: err.errorId,
-    });
+    const oauth = oauthErrorOf(err);
+    const code = oauth ? "GGL_0013" : codeFor(status, err);
+    const insufficientScope =
+      !oauth &&
+      status === 403 &&
+      [...reasonsOf(err)].some((r) => INSUFFICIENT_SCOPE_REASONS.has(r));
+    throw new RequestError(
+      code,
+      insufficientScope ? SCOPE_MESSAGE : MESSAGES[code],
+      {
+        statusCode: status ?? err.statusCode,
+        metadata: {
+          ...err.metadata,
+          status,
+          googleStatus: googleStatusOf(err),
+          ...(oauth
+            ? {
+                oauthError: oauth.error,
+                ...(oauth.description
+                  ? { oauthErrorDescription: oauth.description }
+                  : {}),
+              }
+            : {}),
+        },
+        cause: err.cause instanceof Error ? err.cause : undefined,
+        errorId: err.errorId,
+      }
+    );
   }
 }

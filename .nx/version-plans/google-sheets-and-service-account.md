@@ -16,7 +16,11 @@ request and response types are exported with Google's own names. Each sub-client
 metered at Google's 60 requests per minute per user per project. Writes are not retried
 on a 5xx, a timeout or a dropped connection, so a repeated call cannot append twice.
 Failures raise `GGL_0009` (not found or not shared), `GGL_0010` (invalid request),
-`GGL_0011` (quota) or `GGL_0012` (anything else).
+`GGL_0011` (quota), `GGL_0012` (anything else, including a token missing the needed scope)
+or `GGL_0013` (Google sign-in failed: the token endpoint refused the credentials). Error
+codes `GGL_0009` to `GGL_0013` are new. The Sheets sub-clients exist only on a service-account
+or OAuth account, a malformed `privateKey` is refused at registration, and the Sheets schema
+types are exported from the package root.
 
 BREAKING: the `@dianemo/core` peer dependency is now `^2.1.1`, the first release in which
 a refresh-config interceptor survives core's deep copy. Upgrade `@dianemo/core` before

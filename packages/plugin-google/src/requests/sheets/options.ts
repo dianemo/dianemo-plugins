@@ -1,4 +1,5 @@
 import type {
+  BatchUpdateSpreadsheetRequest,
   BatchUpdateValuesRequest,
   DataFilterValueRange,
 } from "./schemas.js";
@@ -13,6 +14,9 @@ type Specified<T> = Exclude<
   "DIMENSION_UNSPECIFIED" | "INPUT_VALUE_OPTION_UNSPECIFIED"
 >;
 
+export type CommentsViewMode = NonNullable<
+  BatchUpdateSpreadsheetRequest["commentsViewMode"]
+>;
 export type MajorDimension = Specified<DataFilterValueRange["majorDimension"]>;
 export type ValueRenderOption = NonNullable<
   BatchUpdateValuesRequest["responseValueRenderOption"]

@@ -9,7 +9,7 @@ to that build and will drift; the quoted code is the durable part.
 
 ## Before core 2.1.1, a `refreshConfig` could not hold a function
 
-Every package here declares a peer of `@dianemo/core ^2.0.0`, so a consumer may
+Every package here declares a peer of `@dianemo/core ^2.0.0` except `plugin-google`, which declares `^2.1.1` because its service-account sign-in needs the interceptor to survive the copy. So a consumer of any other plugin may
 still be on 2.0.0 or 2.1.0, and in both `client/methods/authenticate.js` runs a
 refresh config's own interceptor against a `structuredClone` of the object that
 _contains_ it:

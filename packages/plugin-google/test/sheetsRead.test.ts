@@ -1,3 +1,4 @@
+import { serviceAccountCreds } from "./support/serviceAccountServer.js";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { resetBinding } from "@dianemo/plugin-kit/testing";
 import { TEST_KEY } from "../../../test/fixtures/key.js";
@@ -242,6 +243,11 @@ describe("over the wire", () => {
   it("repeats ranges in the query string and maps a real 404 to GGL_0009", async () => {
     const seen: string[] = [];
     server = createServer((req, res) => {
+      if (req.url === "/token") {
+        res.setHeader("content-type", "application/json");
+        res.end(JSON.stringify({ access_token: "sa-token", expires_in: 3600 }));
+        return;
+      }
       seen.push(req.url ?? "");
       res.setHeader("content-type", "application/json");
       if (req.url?.startsWith("/v4/spreadsheets/missing")) {
@@ -256,10 +262,7 @@ describe("over the wire", () => {
     handler = new RequestHandler({ key: TEST_KEY, backend: memoryBackend() });
     const { google: requests } = handler.use(google);
     const creds = {
-      instanceId: "main",
-      baseUrl: sheetsBaseUrl,
-      apiKey: "k",
-      sheetsBaseUrl,
+      ...serviceAccountCreds(sheetsBaseUrl, "main"),
     };
     await handler.addTemplateClient("google", creds);
     const client = buildClientName("google", creds);
