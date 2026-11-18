@@ -33,6 +33,7 @@ jobs:
           npm run sort-imports:check
           npm run format
           npm run lint
+          npm run generate:google-types -- --check
           npm run check
           npm test
 

@@ -12,7 +12,10 @@ coverage/
 .readme-examples/
 
 # Vendor API specs kept locally for reference; not ours to redistribute.
-vendor-specs/
+vendor-specs/*
+# Except Google's Discovery documents: generate:google-types --check reads
+# the committed one in CI, and Google publishes them for exactly this use.
+!vendor-specs/google/
 
 # Nx local state; .nx/version-plans is tracked.
 .nx/cache/
