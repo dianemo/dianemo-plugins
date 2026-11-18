@@ -37,6 +37,10 @@
     "./requests/utils": {
       "types": "./dist/requests/utils.d.ts",
       "default": "./dist/requests/utils.js"
+    },
+    "./requests/sheets/schemas": {
+      "types": "./dist/requests/sheets/schemas.d.ts",
+      "default": "./dist/requests/sheets/schemas.js"
     }
   },
   "files": [
