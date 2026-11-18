@@ -60,9 +60,11 @@ the account name is always right.
 
 ## Credentials
 
-Give the account exactly one of an `apiKey`, a `clientId`/`clientSecret` pair, or a service account
-(`serviceAccountEmail` + `privateKey`). A registration carrying none is refused, because every
-request on it would come back 401, and so is a service account combined with an OAuth pair.
+Give the account an `apiKey`, a `clientId`/`clientSecret` pair, or a service account
+(`serviceAccountEmail` + `privateKey` + `scopes`). A service account and an OAuth pair are mutually
+exclusive and registering both is refused; an `apiKey` can accompany either, and Address Validation
+then uses the key. A registration carrying none is refused, because every request on it would come
+back 401. A half-given service account, or one without `scopes`, is refused too.
 
 | Credential                           | Serves                                                                  |
 | ------------------------------------ | ----------------------------------------------------------------------- |

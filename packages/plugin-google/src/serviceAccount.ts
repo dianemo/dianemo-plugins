@@ -59,6 +59,11 @@ export interface ServiceAccountCredentials {
   tokenUrl?: string;
 }
 
+function required<T>(value: T | undefined, name: string): T {
+  if (value === undefined) throw new Error(`${name} is required`);
+  return value;
+}
+
 /**
  * The client-level refresh for a service account: the JWT-bearer grant, the one
  * Google grant that mints a first token from the registered credentials alone.
@@ -83,9 +88,12 @@ export function serviceAccountRefreshConfig(
       data: {
         ...config.data,
         assertion: signServiceAccountAssertion({
-          serviceAccountEmail: creds.serviceAccountEmail ?? "",
-          privateKey: creds.privateKey ?? "",
-          scopes: creds.scopes ?? [],
+          serviceAccountEmail: required(
+            creds.serviceAccountEmail,
+            "serviceAccountEmail"
+          ),
+          privateKey: required(creds.privateKey, "privateKey"),
+          scopes: required(creds.scopes, "scopes"),
           tokenUrl,
         }),
       },

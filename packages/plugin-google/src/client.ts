@@ -23,8 +23,8 @@ import {
  * `serviceAccountEmail`/`privateKey` (the `client_email` and `private_key` of a
  * service-account JSON key) sign a JWT-bearer assertion per refresh, with
  * `scopes` the OAuth scopes requested and `tokenUrl` an override of Google's
- * token endpoint for tests. Exactly one of an OAuth pair, a service account or
- * an API key alone is accepted (docs/google-api.md#service-account-jwt-bearer-flow).
+ * token endpoint for tests. A service account and an OAuth pair are mutually
+ * exclusive; an API key may accompany either or stand alone (docs/google-api.md#service-account-jwt-bearer-flow).
  *
  * `baseUrl` serves the profile sub-client; Address Validation has its own host.
  */
@@ -102,7 +102,7 @@ function buildOAuth2Auth(creds: GoogleCredentials): AuthDataOAuth2 | undefined {
 function buildServiceAccountAuth(creds: GoogleCredentials): AuthDataOAuth2 {
   return {
     type: "oauth2",
-    clientId: creds.serviceAccountEmail ?? "",
+    clientId: creds.serviceAccountEmail as string,
     clientSecret: "",
     refreshConfig: serviceAccountRefreshConfig(creds, TOKEN_URL),
   };
@@ -156,13 +156,19 @@ export async function registerGoogleTemplate(handler: RequestHandler) {
     "google",
     (creds): CreateClientData[] => {
       const oauth = buildOAuth2Auth(creds);
-      const serviceAccount = Boolean(
-        creds.serviceAccountEmail && creds.privateKey
-      );
+      if (Boolean(creds.serviceAccountEmail) !== Boolean(creds.privateKey)) {
+        throw new Error(
+          "serviceAccountEmail and privateKey must be given together"
+        );
+      }
+      const serviceAccount = Boolean(creds.serviceAccountEmail);
       if (serviceAccount && oauth) {
         throw new Error(
           "Google credentials take a service account or a clientId/clientSecret pair, not both — they sign in differently"
         );
+      }
+      if (serviceAccount && !creds.scopes?.length) {
+        throw new Error("a service account needs at least one scope");
       }
       if (!oauth && !serviceAccount && !creds.apiKey) {
         throw new Error(

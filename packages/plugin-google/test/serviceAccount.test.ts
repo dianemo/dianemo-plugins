@@ -61,6 +61,19 @@ describe("signServiceAccountAssertion", () => {
     ).toBe(true);
   });
 
+  it("pins iat and exp to the given time", () => {
+    const jwt = signServiceAccountAssertion({
+      serviceAccountEmail: EMAIL,
+      privateKey: pem,
+      scopes: [SCOPE],
+      tokenUrl: TOKEN_URL,
+      now: new Date("2026-01-01T00:00:00Z"),
+    });
+    const body = decode(jwt.split(".")[1]);
+    expect(body.iat).toBe(1767225600);
+    expect(body.exp).toBe(1767229200);
+  });
+
   it("joins several scopes with a space", () => {
     const jwt = signServiceAccountAssertion({
       serviceAccountEmail: EMAIL,
@@ -98,16 +111,36 @@ describe("google template with a service account", () => {
       build({
         serviceAccountEmail: EMAIL,
         privateKey: pem,
+        scopes: [SCOPE],
         clientId: "id",
         clientSecret: "secret",
       })
     ).rejects.toThrow(/service account/i);
   });
 
+  it.each([
+    ["no scopes", { scopes: undefined }],
+    ["empty scopes", { scopes: [] }],
+  ])("refuses a service account with %s", async (_n, extra) => {
+    await expect(
+      build({ serviceAccountEmail: EMAIL, privateKey: pem, ...extra })
+    ).rejects.toThrow("a service account needs at least one scope");
+  });
+
+  it.each([
+    ["email only", { serviceAccountEmail: EMAIL }],
+    ["key only", { privateKey: pem }],
+  ])("refuses a partial service account (%s)", async (_n, part) => {
+    await expect(build({ scopes: [SCOPE], ...part })).rejects.toThrow(
+      "serviceAccountEmail and privateKey must be given together"
+    );
+  });
+
   it("template with a service account has no grantRefreshConfig and no profile sub-client", async () => {
     const [client] = await build({
       serviceAccountEmail: EMAIL,
       privateKey: pem,
+      scopes: [SCOPE],
       tokenUrl: TOKEN_URL,
       baseUrl: "https://example.test",
     });
